@@ -28,3 +28,36 @@
 /Users/project/dotNET/MyMvcApp/obj/Debug/net8.0/MyMvcApp.pdb
 /Users/project/dotNET/MyMvcApp/obj/Debug/net8.0/MyMvcApp.genruntimeconfig.cache
 /Users/project/dotNET/MyMvcApp/obj/Debug/net8.0/ref/MyMvcApp.dll
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\appsettings.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\MyMvcApp.staticwebassets.runtime.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\MyMvcApp.staticwebassets.endpoints.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\MyMvcApp.exe
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\MyMvcApp.deps.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\MyMvcApp.runtimeconfig.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\MyMvcApp.dll
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\MyMvcApp.pdb
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.AssemblyInfoInputs.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.AssemblyInfo.cs
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.csproj.CoreCompileInputs.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.RazorAssemblyInfo.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.RazorAssemblyInfo.cs
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.sourcelink.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\scopedcss\Views\Shared\_Layout.cshtml.rz.scp.css
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\scopedcss\bundle\MyMvcApp.styles.css
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\scopedcss\projectbundle\MyMvcApp.bundle.scp.css
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.dll
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\refint\MyMvcApp.dll
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.pdb
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.genruntimeconfig.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\ref\MyMvcApp.dll
