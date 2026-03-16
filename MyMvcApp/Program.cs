@@ -13,7 +13,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// In containerized HTTP deployments (e.g. direct EC2), keep HTTPS redirection optional.
+if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection"))
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 
 app.UseRouting();
