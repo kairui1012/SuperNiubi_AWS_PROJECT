@@ -48,6 +48,9 @@ This system aims to solve those problems by providing a centralized platform whe
        处理维修请求
     - Upload documents
        上传文件
+    - View payment records
+       查看付款记录
+   
 
 3. **Tenant**
     - View assigned property
@@ -56,8 +59,9 @@ This system aims to solve those problems by providing a centralized platform whe
        提交维修请求
     - Upload documents
        上传文件
-    - View payment records
-       查看付款记录
+    - Upload payment records
+       上传付款记录
+   
 
 ---
 
@@ -83,8 +87,8 @@ This system aims to solve those problems by providing a centralized platform whe
    关联租客与物业
 
 ### Maintenance Request System
-- Tenants can submit maintenance requests
-   租客可提交维修请求
+- Tenants can submit maintenance requests and payment records
+   租客可提交维修请求和付款记录
 - Landlords can approve or update request status
    房东可审批或更新请求状态
 - Status tracking (Pending, Approved, Completed)
