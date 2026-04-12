@@ -1,8 +1,29 @@
 {
   "version": 2,
-  "dgSpecHash": "zblhbIo7DJY=",
+  "dgSpecHash": "aswoe08fUMM=",
   "success": true,
-  "projectFilePath": "/Users/project/dotNET/MyMvcApp/MyMvcApp.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "C:\\Users\\junyong is DaShuaiGe\\Desktop\\SCHOOL\\Y3S2\\Design & Developing on Cloud\\Code\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\MyMvcApp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\amazon.aspnetcore.identity.cognito\\4.0.2\\amazon.aspnetcore.identity.cognito.4.0.2.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\amazon.extensions.cognitoauthentication\\3.1.4\\amazon.extensions.cognitoauthentication.3.1.4.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.cognitoidentity\\4.0.2.18\\awssdk.cognitoidentity.4.0.2.18.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.cognitoidentityprovider\\4.0.6.2\\awssdk.cognitoidentityprovider.4.0.6.2.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.core\\4.0.3.17\\awssdk.core.4.0.3.17.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.extensions.netcore.setup\\4.0.3.25\\awssdk.extensions.netcore.setup.4.0.3.25.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.securitytoken\\4.0.5.12\\awssdk.securitytoken.4.0.5.12.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.csharp\\4.5.0\\microsoft.csharp.4.5.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\2.0.0\\microsoft.extensions.configuration.abstractions.2.0.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\2.0.0\\microsoft.extensions.logging.abstractions.2.0.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.extensions.primitives\\2.0.0\\microsoft.extensions.primitives.2.0.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\6.8.0\\microsoft.identitymodel.jsonwebtokens.6.8.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.identitymodel.logging\\6.8.0\\microsoft.identitymodel.logging.6.8.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.identitymodel.protocols\\6.8.0\\microsoft.identitymodel.protocols.6.8.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\6.8.0\\microsoft.identitymodel.protocols.openidconnect.6.8.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.identitymodel.tokens\\6.8.0\\microsoft.identitymodel.tokens.6.8.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\system.identitymodel.tokens.jwt\\6.8.0\\system.identitymodel.tokens.jwt.6.8.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\4.4.0\\system.runtime.compilerservices.unsafe.4.4.0.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\system.security.cryptography.cng\\4.5.0\\system.security.cryptography.cng.4.5.0.nupkg.sha512"
+  ],
   "logs": []
 }

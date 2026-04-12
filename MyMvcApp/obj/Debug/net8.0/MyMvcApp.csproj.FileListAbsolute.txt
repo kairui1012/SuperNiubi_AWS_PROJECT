@@ -62,3 +62,16 @@ C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/C
 C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/obj/Debug/net8.0/MyMvcApp.genruntimeconfig.cache
 C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/obj/Debug/net8.0/ref/MyMvcApp.dll
 /Users/project/dotNET/MyMvcApp/obj/Debug/net8.0/MyMvcApp.sourcelink.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.csproj.AssemblyReference.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.AssemblyInfoInputs.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.AssemblyInfo.cs
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.csproj.CoreCompileInputs.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.RazorAssemblyInfo.cache
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.RazorAssemblyInfo.cs
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.sourcelink.json
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.dll
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\refint\MyMvcApp.dll
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\obj\Debug\net8.0\MyMvcApp.pdb
