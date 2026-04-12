@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace YourAppName.Controllers
+namespace MyMvcApp.Controllers
 {
     [Authorize]
     public class RoleController : Controller

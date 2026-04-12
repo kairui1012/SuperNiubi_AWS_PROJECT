@@ -9,15 +9,15 @@ namespace MyMvcApp.Controllers
     public class AccountController : Controller
     {
         private readonly SignInManager<CognitoUser> _signInManager;
-        private readonly CognitoUserManager<CognitoUser> _userManager;
+        // 1. CHANGE THIS LINE to UserManager
+        private readonly UserManager<CognitoUser> _userManager;
         
-        // 1. Add the CognitoUserPool
         private readonly CognitoUserPool _pool; 
 
-        // 2. Inject it into the constructor
+        // 2. CHANGE THIS LINE to UserManager
         public AccountController(
             SignInManager<CognitoUser> signInManager, 
-            CognitoUserManager<CognitoUser> userManager,
+            UserManager<CognitoUser> userManager, 
             CognitoUserPool pool) 
         {
             _signInManager = signInManager;

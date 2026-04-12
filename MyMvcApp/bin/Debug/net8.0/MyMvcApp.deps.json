@@ -7,10 +7,179 @@
   "targets": {
     ".NETCoreApp,Version=v8.0": {
       "MyMvcApp/1.0.0": {
+        "dependencies": {
+          "Amazon.AspNetCore.Identity.Cognito": "4.0.2"
+        },
         "runtime": {
           "MyMvcApp.dll": {}
         }
-      }
+      },
+      "Amazon.AspNetCore.Identity.Cognito/4.0.2": {
+        "dependencies": {
+          "AWSSDK.CognitoIdentity": "4.0.2.18",
+          "AWSSDK.CognitoIdentityProvider": "4.0.6.2",
+          "AWSSDK.Extensions.NETCore.Setup": "4.0.3.25",
+          "Amazon.Extensions.CognitoAuthentication": "3.1.4",
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "6.8.0"
+        },
+        "runtime": {
+          "lib/net8.0/Amazon.AspNetCore.Identity.Cognito.dll": {
+            "assemblyVersion": "4.0.2.0",
+            "fileVersion": "4.0.2.0"
+          }
+        }
+      },
+      "Amazon.Extensions.CognitoAuthentication/3.1.4": {
+        "dependencies": {
+          "AWSSDK.CognitoIdentity": "4.0.2.18",
+          "AWSSDK.CognitoIdentityProvider": "4.0.6.2"
+        },
+        "runtime": {
+          "lib/net8.0/Amazon.Extensions.CognitoAuthentication.dll": {
+            "assemblyVersion": "3.1.4.0",
+            "fileVersion": "3.1.4.0"
+          }
+        }
+      },
+      "AWSSDK.CognitoIdentity/4.0.2.18": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.3.17",
+          "AWSSDK.SecurityToken": "4.0.5.12"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.CognitoIdentity.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.2.18"
+          }
+        }
+      },
+      "AWSSDK.CognitoIdentityProvider/4.0.6.2": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.3.17"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.CognitoIdentityProvider.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.6.2"
+          }
+        }
+      },
+      "AWSSDK.Core/4.0.3.17": {
+        "runtime": {
+          "lib/net8.0/AWSSDK.Core.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.3.17"
+          }
+        }
+      },
+      "AWSSDK.Extensions.NETCore.Setup/4.0.3.25": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.3.17",
+          "Microsoft.Extensions.Configuration.Abstractions": "2.0.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Logging.Abstractions": "2.0.0"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.3.25"
+          }
+        }
+      },
+      "AWSSDK.SecurityToken/4.0.5.12": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.3.17"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.SecurityToken.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.5.12"
+          }
+        }
+      },
+      "Microsoft.CSharp/4.5.0": {},
+      "Microsoft.Extensions.Configuration.Abstractions/2.0.0": {
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "2.0.0"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.0": {},
+      "Microsoft.Extensions.Logging.Abstractions/2.0.0": {},
+      "Microsoft.Extensions.Primitives/2.0.0": {
+        "dependencies": {
+          "System.Runtime.CompilerServices.Unsafe": "4.4.0"
+        }
+      },
+      "Microsoft.IdentityModel.JsonWebTokens/6.8.0": {
+        "dependencies": {
+          "Microsoft.IdentityModel.Tokens": "6.8.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.IdentityModel.JsonWebTokens.dll": {
+            "assemblyVersion": "6.8.0.0",
+            "fileVersion": "6.8.0.11012"
+          }
+        }
+      },
+      "Microsoft.IdentityModel.Logging/6.8.0": {
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.IdentityModel.Logging.dll": {
+            "assemblyVersion": "6.8.0.0",
+            "fileVersion": "6.8.0.11012"
+          }
+        }
+      },
+      "Microsoft.IdentityModel.Protocols/6.8.0": {
+        "dependencies": {
+          "Microsoft.IdentityModel.Logging": "6.8.0",
+          "Microsoft.IdentityModel.Tokens": "6.8.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.IdentityModel.Protocols.dll": {
+            "assemblyVersion": "6.8.0.0",
+            "fileVersion": "6.8.0.11012"
+          }
+        }
+      },
+      "Microsoft.IdentityModel.Protocols.OpenIdConnect/6.8.0": {
+        "dependencies": {
+          "Microsoft.IdentityModel.Protocols": "6.8.0",
+          "System.IdentityModel.Tokens.Jwt": "6.8.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll": {
+            "assemblyVersion": "6.8.0.0",
+            "fileVersion": "6.8.0.11012"
+          }
+        }
+      },
+      "Microsoft.IdentityModel.Tokens/6.8.0": {
+        "dependencies": {
+          "Microsoft.CSharp": "4.5.0",
+          "Microsoft.IdentityModel.Logging": "6.8.0",
+          "System.Security.Cryptography.Cng": "4.5.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.IdentityModel.Tokens.dll": {
+            "assemblyVersion": "6.8.0.0",
+            "fileVersion": "6.8.0.11012"
+          }
+        }
+      },
+      "System.IdentityModel.Tokens.Jwt/6.8.0": {
+        "dependencies": {
+          "Microsoft.IdentityModel.JsonWebTokens": "6.8.0",
+          "Microsoft.IdentityModel.Tokens": "6.8.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/System.IdentityModel.Tokens.Jwt.dll": {
+            "assemblyVersion": "6.8.0.0",
+            "fileVersion": "6.8.0.11012"
+          }
+        }
+      },
+      "System.Runtime.CompilerServices.Unsafe/4.4.0": {},
+      "System.Security.Cryptography.Cng/4.5.0": {}
     }
   },
   "libraries": {
@@ -18,6 +187,146 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "Amazon.AspNetCore.Identity.Cognito/4.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9F7DjOuyhmHl7+y5Inc4A756mbAG9+88LYE0fPHGEe5VbjwqXGPc2YFJRz/D85sRxO1NYFL6R7VG+c+E66snlg==",
+      "path": "amazon.aspnetcore.identity.cognito/4.0.2",
+      "hashPath": "amazon.aspnetcore.identity.cognito.4.0.2.nupkg.sha512"
+    },
+    "Amazon.Extensions.CognitoAuthentication/3.1.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-HT8Gdvm/R/M30wbDkdqOr17pdmCqTvlLgU3s2IXKLWSzgc8zWTfs8SeHwkUQIU67H8tGs3aKeRUIuwwVkoviiQ==",
+      "path": "amazon.extensions.cognitoauthentication/3.1.4",
+      "hashPath": "amazon.extensions.cognitoauthentication.3.1.4.nupkg.sha512"
+    },
+    "AWSSDK.CognitoIdentity/4.0.2.18": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-EOdvsWGU/t/2vXtGVuxFhx2xYha/PcL8ptQBYLGWRBYTRvBrOmaI2jnkRRAjWj0OZbB9hKnrrpDyvvms/GYrwQ==",
+      "path": "awssdk.cognitoidentity/4.0.2.18",
+      "hashPath": "awssdk.cognitoidentity.4.0.2.18.nupkg.sha512"
+    },
+    "AWSSDK.CognitoIdentityProvider/4.0.6.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-MOhL6nl78bYJh1AmoMNq9nJIM4dFjDO/FsLYMYj8IrWCqmfujGeHe8EnNEOM+Bxc8t5CLkil91awpS0TguzT+g==",
+      "path": "awssdk.cognitoidentityprovider/4.0.6.2",
+      "hashPath": "awssdk.cognitoidentityprovider.4.0.6.2.nupkg.sha512"
+    },
+    "AWSSDK.Core/4.0.3.17": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Ab24kVquQ8kvuQKNe5MK/SvaXR4uoxPkAlTPALDEImaHcwsBg+UWfRVcNzLEx4dRR2y1mDFFh+zZ9TVMXGY6Jg==",
+      "path": "awssdk.core/4.0.3.17",
+      "hashPath": "awssdk.core.4.0.3.17.nupkg.sha512"
+    },
+    "AWSSDK.Extensions.NETCore.Setup/4.0.3.25": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-VIuOwVg1SQsBcIsJk0scmV8iyYRy4zV06JuJl4WEFBHHjluMOLI9U1IVoTzhL6DYE0oZHy/8/WePFzgdCC6kmQ==",
+      "path": "awssdk.extensions.netcore.setup/4.0.3.25",
+      "hashPath": "awssdk.extensions.netcore.setup.4.0.3.25.nupkg.sha512"
+    },
+    "AWSSDK.SecurityToken/4.0.5.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-vzqtwlYuaLhioO/kr1KorEIOvyOFkaqYkUGy3luPbHkFX9nOIjsgywOUSP0blRhwhL7UQiluqiPD+cQg1Msjzw==",
+      "path": "awssdk.securitytoken/4.0.5.12",
+      "hashPath": "awssdk.securitytoken.4.0.5.12.nupkg.sha512"
+    },
+    "Microsoft.CSharp/4.5.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-kaj6Wb4qoMuH3HySFJhxwQfe8R/sJsNJnANrvv8WdFPMoNbKY5htfNscv+LHCu5ipz+49m2e+WQXpLXr9XYemQ==",
+      "path": "microsoft.csharp/4.5.0",
+      "hashPath": "microsoft.csharp.4.5.0.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Configuration.Abstractions/2.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-rHFrXqMIvQNq51H8RYTO4IWmDOYh8NUzyqGlh0xHWTP6XYnKk7Ryinys2uDs+Vu88b3AMlM3gBBSs78m6OQpYQ==",
+      "path": "microsoft.extensions.configuration.abstractions/2.0.0",
+      "hashPath": "microsoft.extensions.configuration.abstractions.2.0.0.nupkg.sha512"
+    },
+    "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-cjWrLkJXK0rs4zofsK4bSdg+jhDLTaxrkXu4gS6Y7MAlCvRyNNgwY/lJi5RDlQOnSZweHqoyvgvbdvQsRIW+hg==",
+      "path": "microsoft.extensions.dependencyinjection.abstractions/8.0.0",
+      "hashPath": "microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Logging.Abstractions/2.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-6ZCllUYGFukkymSTx3Yr0G/ajRxoNJp7/FqSxSB4fGISST54ifBhgu4Nc0ItGi3i6DqwuNd8SUyObmiC++AO2Q==",
+      "path": "microsoft.extensions.logging.abstractions/2.0.0",
+      "hashPath": "microsoft.extensions.logging.abstractions.2.0.0.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Primitives/2.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ukg53qNlqTrK38WA30b5qhw0GD7y3jdI9PHHASjdKyTcBHTevFM2o23tyk3pWCgAV27Bbkm+CPQ2zUe1ZOuYSA==",
+      "path": "microsoft.extensions.primitives/2.0.0",
+      "hashPath": "microsoft.extensions.primitives.2.0.0.nupkg.sha512"
+    },
+    "Microsoft.IdentityModel.JsonWebTokens/6.8.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+7JIww64PkMt7NWFxoe4Y/joeF7TAtA/fQ0b2GFGcagzB59sKkTt/sMZWR6aSZht5YC7SdHi3W6yM1yylRGJCQ==",
+      "path": "microsoft.identitymodel.jsonwebtokens/6.8.0",
+      "hashPath": "microsoft.identitymodel.jsonwebtokens.6.8.0.nupkg.sha512"
+    },
+    "Microsoft.IdentityModel.Logging/6.8.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Rfh/p4MaN4gkmhPxwbu8IjrmoDncGfHHPh1sTnc0AcM/Oc39/fzC9doKNWvUAjzFb8LqA6lgZyblTrIsX/wDXg==",
+      "path": "microsoft.identitymodel.logging/6.8.0",
+      "hashPath": "microsoft.identitymodel.logging.6.8.0.nupkg.sha512"
+    },
+    "Microsoft.IdentityModel.Protocols/6.8.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-OJZx5nPdiH+MEkwCkbJrTAUiO/YzLe0VSswNlDxJsJD9bhOIdXHufh650pfm59YH1DNevp3/bXzukKrG57gA1w==",
+      "path": "microsoft.identitymodel.protocols/6.8.0",
+      "hashPath": "microsoft.identitymodel.protocols.6.8.0.nupkg.sha512"
+    },
+    "Microsoft.IdentityModel.Protocols.OpenIdConnect/6.8.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-X/PiV5l3nYYsodtrNMrNQIVlDmHpjQQ5w48E+o/D5H4es2+4niEyQf3l03chvZGWNzBRhfSstaXr25/Ye4AeYw==",
+      "path": "microsoft.identitymodel.protocols.openidconnect/6.8.0",
+      "hashPath": "microsoft.identitymodel.protocols.openidconnect.6.8.0.nupkg.sha512"
+    },
+    "Microsoft.IdentityModel.Tokens/6.8.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-gTqzsGcmD13HgtNePPcuVHZ/NXWmyV+InJgalW/FhWpII1D7V1k0obIseGlWMeA4G+tZfeGMfXr0klnWbMR/mQ==",
+      "path": "microsoft.identitymodel.tokens/6.8.0",
+      "hashPath": "microsoft.identitymodel.tokens.6.8.0.nupkg.sha512"
+    },
+    "System.IdentityModel.Tokens.Jwt/6.8.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-5tBCjAub2Bhd5qmcd0WhR5s354e4oLYa//kOWrkX+6/7ZbDDJjMTfwLSOiZ/MMpWdE4DWPLOfTLOq/juj9CKzA==",
+      "path": "system.identitymodel.tokens.jwt/6.8.0",
+      "hashPath": "system.identitymodel.tokens.jwt.6.8.0.nupkg.sha512"
+    },
+    "System.Runtime.CompilerServices.Unsafe/4.4.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9dLLuBxr5GNmOfl2jSMcsHuteEg32BEfUotmmUkmZjpR3RpVHE8YQwt0ow3p6prwA1ME8WqDVZqrr8z6H8G+Kw==",
+      "path": "system.runtime.compilerservices.unsafe/4.4.0",
+      "hashPath": "system.runtime.compilerservices.unsafe.4.4.0.nupkg.sha512"
+    },
+    "System.Security.Cryptography.Cng/4.5.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-WG3r7EyjUe9CMPFSs6bty5doUqT+q9pbI80hlNzo2SkPkZ4VTuZkGWjpp77JB8+uaL4DFPRdBsAY+DX3dBK92A==",
+      "path": "system.security.cryptography.cng/4.5.0",
+      "hashPath": "system.security.cryptography.cng.4.5.0.nupkg.sha512"
     }
   }
 }
