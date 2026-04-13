@@ -1,14 +1,63 @@
+@model IEnumerable<MyMvcApp.Models.AppUser>
 @{
     ViewData["Title"] = "Admin Dashboard";
 }
+
 <style>
     body { background-color: #14110F; color: #D9C5B2; }
-    .role-card { background-color: #34312D; border-left: 4px solid #D9C5B2; padding: 2rem; border-radius: 8px; margin-top: 2rem; }
+    .table { color: #D9C5B2; margin-top: 2rem; }
+    .table th { border-bottom: 2px solid #7E7F83; }
+    .table td { border-bottom: 1px solid #34312D; vertical-align: middle; }
+    .btn-approve { background-color: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px; }
+    .btn-role { background-color: #D9C5B2; color: #14110F; border: none; padding: 5px 15px; border-radius: 4px; }
 </style>
 
-<div class="container">
-    <div class="role-card">
-        <h2>Administrator Workspace</h2>
-        <p style="color: #7E7F83;">You are currently viewing the system as an <strong>Admin</strong>. You have full access to system configuration and user management.</p>
-    </div>
+<div class="container mt-5">
+    <h2>System Administrator Workspace</h2>
+    <p class="text-muted">Manage user approvals and role assignments below.</p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nickname</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td>@user.Nickname</td>
+                    <td>@user.Email</td>
+                    <td>
+                        @if (!user.IsApproved) { <span class="badge bg-warning text-dark">Pending</span> }
+                        else { <span class="badge bg-success">Approved</span> }
+                    </td>
+                    <td>
+                        <form asp-action="ChangeRole" method="post" class="d-inline-flex">
+                            <input type="hidden" name="id" value="@user.Id" />
+                            <select name="newRole" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: 120px; margin-right: 10px;">
+                                <option value="Tenant" selected="@(user.Role == "Tenant")">Tenant</option>
+                                <option value="Landlord" selected="@(user.Role == "Landlord")">Landlord</option>
+                                <option value="Admin" selected="@(user.Role == "Admin")">Admin</option>
+                            </select>
+                            <button type="submit" class="btn-role btn-sm">Save</button>
+                        </form>
+                    </td>
+                    <td>
+                        @if (!user.IsApproved)
+                        {
+                            <form asp-action="ApproveUser" method="post">
+                                <input type="hidden" name="id" value="@user.Id" />
+                                <button type="submit" class="btn-approve btn-sm">Approve & Email</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>

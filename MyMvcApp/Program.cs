@@ -1,9 +1,25 @@
+using Microsoft.EntityFrameworkCore;
+using MyMvcApp.Data;
+using MyMvcApp.Services;
+using Microsoft.AspNetCore.Authentication;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Add Email Service
+builder.Services.AddScoped<EmailService>();
+
+builder.Services.AddScoped<IClaimsTransformation, MyMvcApp.Services.RoleClaimsTransformation>();
+
 builder.Services.AddCognitoIdentity();
+
+builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIdentityProvider>();
 
 var app = builder.Build();
 
@@ -29,6 +45,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
