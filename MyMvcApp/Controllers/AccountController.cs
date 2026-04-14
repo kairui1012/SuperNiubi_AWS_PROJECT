@@ -38,6 +38,12 @@ namespace MyMvcApp.Controllers
                     ModelState.AddModelError(string.Empty, "User does not exist.");
                     return View(model);
                 }
+
+                if (appUser.IsDisabled) {
+                    ModelState.AddModelError(string.Empty, "Your account has been disabled by the administrator.");
+                    return View(model);
+                }
+
                 if (!appUser.IsApproved) {
                     ModelState.AddModelError(string.Empty, "Your account is pending Admin approval.");
                     return View(model);
@@ -106,7 +112,7 @@ namespace MyMvcApp.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Login", "Account");
         }
     }
 }

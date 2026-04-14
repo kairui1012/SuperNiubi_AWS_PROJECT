@@ -8,7 +8,8 @@ namespace MyMvcApp.Services
         private readonly IConfiguration _config;
         public EmailService(IConfiguration config) { _config = config; }
 
-        public async Task SendApprovalEmailAsync(string toEmail, string nickname)
+        // Removed the nickname parameter
+        public async Task SendApprovalEmailAsync(string toEmail)
         {
             var smtpServer = _config["EmailSettings:SmtpServer"];
             var port = int.Parse(_config["EmailSettings:Port"]);
@@ -21,14 +22,15 @@ namespace MyMvcApp.Services
                 EnableSsl = true
             };
 
-            // Update this port to match your local running port!
-            var loginUrl = "https://localhost:5051"; 
+            // Fixed: Changed from https to http
+            var loginUrl = "http://localhost:5051/"; 
             
             var mailMessage = new MailMessage
             {
                 From = new MailAddress(senderEmail, "Super Niubi Admin"),
                 Subject = "Your Account Has Been Approved!",
-                Body = $"<h3>Hello {nickname},</h3><p>Your account has been approved by the system administrator.</p><br><a href='{loginUrl}' style='padding:12px 24px; background-color:#D9C5B2; color:#14110F; text-decoration:none; border-radius:6px; font-weight:bold;'>Login to Your Account</a>",
+                // Fixed: Added display:inline-block and increased border-radius to 50px for a perfectly round pill shape
+                Body = $"<h3>Hello,</h3><p>Your account has been approved by the system administrator.</p><br><a href='{loginUrl}' style='display:inline-block; padding:12px 24px; background-color:#D9C5B2; color:#14110F; text-decoration:none; border-radius:50px; font-weight:bold;'>Login to Your Account</a>",
                 IsBodyHtml = true,
             };
             mailMessage.To.Add(toEmail);
