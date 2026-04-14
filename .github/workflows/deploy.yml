@@ -42,4 +42,4 @@ jobs:
           docker rm mymvcapp || true
           docker system prune -f || true
           docker pull ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
-          docker run -d -p 80:8080 --restart always --name mymvcapp ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
+          docker run -d -p 80:8080 --restart always --name mymvcapp -e AWS__UserPoolClientSecret="${{ secrets.AWS_USER_POOL_CLIENT_SECRET }}" ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
