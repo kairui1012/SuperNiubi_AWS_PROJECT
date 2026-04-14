@@ -4,9 +4,6 @@ namespace MyMvcApp.Models
 {
     public class RegisterViewModel
     {
-        [Required]
-        [Display(Name = "Nickname")]
-        public string Nickname { get; set; }
 
         [Required]
         [EmailAddress]

@@ -22,7 +22,7 @@ namespace MyMvcApp.Services
             };
 
             // Update this port to match your local running port!
-            var loginUrl = "https://localhost:8080/Account/Login"; 
+            var loginUrl = "https://localhost:5051"; 
             
             var mailMessage = new MailMessage
             {

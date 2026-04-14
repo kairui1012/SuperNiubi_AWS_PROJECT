@@ -88,7 +88,6 @@ namespace MyMvcApp.Controllers
                 if (result.Succeeded)
                 {
                     _dbContext.Users.Add(new AppUser {
-                        Nickname = model.Nickname, // Still save nickname to Neon DB
                         Email = model.Email,
                         IsApproved = false,
                         Role = "Tenant" 

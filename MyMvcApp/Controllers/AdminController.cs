@@ -43,13 +43,12 @@ namespace MyMvcApp.Controllers
                     var confirmRequest = new AdminConfirmSignUpRequest
                     {
                         UserPoolId = userPoolId,
-                        Username = user.Email // We used Nickname as the Cognito Username
+                        Username = user.Email // Using Email for Cognito
                     };
                     await _cognitoClient.AdminConfirmSignUpAsync(confirmRequest);
                 }
                 catch (Exception ex)
                 {
-                    // If Cognito fails, we shouldn't approve in DB
                     TempData["ErrorMessage"] = $"Failed to confirm in Cognito: {ex.Message}";
                     return RedirectToAction("Admin");
                 }
@@ -58,8 +57,18 @@ namespace MyMvcApp.Controllers
                 user.IsApproved = true;
                 await _dbContext.SaveChangesAsync();
                 
-                // 3. Send your custom welcome email
-                await _emailService.SendApprovalEmailAsync(user.Email, user.Nickname);
+                // 3. Send email safely (won't crash the app if it fails)
+                try 
+                {
+                    await _emailService.SendApprovalEmailAsync(user.Email, user.Nickname);
+                    TempData["SuccessMessage"] = "User approved and email sent!";
+                }
+                catch (Exception ex)
+                {
+                    // The user is still approved in the DB, but we log that the email failed
+                    Console.WriteLine($"Email Failed: {ex.Message}");
+                    TempData["SuccessMessage"] = "User approved, but the notification email failed to send.";
+                }
             }
             return RedirectToAction("Admin");
         }
