@@ -43,7 +43,7 @@ namespace MyMvcApp.Controllers
                     var confirmRequest = new AdminConfirmSignUpRequest
                     {
                         UserPoolId = userPoolId,
-                        Username = user.Nickname // We used Nickname as the Cognito Username
+                        Username = user.Email // We used Nickname as the Cognito Username
                     };
                     await _cognitoClient.AdminConfirmSignUpAsync(confirmRequest);
                 }

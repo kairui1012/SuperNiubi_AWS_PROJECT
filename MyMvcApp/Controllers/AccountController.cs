@@ -31,26 +31,25 @@ namespace MyMvcApp.Controllers
         {
             if (ModelState.IsValid)
             {
-                // 1. CHECK LOCAL DB FOR APPROVAL FIRST
-                var appUser = _dbContext.Users.FirstOrDefault(u => u.Nickname == model.Nickname);
+                // 1. LOOKUP BY EMAIL NOW
+                var appUser = _dbContext.Users.FirstOrDefault(u => u.Email.ToLower() == model.Email.ToLower());
                 
                 if (appUser == null) {
                     ModelState.AddModelError(string.Empty, "User does not exist.");
                     return View(model);
                 }
                 if (!appUser.IsApproved) {
-                    ModelState.AddModelError(string.Empty, "Your account is pending Admin approval. Please wait for the email.");
+                    ModelState.AddModelError(string.Empty, "Your account is pending Admin approval.");
                     return View(model);
                 }
 
-                // 2. IF APPROVED, LOGIN TO COGNITO
                 try 
-{
-                    var result = await _signInManager.PasswordSignInAsync(model.Nickname, model.Password, model.RememberMe, false);
+                {
+                    // 2. SIGN IN TO COGNITO USING EMAIL
+                    var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
 
                     if (result.Succeeded)
                     {
-                        // 3. ROLE-BASED REDIRECTION
                         if (appUser.Role == "Admin") return RedirectToAction("Admin", "Admin");
                         if (appUser.Role == "Landlord") return RedirectToAction("Landlord", "Landlord");
                         return RedirectToAction("Tenant", "Tenant");
@@ -59,7 +58,6 @@ namespace MyMvcApp.Controllers
                 }
                 catch (Amazon.CognitoIdentityProvider.Model.UserNotConfirmedException)
                 {
-                    // Catch the Cognito error nicely instead of crashing the server
                     ModelState.AddModelError(string.Empty, "Your account has not been confirmed by the administrator yet.");
                 }
             }
@@ -81,22 +79,22 @@ namespace MyMvcApp.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = _pool.GetUser(model.Nickname);
+                // CREATE COGNITO USER USING EMAIL AS THE IDENTIFIER
+                var user = _pool.GetUser(model.Email); 
                 user.Attributes.Add("email", model.Email);
+                
                 var result = await _userManager.CreateAsync(user, model.Password);
 
                 if (result.Succeeded)
                 {
-                    // 1. Save to Neon DB (Unapproved by default)
                     _dbContext.Users.Add(new AppUser {
-                        Nickname = model.Nickname,
+                        Nickname = model.Nickname, // Still save nickname to Neon DB
                         Email = model.Email,
                         IsApproved = false,
-                        Role = "Tenant" // Default role
+                        Role = "Tenant" 
                     });
                     await _dbContext.SaveChangesAsync();
 
-                    // 2. Redirect to login with a success message (DO NOT auto-login)
                     TempData["SuccessMessage"] = "Registration successful! Please wait for admin approval.";
                     return RedirectToAction("Login");
                 }

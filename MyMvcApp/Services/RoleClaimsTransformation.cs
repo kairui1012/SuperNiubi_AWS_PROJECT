@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using MyMvcApp.Data;
+using System; // Required for Console
 
 namespace MyMvcApp.Services
 {
@@ -15,7 +16,6 @@ namespace MyMvcApp.Services
 
         public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
-            // 1. Prevent infinite loops / multiple DB calls
             if (principal.HasClaim(c => c.Type == "NeonDbRoleStamped"))
             {
                 return Task.FromResult(principal);
@@ -24,28 +24,33 @@ namespace MyMvcApp.Services
             var clone = principal.Clone();
             var mainIdentity = clone.Identity as ClaimsIdentity;
 
-            // 2. Ensure the user is actually logged in
             if (mainIdentity != null && mainIdentity.IsAuthenticated)
             {
-                // 3. Extract the username safely (AWS sometimes uses custom claim names)
-                var username = clone.FindFirst("cognito:username")?.Value 
-                            ?? clone.FindFirst(ClaimTypes.Name)?.Value 
-                            ?? mainIdentity.Name;
+                var email = clone.FindFirst(ClaimTypes.Email)?.Value;
 
-                if (!string.IsNullOrEmpty(username))
+                Console.WriteLine($"\n[DEBUG] --> Attempting to authorize user by Email: '{email}'");
+
+                if (!string.IsNullOrEmpty(email))
                 {
-                    // 4. Look them up in Neon DB
-                    var user = _dbContext.Users.FirstOrDefault(u => u.Nickname == username);
+                    var user = _dbContext.Users.FirstOrDefault(u => u.Email == email);
+                    
                     if (user != null)
                     {
-                        // 5. THE FIX: Inject the role directly into the main AWS identity card.
-                        // We stamp it three different ways to guarantee ASP.NET catches it!
-                        mainIdentity.AddClaim(new Claim(mainIdentity.RoleClaimType ?? ClaimTypes.Role, user.Role));
-                        mainIdentity.AddClaim(new Claim(ClaimTypes.Role, user.Role));
-                        mainIdentity.AddClaim(new Claim("cognito:groups", user.Role)); 
+                        var cleanRole = user.Role.Trim(); // Removes accidental spaces from DB
+                        Console.WriteLine($"[DEBUG] --> User found in DB! Role assigned: '{cleanRole}'");
 
-                        // Mark as processed
-                        mainIdentity.AddClaim(new Claim("NeonDbRoleStamped", "true"));
+                        // 2. THE FIX: Create a dedicated, explicitly authenticated Identity card 
+                        // Passing a string ("NeonDbAuth") forces IsAuthenticated = true!
+                        var roleIdentity = new ClaimsIdentity("NeonDbAuth", ClaimTypes.Name, ClaimTypes.Role);
+                        roleIdentity.AddClaim(new Claim(ClaimTypes.Role, cleanRole));
+                        roleIdentity.AddClaim(new Claim("NeonDbRoleStamped", "true"));
+
+                        clone.AddIdentity(roleIdentity);
+                        Console.WriteLine($"[DEBUG] --> Success: Role stamped onto Identity.\n");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[DEBUG] --> FAILED: User '{email}' was NOT found in the Neon Database!\n");
                     }
                 }
             }
