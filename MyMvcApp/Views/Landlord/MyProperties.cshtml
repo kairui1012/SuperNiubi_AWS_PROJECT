@@ -1,0 +1,83 @@
+@model List<MyMvcApp.Models.Property>
+
+@{
+    ViewData["Title"] = "My Properties";
+}
+
+<style>
+    body {
+        background-color: #14110F;
+        color: #D9C5B2;
+    }
+
+    .page-card {
+        background-color: #34312D;
+        border-left: 4px solid #7E7F83;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .btn-custom {
+        background-color: #7E7F83;
+        color: #14110F;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 0.8rem;
+        margin-top: 1rem;
+        font-weight: 600;
+    }
+
+    .btn-custom:hover {
+        background-color: #D9C5B2;
+        color: #14110F;
+    }
+
+    .property-box {
+        background-color: #2A2724;
+        border: 1px solid #7E7F83;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .muted-text {
+        color: #7E7F83;
+    }
+</style>
+
+<div class="container">
+    <div class="page-card">
+        <h2>My Properties</h2>
+        <p class="muted-text">
+            View and manage all your properties here.
+        </p>
+
+        <a href="/Landlord/AddProperty" class="btn-custom">Add New Property</a>
+        <a href="/Landlord/Dashboard" class="btn-custom">Back to Dashboard</a>
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="property-box">
+                <p>No properties found. Start by adding your first property.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var property in Model)
+            {
+                <div class="property-box">
+                    <h4>@property.Title</h4>
+                    <p><strong>Address:</strong> @property.Address</p>
+                    <p><strong>City:</strong> @property.City</p>
+                    <p><strong>Rent Price:</strong> RM @property.RentPrice</p>
+                    <p><strong>Bedrooms:</strong> @property.Bedrooms</p>
+                    <p><strong>Status:</strong> @property.Status</p>
+                </div>
+            }
+        }
+    </div>
+</div>

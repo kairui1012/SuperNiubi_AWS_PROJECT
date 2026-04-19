@@ -1,0 +1,109 @@
+@model MyMvcApp.Models.Property
+
+@{
+    ViewData["Title"] = "Add Property";
+}
+
+<style>
+    body {
+        background-color: #14110F;
+        color: #D9C5B2;
+    }
+
+    .form-card {
+        background-color: #34312D;
+        border-left: 4px solid #7E7F83;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    label {
+        display: block;
+        margin-top: 1rem;
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 0.7rem;
+        border-radius: 5px;
+        border: none;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-custom {
+        background-color: #7E7F83;
+        color: #14110F;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 1rem;
+        margin-right: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-custom:hover {
+        background-color: #D9C5B2;
+        color: #14110F;
+    }
+
+    .validation-text {
+        color: #ff8a8a;
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="container">
+    <div class="form-card">
+        <h2>Add New Property</h2>
+        <p style="color: #7E7F83;">
+            Fill in the property information below.
+        </p>
+
+        <form asp-action="AddProperty" method="post">
+            @Html.AntiForgeryToken()
+
+            <label asp-for="Title">Property Title</label>
+            <input asp-for="Title" />
+            <span asp-validation-for="Title" class="validation-text"></span>
+
+            <label asp-for="Address">Address</label>
+            <input asp-for="Address" />
+            <span asp-validation-for="Address" class="validation-text"></span>
+
+            <label asp-for="City">City</label>
+            <input asp-for="City" />
+            <span asp-validation-for="City" class="validation-text"></span>
+
+            <label asp-for="RentPrice">Rent Price (RM)</label>
+            <input asp-for="RentPrice" type="number" step="0.01" />
+            <span asp-validation-for="RentPrice" class="validation-text"></span>
+
+            <label asp-for="Bedrooms">Bedrooms</label>
+            <input asp-for="Bedrooms" type="number" />
+            <span asp-validation-for="Bedrooms" class="validation-text"></span>
+
+            <label asp-for="Status">Status</label>
+            <select asp-for="Status">
+                <option value="">Select status</option>
+                <option value="Available">Available</option>
+                <option value="Occupied">Occupied</option>
+            </select>
+            <span asp-validation-for="Status" class="validation-text"></span>
+
+            <button type="submit" class="btn-custom">Save Property</button>
+            <a href="/Landlord/MyProperties" class="btn-custom">Back to My Properties</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
