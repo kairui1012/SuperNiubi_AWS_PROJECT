@@ -57,7 +57,7 @@ namespace MyMvcApp.Controllers
                     if (result.Succeeded)
                     {
                         if (appUser.Role == "Admin") return RedirectToAction("Admin", "Admin");
-                        if (appUser.Role == "Landlord") return RedirectToAction("Landlord", "Landlord");
+                        if (appUser.Role == "Landlord") return RedirectToAction("Dashboard", "Landlord");
                         return RedirectToAction("Tenant", "Tenant");
                     }
                     ModelState.AddModelError(string.Empty, "Invalid password.");

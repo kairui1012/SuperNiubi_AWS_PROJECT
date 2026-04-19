@@ -1,0 +1,47 @@
+@{
+    ViewData["Title"] = "Landlord Dashboard";
+}
+
+<style>
+    body {
+        background-color: #14110F;
+        color: #D9C5B2;
+    }
+
+    .role-card {
+        background-color: #34312D;
+        border-left: 4px solid #7E7F83;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .btn-custom {
+        background-color: #7E7F83;
+        color: #14110F;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 1rem;
+        font-weight: 600;
+    }
+
+    .btn-custom:hover {
+        background-color: #D9C5B2;
+        color: #14110F;
+    }
+</style>
+
+<div class="container">
+    <div class="role-card">
+        <h2>Landlord Workspace</h2>
+        <p style="color: #7E7F83;">
+            You are currently viewing the system as a <strong>Landlord</strong>.
+            You can manage your properties, monitor rental information, and handle property-related operations here.
+        </p>
+
+        <a href="/Landlord/MyProperties" class="btn-custom">Manage My Properties</a>
+    </div>
+</div>
