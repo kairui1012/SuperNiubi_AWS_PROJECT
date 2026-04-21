@@ -2,7 +2,7 @@
   "ExpandedNodes": [
     "",
     "\\MyMvcApp",
-    "\\MyMvcApp\\Controllers",
+    "\\MyMvcApp\\Data",
     "\\MyMvcApp\\Migrations",
     "\\MyMvcApp\\Models",
     "\\MyMvcApp\\obj",
@@ -11,6 +11,6 @@
     "\\MyMvcApp\\Views",
     "\\MyMvcApp\\Views\\Shared"
   ],
-  "SelectedNode": "\\MyMvcApp\\Views\\Tenant\\Tenant.cshtml",
+  "SelectedNode": "\\MyMvcApp\\Data\\AppDbContext.cs",
   "PreviewInSolutionExplorer": false
 }
