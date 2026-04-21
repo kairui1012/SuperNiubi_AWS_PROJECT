@@ -23,5 +23,26 @@ namespace MyMvcApp.Controllers
             ViewBag.TenantEmail = email;
             return View();
         }
+
+        public async Task<IActionResult> MyProperty()
+        {
+            return View();
+        }
+
+        public async Task<IActionResult> MaintenanceRequest()
+        {
+
+            return View();
+        }
+
+        public async Task<IActionResult> Documents()
+        { 
+            return View();
+        }
+
+        public async Task<IActionResult> Payments()
+        {
+            return View();
+        }
     }
 }

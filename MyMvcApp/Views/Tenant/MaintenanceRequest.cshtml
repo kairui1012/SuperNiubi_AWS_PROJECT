@@ -1,0 +1,627 @@
+﻿@{
+    ViewData["Title"] = "Maintenance Requests";
+    // Replace with Model data
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg-deep: #14110F;
+        --bg-card: #1E1B18;
+        --bg-elevated: #2A2723;
+        --border: rgba(126,127,131,0.25);
+        --border-hover: rgba(126,127,131,0.55);
+        --text-primary: #E8D9C8;
+        --text-muted: #7E7F83;
+        --accent: #C8965A;
+        --accent-dim: rgba(200,150,90,0.08);
+        --accent-glow: rgba(200,150,90,0.18);
+        --green: #6BBF8E;
+        --green-dim: rgba(107,191,142,0.12);
+        --red: #D97B6C;
+        --red-dim: rgba(217,123,108,0.12);
+        --blue: #7AA8C7;
+        --blue-dim: rgba(122,168,199,0.12);
+        --yellow: #D4AC5A;
+        --yellow-dim: rgba(212,172,90,0.12);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        background-color: var(--bg-deep);
+        color: var(--text-primary);
+        font-family: 'DM Sans', sans-serif;
+    }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(200,150,90,0.07) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+    .tenant-wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem 4rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .breadcrumb-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-bottom: 1.8rem;
+    }
+
+        .breadcrumb-nav a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+    .page-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+        .page-title-row h1 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+            .page-title-row h1 span {
+                color: var(--accent);
+            }
+
+    .btn-primary {
+        background: var(--accent);
+        color: #14110F;
+        border: none;
+        border-radius: 7px;
+        padding: 0.6rem 1.3rem;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.15s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+        .btn-primary:hover {
+            opacity: 0.88;
+            transform: translateY(-1px);
+            color: #14110F;
+            text-decoration: none;
+        }
+
+    .btn-secondary {
+        background: var(--bg-elevated);
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 0.6rem 1.1rem;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: border-color 0.2s, color 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+        .btn-secondary:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+    /* Form card */
+    .form-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-top: 2px solid var(--accent);
+        border-radius: 10px;
+        padding: 1.8rem 2rem;
+        margin-bottom: 2rem;
+        display: none;
+    }
+
+        .form-card.open {
+            display: block;
+            animation: slideDown 0.25s ease;
+        }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .form-card h3 {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-bottom: 1.4rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.2rem 1.5rem;
+    }
+
+    @@media (max-width: 600px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+        .form-group.full {
+            grid-column: 1/-1;
+        }
+
+        .form-group label {
+            font-size: 0.77rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 7px;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.88rem;
+            font-family: 'DM Sans', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            width: 100%;
+        }
+
+            .form-group input:focus,
+            .form-group select:focus,
+            .form-group textarea:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px var(--accent-dim);
+            }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-group select option {
+            background: var(--bg-elevated);
+        }
+
+    .form-actions {
+        display: flex;
+        gap: 0.8rem;
+        margin-top: 1.5rem;
+        justify-content: flex-end;
+    }
+
+    /* Filter bar */
+    .filter-bar {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-btn {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        border-radius: 6px;
+        padding: 0.4rem 0.9rem;
+        font-size: 0.78rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .filter-btn:hover, .filter-btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+    /* Request table */
+    .requests-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .requests-card-header {
+        padding: 1.1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+        .requests-card-header .title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+    .count-badge {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 0.15rem 0.55rem;
+        border-radius: 20px;
+        font-size: 0.72rem;
+    }
+
+    .requests-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .requests-table th {
+            padding: 0.8rem 1.5rem;
+            text-align: left;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .requests-table td {
+            padding: 1rem 1.5rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .requests-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .requests-table tbody tr {
+            transition: background 0.15s;
+        }
+
+            .requests-table tbody tr:hover {
+                background: var(--bg-elevated);
+            }
+
+    .req-title {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 0.15rem;
+    }
+
+    .req-sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .category-tag {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 0.2rem 0.6rem;
+        border-radius: 5px;
+        font-size: 0.72rem;
+    }
+
+    .status-pill {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+    }
+
+    .sp-pending {
+        background: var(--yellow-dim);
+        color: var(--yellow);
+    }
+
+    .sp-approved {
+        background: var(--blue-dim);
+        color: var(--blue);
+    }
+
+    .sp-completed {
+        background: var(--green-dim);
+        color: var(--green);
+    }
+
+    .sp-rejected {
+        background: var(--red-dim);
+        color: var(--red);
+    }
+
+    .priority-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        margin-right: 0.3rem;
+    }
+
+    .p-high {
+        background: var(--red);
+    }
+
+    .p-medium {
+        background: var(--yellow);
+    }
+
+    .p-low {
+        background: var(--green);
+    }
+
+    .action-link {
+        font-size: 0.75rem;
+        color: var(--accent);
+        text-decoration: none;
+        transition: opacity 0.2s;
+    }
+
+        .action-link:hover {
+            opacity: 0.7;
+        }
+
+    @@media (max-width: 768px) {
+        .requests-table thead {
+            display: none;
+        }
+
+        .requests-table td {
+            display: block;
+            padding: 0.5rem 1rem;
+        }
+
+            .requests-table td::before {
+                content: attr(data-label) ': ';
+                font-size: 0.7rem;
+                color: var(--text-muted);
+                text-transform: uppercase;
+            }
+
+        .requests-table tr {
+            border-bottom: 1px solid var(--border);
+            display: block;
+            padding: 0.8rem 0;
+        }
+    }
+
+    @@keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .tenant-wrap > * {
+        animation: fadeUp 0.4s ease both;
+    }
+
+    .breadcrumb-nav {
+        animation-delay: 0s;
+    }
+
+    .page-title-row {
+        animation-delay: 0.05s;
+    }
+
+    .filter-bar {
+        animation-delay: 0.1s;
+    }
+
+    .requests-card {
+        animation-delay: 0.15s;
+    }
+</style>
+
+<div class="tenant-wrap">
+
+    <nav class="breadcrumb-nav">
+        <a href="/Tenant">Dashboard</a>
+        <span>></span>
+        <span>Maintenance Requests</span>
+    </nav>
+
+    <div class="page-title-row">
+        <h1>Maintenance <span>Requests</span></h1>
+        <button class="btn-primary" onclick="toggleForm()">+ New Request</button>
+    </div>
+
+    <!-- Create form (toggleable) -->
+    <div class="form-card" id="createForm">
+        <h3><i class="bi bi-wrench"></i> Submit New Maintenance Request</h3>
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Issue Title</label>
+                    <input type="text" name="Title" placeholder="e.g. Air conditioner not working" required />
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="Category" required>
+                        <option value="" disabled selected>Select category</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Air Conditioning">Air Conditioning</option>
+                        <option value="Structural">Structural</option>
+                        <option value="Appliances">Appliances</option>
+                        <option value="Pest Control">Pest Control</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select name="Priority" required>
+                        <option value="" disabled selected>Select priority</option>
+                        <option value="High"><i class="bi bi-dot text-danger"></i>High - Urgent</option>
+                        <option value="Medium"><i class="bi bi-dot text-warning"> Medium - Normal</option>
+                        <option value="Low"><i class="bi bi-dot text-success"> Low - Non-urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Preferred Date</label>
+                    <input type="date" name="PreferredDate" />
+                </div>
+                <div class="form-group full">
+                    <label>Description</label>
+                    <textarea name="Description" placeholder="Please describe the issue in detail..."></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="toggleForm()">Cancel</button>
+                <button type="submit" class="btn-primary">Submit Request</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterRequests(this,'all')">All</button>
+        <button class="filter-btn" onclick="filterRequests(this,'Pending')">Pending</button>
+        <button class="filter-btn" onclick="filterRequests(this,'Approved')">Approved</button>
+        <button class="filter-btn" onclick="filterRequests(this,'Completed')">Completed</button>
+    </div>
+
+    <!-- Requests table -->
+    <div class="requests-card">
+        <div class="requests-card-header">
+            <div class="title">
+                <span style="color:var(--accent)"><i class="bi bi-diamond-fill"></i></span>
+                All Requests
+                <span class="count-badge">3</span>
+            </div>
+        </div>
+        <table class="requests-table">
+            <thead>
+                <tr>
+                    <th>Issue</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Submitted</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Example rows  replace with @@foreach (var req in Model) -->
+                <tr data-status="Pending">
+                    <td data-label="Issue">
+                        <div class="req-title">Air conditioner not cooling</div>
+                        <div class="req-sub">Unit 12A - Living Room</div>
+                    </td>
+                    <td data-label="Category"><span class="category-tag">Air Conditioning</span></td>
+                    <td data-label="Priority"><span class="priority-dot p-high"></span>High</td>
+                    <td data-label="Submitted" style="color:var(--text-muted);font-size:0.8rem">12 Apr 2025</td>
+                    <td data-label="Status"><span class="status-pill sp-pending">Pending</span></td>
+                    <td><a href="#" class="action-link">View </a></td>
+                </tr>
+                <tr data-status="Approved">
+                    <td data-label="Issue">
+                        <div class="req-title">Leaking pipe in bathroom</div>
+                        <div class="req-sub">Unit 12A - Bathroom</div>
+                    </td>
+                    <td data-label="Category"><span class="category-tag">Plumbing</span></td>
+                    <td data-label="Priority"><span class="priority-dot p-medium"></span>Medium</td>
+                    <td data-label="Submitted" style="color:var(--text-muted);font-size:0.8rem">3 Apr 2025</td>
+                    <td data-label="Status"><span class="status-pill sp-approved">Approved</span></td>
+                    <td><a href="#" class="action-link">View <i class="bi bi-caret-right-fill"></i></a></td>
+                </tr>
+                <tr data-status="Completed">
+                    <td data-label="Issue">
+                        <div class="req-title">Broken door lock</div>
+                        <div class="req-sub">Unit 12A - Main Door</div>
+                    </td>
+                    <td data-label="Category"><span class="category-tag">Structural</span></td>
+                    <td data-label="Priority"><span class="priority-dot p-low"></span>Low</td>
+                    <td data-label="Submitted" style="color:var(--text-muted);font-size:0.8rem">18 Mar 2025</td>
+                    <td data-label="Status"><span class="status-pill sp-completed">Completed</span></td>
+                    <td><a href="#" class="action-link">View <i class="bi bi-caret-right-fill"></i></a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function toggleForm() {
+        const f = document.getElementById('createForm');
+        f.classList.toggle('open');
+        if (f.classList.contains('open')) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function filterRequests(btn, status) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.requests-table tbody tr').forEach(row => {
+            row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+        });
+    }
+</script>

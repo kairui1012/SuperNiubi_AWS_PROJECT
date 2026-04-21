@@ -54,6 +54,22 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/Documents.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XERvY3VtZW50cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/MaintenanceRequest.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XE1haW50ZW5hbmNlUmVxdWVzdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/MyProperty.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XE15UHJvcGVydHkuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/Payments.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XFBheW1lbnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/Tenant.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XFRlbmFudC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
