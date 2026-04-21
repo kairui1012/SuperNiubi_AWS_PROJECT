@@ -11,77 +11,79 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = MyMvcApp
 build_property.RootNamespace = MyMvcApp
-build_property.ProjectDir = D:\Year3\CloudAssignment\SuperNiubi_AWS_PROJECT\MyMvcApp\
+build_property.ProjectDir = C:\Users\yeo yu le\ReactJs\SuperNiubi_AWS_PROJECT\MyMvcApp\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 8.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = D:\Year3\CloudAssignment\SuperNiubi_AWS_PROJECT\MyMvcApp
+build_property.MSBuildProjectDirectory = C:\Users\yeo yu le\ReactJs\SuperNiubi_AWS_PROJECT\MyMvcApp
 build_property._RazorSourceGeneratorDebug = 
-build_property.EffectiveAnalysisLevelStyle = 8.0
-build_property.EnableCodeStyleSeverity = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Account/AccessDenied.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Account/AccessDenied.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxBY2Nlc3NEZW5pZWQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Account/Login.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Account/Login.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxMb2dpbi5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Account/Register.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Account/Register.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxSZWdpc3Rlci5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Admin/Admin.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Admin/Admin.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWRtaW5cQWRtaW4uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Home/Index.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Home/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Home/Privacy.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Home/Privacy.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/AddProperty.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcQWRkUHJvcGVydHkuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/Dashboard.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcRGFzaGJvYXJkLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/Landlord.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/Landlord.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcTGFuZGxvcmQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/MyProperties.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcTXlQcm9wZXJ0aWVzLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Shared/Error.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Shared/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Shared/_ValidationScriptsPartial.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Shared/_ValidationScriptsPartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/Tenant.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/Documents.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XERvY3VtZW50cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/MaintenanceRequest.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XE1haW50ZW5hbmNlUmVxdWVzdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/MyProperty.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XE15UHJvcGVydHkuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/Payments.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XFBheW1lbnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Tenant/Tenant.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuYW50XFRlbmFudC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/_ViewImports.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/_ViewStart.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/_ViewStart.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Year3/CloudAssignment/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Shared/_Layout.cshtml]
+[C:/Users/yeo yu le/ReactJs/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Shared/_Layout.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = b-ujr1yed5n4
