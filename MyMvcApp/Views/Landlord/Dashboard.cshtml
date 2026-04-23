@@ -8,7 +8,7 @@
         color: #D9C5B2;
     }
 
-    .role-card {
+    .dashboard-card {
         background-color: #34312D;
         border-left: 4px solid #7E7F83;
         padding: 2rem;
@@ -16,32 +16,66 @@
         margin-top: 2rem;
     }
 
+    .dashboard-title {
+        margin-bottom: 0.8rem;
+    }
+
+    .dashboard-subtitle {
+        color: #7E7F83;
+        margin-bottom: 1.5rem;
+    }
+
+    .button-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
     .btn-custom {
         background-color: #7E7F83;
         color: #14110F;
         border: none;
-        padding: 0.6rem 1.2rem;
-        border-radius: 5px;
+        padding: 0.8rem 1.2rem;
+        border-radius: 6px;
         text-decoration: none;
         display: inline-block;
-        margin-top: 1rem;
         font-weight: 600;
+        min-width: 220px;
+        text-align: center;
     }
 
     .btn-custom:hover {
         background-color: #D9C5B2;
         color: #14110F;
     }
+
+    .section-note {
+        margin-top: 1.5rem;
+        color: #C7B299;
+    }
 </style>
 
 <div class="container">
-    <div class="role-card">
-        <h2>Landlord Workspace</h2>
-        <p style="color: #7E7F83;">
+    <div class="dashboard-card">
+        <h2 class="dashboard-title">Landlord Workspace</h2>
+
+        <p class="dashboard-subtitle">
             You are currently viewing the system as a <strong>Landlord</strong>.
-            You can manage your properties, monitor rental information, and handle property-related operations here.
+            You can manage properties, review tenant details, handle maintenance requests,
+            upload documents, and view payment records from this dashboard.
         </p>
 
-        <a href="/Landlord/MyProperties" class="btn-custom">Manage My Properties</a>
+        <div class="button-grid">
+            <a href="/Landlord/MyProperties" class="btn-custom">Manage Properties</a>
+            <a href="/Landlord/Tenants" class="btn-custom">View Tenant Details</a>
+            <a href="/Landlord/MaintenanceRequests" class="btn-custom">Handle Maintenance Requests</a>
+            <a href="/Landlord/Documents" class="btn-custom">Upload Documents</a>
+            <a href="/Landlord/Payments" class="btn-custom">View Payment Records</a>
+        </div>
+
+        <p class="section-note">
+            Select a function above to continue managing your rental properties.
+        </p>
     </div>
 </div>

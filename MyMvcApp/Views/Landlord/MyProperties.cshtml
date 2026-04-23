@@ -29,6 +29,7 @@
         margin-right: 0.8rem;
         margin-top: 1rem;
         font-weight: 600;
+        cursor: pointer;
     }
 
     .btn-custom:hover {
@@ -47,6 +48,27 @@
     .muted-text {
         color: #7E7F83;
     }
+
+    .error-text {
+        color: #ff8a8a;
+        margin-top: 1rem;
+    }
+
+    .success-text {
+        color: #90ee90;
+        margin-top: 1rem;
+    }
+
+    .action-row {
+        margin-top: 1rem;
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .inline-form {
+        display: inline;
+    }
 </style>
 
 <div class="container">
@@ -55,6 +77,16 @@
         <p class="muted-text">
             View and manage all your properties here.
         </p>
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <p class="error-text">@TempData["ErrorMessage"]</p>
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <p class="success-text">@TempData["SuccessMessage"]</p>
+        }
 
         <a href="/Landlord/AddProperty" class="btn-custom">Add New Property</a>
         <a href="/Landlord/Dashboard" class="btn-custom">Back to Dashboard</a>
@@ -75,9 +107,23 @@
                     <p><strong>Address:</strong> @property.AddressLine1 @property.AddressLine2</p>
                     <p><strong>City:</strong> @property.City</p>
                     <p><strong>State:</strong> @property.State</p>
-                    <p><strong>Monthly Rent:</strong> RM @property.MonthlyRent</p>
+                    <p><strong>Postal Code:</strong> @property.PostalCode</p>
                     <p><strong>Bedrooms:</strong> @property.Bedrooms</p>
                     <p><strong>Bathrooms:</strong> @property.Bathrooms</p>
+                    <p><strong>Monthly Rent:</strong> RM @property.MonthlyRent</p>
+
+                    <div class="action-row">
+                        <a href="/Landlord/PropertyDetails/@property.PropertyId" class="btn-custom">Details</a>
+                        <a href="/Landlord/EditProperty/@property.PropertyId" class="btn-custom">Edit</a>
+
+                        <form asp-action="DeleteProperty" asp-controller="Landlord" method="post" class="inline-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@property.PropertyId" />
+                            <button type="submit" class="btn-custom" onclick="return confirm('Are you sure you want to delete this property?');">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
                 </div>
             }
         }

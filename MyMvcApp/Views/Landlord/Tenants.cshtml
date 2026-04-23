@@ -1,0 +1,96 @@
+@model List<MyMvcApp.Models.Tenant>
+
+@{
+    ViewData["Title"] = "Tenant Details";
+}
+
+<style>
+    body {
+        background-color: #14110F;
+        color: #D9C5B2;
+    }
+
+    .page-card {
+        background-color: #34312D;
+        border-left: 4px solid #7E7F83;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .tenant-box {
+        background-color: #2A2724;
+        border: 1px solid #7E7F83;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-custom {
+        background-color: #7E7F83;
+        color: #14110F;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 0.8rem;
+        margin-top: 1rem;
+        font-weight: 600;
+    }
+
+    .btn-custom:hover {
+        background-color: #D9C5B2;
+        color: #14110F;
+    }
+
+    .muted-text {
+        color: #7E7F83;
+    }
+
+    .error-text {
+        color: #ff8a8a;
+        margin-top: 1rem;
+    }
+</style>
+
+<div class="container">
+    <div class="page-card">
+        <h2>Tenant Details</h2>
+        <p class="muted-text">
+            View tenants assigned to your properties.
+        </p>
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <p class="error-text">@TempData["ErrorMessage"]</p>
+        }
+
+        <a href="/Landlord/Dashboard" class="btn-custom">Back to Dashboard</a>
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="tenant-box">
+                <p>No tenants found for your properties.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var tenant in Model)
+            {
+                <div class="tenant-box">
+                    <h4>@tenant.User.Email</h4>
+                    <p><strong>Property:</strong> @tenant.Property.PropertyName</p>
+                    <p><strong>Lease Start:</strong> @tenant.LeaseStartDate.ToShortDateString()</p>
+                    <p><strong>Lease End:</strong> @tenant.LeaseEndDate.ToShortDateString()</p>
+                    <p><strong>Monthly Rent:</strong> RM @tenant.MonthlyRent</p>
+                    <p><strong>Deposit Paid:</strong> RM @tenant.DepositPaid</p>
+                    <p><strong>Deposit Status:</strong> @tenant.DepositStatus</p>
+                    <p><strong>Lease Status:</strong> @tenant.LeaseStatus</p>
+
+                    <a href="/Landlord/TenantDetails/@tenant.TenantId" class="btn-custom">View Details</a>
+                </div>
+            }
+        }
+    </div>
+</div>
