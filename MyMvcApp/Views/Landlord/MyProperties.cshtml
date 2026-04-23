@@ -70,12 +70,14 @@
             @foreach (var property in Model)
             {
                 <div class="property-box">
-                    <h4>@property.Title</h4>
-                    <p><strong>Address:</strong> @property.Address</p>
+                    <h4>@property.PropertyName</h4>
+                    <p><strong>Type:</strong> @property.PropertyType</p>
+                    <p><strong>Address:</strong> @property.AddressLine1 @property.AddressLine2</p>
                     <p><strong>City:</strong> @property.City</p>
-                    <p><strong>Rent Price:</strong> RM @property.RentPrice</p>
+                    <p><strong>State:</strong> @property.State</p>
+                    <p><strong>Monthly Rent:</strong> RM @property.MonthlyRent</p>
                     <p><strong>Bedrooms:</strong> @property.Bedrooms</p>
-                    <p><strong>Status:</strong> @property.Status</p>
+                    <p><strong>Bathrooms:</strong> @property.Bathrooms</p>
                 </div>
             }
         }

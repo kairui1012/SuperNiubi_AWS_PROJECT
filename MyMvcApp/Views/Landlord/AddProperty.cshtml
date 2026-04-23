@@ -25,7 +25,7 @@
         font-weight: 600;
     }
 
-    input, select {
+    input, select, textarea {
         width: 100%;
         padding: 0.7rem;
         border-radius: 5px;
@@ -68,33 +68,71 @@
         <form asp-action="AddProperty" method="post">
             @Html.AntiForgeryToken()
 
-            <label asp-for="Title">Property Title</label>
-            <input asp-for="Title" />
-            <span asp-validation-for="Title" class="validation-text"></span>
+            <input asp-for="LandlordId" type="hidden" value="1" />
 
-            <label asp-for="Address">Address</label>
-            <input asp-for="Address" />
-            <span asp-validation-for="Address" class="validation-text"></span>
+            <label asp-for="PropertyName">Property Name</label>
+            <input asp-for="PropertyName" />
+            <span asp-validation-for="PropertyName" class="validation-text"></span>
+
+            <label asp-for="PropertyType">Property Type</label>
+            <select asp-for="PropertyType" asp-items="Html.GetEnumSelectList<PropertyType>()"></select>
+            <span asp-validation-for="PropertyType" class="validation-text"></span>
+
+            <label asp-for="AddressLine1">Address Line 1</label>
+            <input asp-for="AddressLine1" />
+            <span asp-validation-for="AddressLine1" class="validation-text"></span>
+
+            <label asp-for="AddressLine2">Address Line 2</label>
+            <input asp-for="AddressLine2" />
+            <span asp-validation-for="AddressLine2" class="validation-text"></span>
 
             <label asp-for="City">City</label>
             <input asp-for="City" />
             <span asp-validation-for="City" class="validation-text"></span>
 
-            <label asp-for="RentPrice">Rent Price (RM)</label>
-            <input asp-for="RentPrice" type="number" step="0.01" />
-            <span asp-validation-for="RentPrice" class="validation-text"></span>
+            <label asp-for="State">State</label>
+            <input asp-for="State" />
+            <span asp-validation-for="State" class="validation-text"></span>
+
+            <label asp-for="PostalCode">Postal Code</label>
+            <input asp-for="PostalCode" />
+            <span asp-validation-for="PostalCode" class="validation-text"></span>
+
+            <label asp-for="FloorNumber">Floor Number</label>
+            <input asp-for="FloorNumber" />
+            <span asp-validation-for="FloorNumber" class="validation-text"></span>
+
+            <label asp-for="UnitNumber">Unit Number</label>
+            <input asp-for="UnitNumber" />
+            <span asp-validation-for="UnitNumber" class="validation-text"></span>
+
+            <label asp-for="SizeSqFt">Size (Sq Ft)</label>
+            <input asp-for="SizeSqFt" type="number" step="0.01" />
+            <span asp-validation-for="SizeSqFt" class="validation-text"></span>
 
             <label asp-for="Bedrooms">Bedrooms</label>
             <input asp-for="Bedrooms" type="number" />
             <span asp-validation-for="Bedrooms" class="validation-text"></span>
 
-            <label asp-for="Status">Status</label>
-            <select asp-for="Status">
-                <option value="">Select status</option>
-                <option value="Available">Available</option>
-                <option value="Occupied">Occupied</option>
-            </select>
-            <span asp-validation-for="Status" class="validation-text"></span>
+            <label asp-for="Bathrooms">Bathrooms</label>
+            <input asp-for="Bathrooms" type="number" />
+            <span asp-validation-for="Bathrooms" class="validation-text"></span>
+
+            <label asp-for="MonthlyRent">Monthly Rent</label>
+            <input asp-for="MonthlyRent" type="number" step="0.01" />
+            <span asp-validation-for="MonthlyRent" class="validation-text"></span>
+
+            <label asp-for="DepositAmount">Deposit Amount</label>
+            <input asp-for="DepositAmount" type="number" step="0.01" />
+            <span asp-validation-for="DepositAmount" class="validation-text"></span>
+
+            <label asp-for="ParkingBay">Parking Bay</label>
+            <input asp-for="ParkingBay" />
+            <span asp-validation-for="ParkingBay" class="validation-text"></span>
+
+            <label asp-for="Description">Description</label>
+            <textarea asp-for="Description"></textarea>
+            <span asp-validation-for="Description" class="validation-text"></span>
 
             <button type="submit" class="btn-custom">Save Property</button>
             <a href="/Landlord/MyProperties" class="btn-custom">Back to My Properties</a>

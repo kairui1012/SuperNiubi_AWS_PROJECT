@@ -23,12 +23,7 @@ namespace MyMvcApp.Controllers
 
         public IActionResult MyProperties()
         {
-            var userEmail = User.Identity?.Name;
-
-            var properties = _dbContext.Properties
-                .Where(p => p.LandlordEmail == userEmail)
-                .ToList();
-
+            var properties = _dbContext.Properties.ToList();
             return View(properties);
         }
 
@@ -47,7 +42,9 @@ namespace MyMvcApp.Controllers
                 return View(model);
             }
 
-            model.LandlordEmail = User.Identity?.Name;
+            model.CreatedAt = DateTime.UtcNow;
+            model.UpdatedAt = DateTime.UtcNow;
+
             _dbContext.Properties.Add(model);
             _dbContext.SaveChanges();
 
