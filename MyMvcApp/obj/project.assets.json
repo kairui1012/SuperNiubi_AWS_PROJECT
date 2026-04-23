@@ -17,7 +17,9 @@
         "runtime": {
           "lib/net8.0/Amazon.AspNetCore.Identity.Cognito.dll": {}
         },
-        "frameworkReferences": ["Microsoft.AspNetCore.App"]
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
       },
       "Amazon.Extensions.CognitoAuthentication/3.1.4": {
         "type": "package",
@@ -2924,29 +2926,32 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\yeo yu le\\.nuget\\packages\\": {},
+    "C:\\Users\\Elvin\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\MyMvcApp.csproj",
+      "projectUniqueName": "D:\\Year3\\CloudAssignment\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\MyMvcApp.csproj",
       "projectName": "MyMvcApp",
-      "projectPath": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\MyMvcApp.csproj",
-      "packagesPath": "C:\\Users\\yeo yu le\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\obj\\",
+      "projectPath": "D:\\Year3\\CloudAssignment\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\MyMvcApp.csproj",
+      "packagesPath": "C:\\Users\\Elvin\\.nuget\\packages\\",
+      "outputPath": "D:\\Year3\\CloudAssignment\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\yeo yu le\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Elvin\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
-      "originalTargetFrameworks": ["net8.0"],
+      "originalTargetFrameworks": [
+        "net8.0"
+      ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -2956,8 +2961,16 @@
         }
       },
       "warningProperties": {
-        "warnAsError": ["NU1605"]
-      }
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "10.0.200"
     },
     "frameworks": {
       "net8.0": {
@@ -3003,7 +3016,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.100/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
       }
     }
   }
