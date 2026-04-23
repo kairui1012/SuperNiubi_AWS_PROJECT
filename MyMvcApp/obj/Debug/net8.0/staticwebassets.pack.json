@@ -5,12 +5,32 @@
       "PackagePath": "staticwebassets/MyMvcApp.bundle.scp.css"
     },
     {
+      "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/css/pages/admin.css",
+      "PackagePath": "staticwebassets/css/pages/admin.css"
+    },
+    {
+      "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/css/pages/app-shell.css",
+      "PackagePath": "staticwebassets/css/pages/app-shell.css"
+    },
+    {
+      "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/css/pages/auth.css",
+      "PackagePath": "staticwebassets/css/pages/auth.css"
+    },
+    {
+      "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/css/pages/landlord.css",
+      "PackagePath": "staticwebassets/css/pages/landlord.css"
+    },
+    {
       "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/css/site.css",
       "PackagePath": "staticwebassets/css/site.css"
     },
     {
       "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/favicon.ico",
       "PackagePath": "staticwebassets/favicon.ico"
+    },
+    {
+      "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/images/auth-side.jpg",
+      "PackagePath": "staticwebassets/images/auth-side.jpg"
     },
     {
       "Id": "/Users/project/dotNET/MyMvcApp/wwwroot/js/site.js",

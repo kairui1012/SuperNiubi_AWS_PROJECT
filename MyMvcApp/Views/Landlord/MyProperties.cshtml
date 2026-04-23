@@ -4,82 +4,53 @@
     ViewData["Title"] = "My Properties";
 }
 
-<style>
-    body {
-        background-color: #14110F;
-        color: #D9C5B2;
-    }
+<div class="container landlord-shell">
+    <section class="landlord-hero d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <div class="landlord-kicker">Property Management</div>
+            <h1 class="landlord-title mb-2">My Properties</h1>
+            <p class="landlord-subtitle mb-0">View and manage all properties in a cleaner cloud-style layout.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/Landlord/AddProperty" class="btn landlord-btn">Add New Property</a>
+            <a href="/Landlord/Dashboard" class="btn landlord-secondary-btn">Back to Dashboard</a>
+        </div>
+    </section>
 
-    .page-card {
-        background-color: #34312D;
-        border-left: 4px solid #7E7F83;
-        padding: 2rem;
-        border-radius: 8px;
-        margin-top: 2rem;
-    }
-
-    .btn-custom {
-        background-color: #7E7F83;
-        color: #14110F;
-        border: none;
-        padding: 0.6rem 1.2rem;
-        border-radius: 5px;
-        text-decoration: none;
-        display: inline-block;
-        margin-right: 0.8rem;
-        margin-top: 1rem;
-        font-weight: 600;
-    }
-
-    .btn-custom:hover {
-        background-color: #D9C5B2;
-        color: #14110F;
-    }
-
-    .property-box {
-        background-color: #2A2724;
-        border: 1px solid #7E7F83;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-top: 1.5rem;
-    }
-
-    .muted-text {
-        color: #7E7F83;
-    }
-</style>
-
-<div class="container">
-    <div class="page-card">
-        <h2>My Properties</h2>
-        <p class="muted-text">
-            View and manage all your properties here.
-        </p>
-
-        <a href="/Landlord/AddProperty" class="btn-custom">Add New Property</a>
-        <a href="/Landlord/Dashboard" class="btn-custom">Back to Dashboard</a>
-
+    <section class="mt-4">
         @if (Model == null || !Model.Any())
         {
-            <div class="property-box">
-                <p>No properties found. Start by adding your first property.</p>
+            <div class="landlord-panel landlord-empty">
+                No properties found. Start by adding your first property.
             </div>
         }
         else
         {
-            @foreach (var property in Model)
-            {
-                <div class="property-box">
-                    <h4>@property.PropertyName</h4>
-                    <p><strong>Type:</strong> @property.PropertyType</p>
-                    <p><strong>Address:</strong> @property.AddressLine1 @property.AddressLine2</p>
-                    <p><strong>City:</strong> @property.City</p>
-                    <p><strong>State:</strong> @property.State</p>
-                    <p><strong>Monthly Rent:</strong> RM @property.MonthlyRent</p>
-                    <p><strong>Bedrooms:</strong> @property.Bedrooms</p>
-                    <p><strong>Bathrooms:</strong> @property.Bathrooms</p>
-                </div>
-            }
+            <div class="row g-3">
+                @foreach (var property in Model)
+                {
+                    <div class="col-lg-6">
+                        <div class="landlord-card h-100">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div>
+                                    <div class="landlord-kicker">Property</div>
+                                    <h4 class="mt-2 mb-2">@property.PropertyName</h4>
+                                </div>
+                                <span class="badge badge-soft-primary">@property.PropertyType</span>
+                            </div>
+                            <div class="landlord-muted mb-2">@property.AddressLine1 @property.AddressLine2</div>
+                            <div class="row g-2 small">
+                                <div class="col-6"><strong>City:</strong> @property.City</div>
+                                <div class="col-6"><strong>State:</strong> @property.State</div>
+                                <div class="col-6"><strong>Monthly Rent:</strong> RM @property.MonthlyRent</div>
+                                <div class="col-6"><strong>Size:</strong> @property.SizeSqFt sq ft</div>
+                                <div class="col-6"><strong>Bedrooms:</strong> @property.Bedrooms</div>
+                                <div class="col-6"><strong>Bathrooms:</strong> @property.Bathrooms</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
         }
-    </div>
+    </section>
 </div>

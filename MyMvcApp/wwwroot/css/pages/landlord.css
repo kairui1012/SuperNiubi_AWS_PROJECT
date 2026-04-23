@@ -1,0 +1,248 @@
+body.landlord-cloud-skin {
+    background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 34%),
+        radial-gradient(circle at 82% 16%, rgba(14, 165, 233, 0.1), transparent 24%),
+        linear-gradient(180deg, #f6f9fc 0%, #eef4fb 100%);
+    color: #0f172a;
+}
+
+body.landlord-cloud-skin .container {
+    position: relative;
+}
+
+body.landlord-cloud-skin .landlord-shell {
+    padding: 1.25rem 0 2.25rem;
+}
+
+body.landlord-cloud-skin .landlord-hero,
+body.landlord-cloud-skin .landlord-card,
+body.landlord-cloud-skin .landlord-panel,
+body.landlord-cloud-skin .landlord-form-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 22px;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
+}
+
+body.landlord-cloud-skin .landlord-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 1.75rem;
+    margin-top: 0.5rem;
+}
+
+body.landlord-cloud-skin .landlord-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -10% -40% auto;
+    width: 20rem;
+    height: 20rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0) 70%);
+    pointer-events: none;
+}
+
+body.landlord-cloud-skin .landlord-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.78rem;
+    color: #2563eb;
+    font-weight: 800;
+}
+
+body.landlord-cloud-skin .landlord-title {
+    margin: 0.35rem 0 0.75rem;
+    font-size: clamp(1.8rem, 3.2vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+body.landlord-cloud-skin .landlord-subtitle,
+body.landlord-cloud-skin .landlord-muted,
+body.landlord-cloud-skin .panel-meta,
+body.landlord-cloud-skin .landlord-help,
+body.landlord-cloud-skin .landlord-empty {
+    color: #64748b;
+}
+
+body.landlord-cloud-skin .landlord-chip,
+body.landlord-cloud-skin .landlord-btn,
+body.landlord-cloud-skin .landlord-secondary-btn {
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    font-weight: 700;
+    box-shadow: none !important;
+}
+
+body.landlord-cloud-skin .landlord-btn {
+    background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+    color: #ffffff;
+    border: none;
+}
+
+body.landlord-cloud-skin .landlord-btn:hover,
+body.landlord-cloud-skin .landlord-btn:focus-visible {
+    color: #ffffff;
+    filter: brightness(1.03);
+}
+
+body.landlord-cloud-skin .landlord-secondary-btn {
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
+}
+
+body.landlord-cloud-skin .landlord-secondary-btn:hover,
+body.landlord-cloud-skin .landlord-secondary-btn:focus-visible {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.22);
+    color: #0f172a;
+}
+
+body.landlord-cloud-skin .landlord-card,
+body.landlord-cloud-skin .landlord-panel,
+body.landlord-cloud-skin .landlord-form-card {
+    padding: 1.3rem;
+}
+
+body.landlord-cloud-skin .landlord-card + .landlord-card,
+body.landlord-cloud-skin .property-box + .property-box {
+    margin-top: 1rem;
+}
+
+body.landlord-cloud-skin .landlord-card h4,
+body.landlord-cloud-skin .landlord-card h5,
+body.landlord-cloud-skin .landlord-panel h2,
+body.landlord-cloud-skin .landlord-form-card h2 {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+body.landlord-cloud-skin .landlord-card p,
+body.landlord-cloud-skin .landlord-panel p,
+body.landlord-cloud-skin .landlord-form-card p {
+    color: #334155;
+}
+
+body.landlord-cloud-skin .landlord-chip,
+body.landlord-cloud-skin .landlord-chip:hover,
+body.landlord-cloud-skin .landlord-chip:focus-visible {
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
+}
+
+body.landlord-cloud-skin .badge-soft-success {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
+body.landlord-cloud-skin .badge-soft-warning {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+
+body.landlord-cloud-skin .badge-soft-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+body.landlord-cloud-skin .badge-soft-info {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0284c7;
+}
+
+body.landlord-cloud-skin .badge-soft-primary {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+}
+
+body.landlord-cloud-skin .badge-soft-secondary {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+}
+
+body.landlord-cloud-skin .auth-page-topbar .app-topbar-links .nav-link {
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+    border-radius: 0;
+    padding: 0.45rem 0.75rem;
+    border: 0;
+    background: transparent;
+}
+
+body.landlord-cloud-skin .auth-page-topbar .app-topbar-links .nav-link:hover,
+body.landlord-cloud-skin .auth-page-topbar .app-topbar-links .nav-link:focus-visible {
+    color: rgba(0, 0, 0, 0.75);
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body.landlord-cloud-skin .auth-page-topbar .app-user-chip {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    color: #0f172a;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+}
+
+body.landlord-cloud-skin .landlord-input,
+body.landlord-cloud-skin .landlord-select,
+body.landlord-cloud-skin .landlord-textarea,
+body.landlord-cloud-skin input,
+body.landlord-cloud-skin select,
+body.landlord-cloud-skin textarea {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: #ffffff;
+    color: #0f172a;
+    padding: 0.78rem 0.95rem;
+    box-shadow: none;
+}
+
+body.landlord-cloud-skin .landlord-input:focus,
+body.landlord-cloud-skin .landlord-select:focus,
+body.landlord-cloud-skin .landlord-textarea:focus,
+body.landlord-cloud-skin input:focus,
+body.landlord-cloud-skin select:focus,
+body.landlord-cloud-skin textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.18rem rgba(59, 130, 246, 0.14);
+    outline: none;
+}
+
+body.landlord-cloud-skin .landlord-error {
+    color: #dc2626;
+    font-size: 0.92rem;
+}
+
+body.landlord-cloud-skin .auth-page-topbar {
+    border-bottom: 1px solid rgba(222, 226, 230, 1);
+    background: #f8f9fa;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+body.landlord-cloud-skin .auth-page-topbar .navbar-brand,
+body.landlord-cloud-skin .auth-page-topbar .nav-link {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+body.landlord-cloud-skin .auth-page-topbar .nav-link:hover,
+body.landlord-cloud-skin .auth-page-topbar .nav-link:focus-visible {
+    color: #2563eb;
+}
+
+body.landlord-cloud-skin .auth-page-topbar .navbar-toggler {
+    border-color: rgba(148, 163, 184, 0.22);
+}
+
+@media (max-width: 575.98px) {
+    body.landlord-cloud-skin .landlord-shell {
+        padding: 1rem 0 1.5rem;
+    }
+
+    body.landlord-cloud-skin .landlord-hero {
+        padding: 1.2rem;
+        border-radius: 18px;
+    }
+}
