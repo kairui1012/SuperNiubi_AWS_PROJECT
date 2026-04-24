@@ -1,0 +1,177 @@
+@model MyMvcApp.Models.Tenant
+
+@{
+    ViewData["Title"] = "Tenant Details";
+}
+
+<div class="landlord-console">
+
+    <!-- Sidebar -->
+
+    <aside class="landlord-rail">
+
+        <div class="landlord-rail-brand">
+
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
+
+            <div>
+                <p class="landlord-rail-title">
+                    Landlord Console
+                </p>
+
+                <p class="landlord-rail-sub">
+                    Property Operations
+                </p>
+            </div>
+
+        </div>
+
+        <nav class="landlord-rail-nav">
+
+            <a href="/Landlord/Dashboard"
+               class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </a>
+
+            <a href="/Landlord/MyProperties"
+               class="landlord-rail-link">
+                <i class="bi bi-houses-fill"></i>
+                Properties
+            </a>
+
+            <a href="/Landlord/Tenants"
+               class="landlord-rail-link active">
+                <i class="bi bi-people-fill"></i>
+                Tenants
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+
+    <!-- Workspace -->
+
+    <section class="landlord-workspace">
+
+        <div class="landlord-toolbar">
+
+            <div>
+
+                <p class="landlord-kicker">
+                    TENANT DETAILS
+                </p>
+
+                <h1 class="landlord-heading">
+                    Tenant Information
+                </h1>
+
+                <p class="landlord-sub">
+                    View complete details of the selected tenant.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Details Panel -->
+
+        <article class="landlord-panel">
+
+            <div class="landlord-list">
+
+                <div class="landlord-list-item">
+                    <strong>Tenant Email</strong>
+                    <span>@Model.User.Email</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Property</strong>
+                    <span>@Model.Property.PropertyName</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Lease Start Date</strong>
+                    <span>@Model.LeaseStartDate.ToShortDateString()</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Lease End Date</strong>
+                    <span>@Model.LeaseEndDate.ToShortDateString()</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Monthly Rent</strong>
+                    <span>RM @Model.MonthlyRent</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Deposit Paid</strong>
+                    <span>RM @Model.DepositPaid</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Deposit Status</strong>
+                    <span>@Model.DepositStatus</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Rent Due Day</strong>
+                    <span>@Model.RentDueDay</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Lease Status</strong>
+                    <span>@Model.LeaseStatus</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Notes</strong>
+                    <span>@Model.Notes</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Created At</strong>
+                    <span>@Model.CreatedAt</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Updated At</strong>
+                    <span>@Model.UpdatedAt</span>
+                </div>
+
+            </div>
+
+
+
+            <!-- Buttons -->
+
+            <div class="landlord-actions mt-4">
+
+                <a href="/Landlord/Tenants"
+                   class="landlord-btn landlord-btn-outline">
+
+                    Back to Tenant List
+
+                </a>
+
+                <a href="/Landlord/Dashboard"
+                   class="landlord-btn landlord-btn-primary">
+
+                    Back to Dashboard
+
+                </a>
+
+            </div>
+
+        </article>
+
+    </section>
+
+</div>

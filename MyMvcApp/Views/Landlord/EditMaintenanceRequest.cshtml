@@ -1,0 +1,136 @@
+@model MyMvcApp.Models.MaintenanceRequest
+
+@{
+    ViewData["Title"] = "Handle Maintenance Request";
+}
+
+<div class="landlord-console">
+
+    <aside class="landlord-rail">
+        <div class="landlord-rail-brand">
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
+            <div>
+                <p class="landlord-rail-title">Landlord Console</p>
+                <p class="landlord-rail-sub">Property Operations</p>
+            </div>
+        </div>
+
+        <nav class="landlord-rail-nav">
+            <a href="/Landlord/Dashboard" class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard
+            </a>
+
+            <a href="/Landlord/MyProperties" class="landlord-rail-link">
+                <i class="bi bi-houses-fill"></i> Properties
+            </a>
+
+            <a href="/Landlord/Tenants" class="landlord-rail-link">
+                <i class="bi bi-people-fill"></i> Tenants
+            </a>
+
+            <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link active">
+                <i class="bi bi-tools"></i> Maintenance
+            </a>
+        </nav>
+    </aside>
+
+    <section class="landlord-workspace">
+
+        <div class="landlord-toolbar">
+            <div>
+                <p class="landlord-kicker">HANDLE REQUEST</p>
+                <h1 class="landlord-heading">Update Maintenance Request</h1>
+                <p class="landlord-sub">
+                    Review the issue and update its priority, status, and remarks.
+                </p>
+            </div>
+        </div>
+
+        <article class="landlord-panel">
+
+            <div class="landlord-list mb-4">
+
+                <div class="landlord-list-item">
+                    <strong>Title</strong>
+                    <span>@Model.Title</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Property</strong>
+                    <span>@Model.Property.PropertyName</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Tenant</strong>
+                    <span>@Model.Tenant.User.Email</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Category</strong>
+                    <span>@Model.Category</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Description</strong>
+                    <span>@Model.Description</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Preferred Date</strong>
+                    <span>@Model.PreferredDate?.ToString("dd MMM yyyy")</span>
+                </div>
+
+            </div>
+
+            <form asp-action="EditMaintenanceRequest"
+                  asp-controller="Landlord"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <input asp-for="RequestId" type="hidden" />
+                <input asp-for="TenantId" type="hidden" />
+                <input asp-for="PropertyId" type="hidden" />
+                <input asp-for="Title" type="hidden" />
+                <input asp-for="Category" type="hidden" />
+                <input asp-for="Description" type="hidden" />
+                <input asp-for="PreferredDate" type="hidden" />
+                <input asp-for="CreatedAt" type="hidden" />
+
+                <label asp-for="Priority" class="landlord-label"></label>
+                <select asp-for="Priority"
+                        class="landlord-select"
+                        asp-items="Html.GetEnumSelectList<MyMvcApp.Models.MaintenancePriority>()">
+                </select>
+
+                <label asp-for="Status" class="landlord-label"></label>
+                <select asp-for="Status"
+                        class="landlord-select"
+                        asp-items="Html.GetEnumSelectList<MyMvcApp.Models.MaintenanceStatus>()">
+                </select>
+
+                <label asp-for="LandlordRemarks" class="landlord-label"></label>
+                <textarea asp-for="LandlordRemarks"
+                          class="landlord-textarea">
+                </textarea>
+
+                <div class="landlord-actions mt-4">
+                    <button type="submit"
+                            class="landlord-btn landlord-btn-primary">
+                        Update Request
+                    </button>
+
+                    <a href="/Landlord/MaintenanceRequests"
+                       class="landlord-btn landlord-btn-outline">
+                        Back to Requests
+                    </a>
+                </div>
+
+            </form>
+
+        </article>
+
+    </section>
+</div>

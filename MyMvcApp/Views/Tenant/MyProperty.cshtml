@@ -1,530 +1,106 @@
-﻿@{
+@{
     ViewData["Title"] = "My Property";
 }
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
 
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-
-<style>
-    :root {
-        --bg-deep: #14110F;
-        --bg-card: #1E1B18;
-        --bg-elevated: #2A2723;
-        --border: rgba(126,127,131,0.25);
-        --border-hover: rgba(126,127,131,0.55);
-        --text-primary: #E8D9C8;
-        --text-muted: #7E7F83;
-        --accent: #C8965A;
-        --accent-dim: rgba(200,150,90,0.08);
-        --green: #6BBF8E;
-        --green-dim: rgba(107,191,142,0.12);
-        --blue: #7AA8C7;
-        --blue-dim: rgba(122,168,199,0.12);
-        --yellow: #D4AC5A;
-        --yellow-dim: rgba(212,172,90,0.12);
-    }
-
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    body {
-        background-color: var(--bg-deep);
-        color: var(--text-primary);
-        font-family: 'DM Sans', sans-serif;
-    }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: -20%;
-            right: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(200,150,90,0.07) 0%, transparent 65%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-    .tenant-wrap {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 2.5rem 1.5rem 4rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    /* Breadcrumb */
-    .breadcrumb-nav {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        margin-bottom: 1.8rem;
-    }
-
-        .breadcrumb-nav a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-            .breadcrumb-nav a:hover {
-                text-decoration: underline;
-            }
-
-        .breadcrumb-nav span {
-            opacity: 0.5;
-        }
-
-    /* Page title */
-    .page-title-row {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-        .page-title-row h1 {
-            font-family: 'Syne', sans-serif;
-            font-weight: 800;
-            font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-        }
-
-            .page-title-row h1 span {
-                color: var(--accent);
-            }
-
-    .status-active {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: var(--green-dim);
-        color: var(--green);
-        padding: 0.4rem 0.9rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-    }
-
-        .status-active::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--green);
-            animation: pulse 2s infinite;
-        }
-
-    @@keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.3;
-        }
-    }
-
-    /* Property hero card */
-    .property-hero {
-        background: linear-gradient(135deg, var(--bg-card) 0%, #252119 100%);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-        .property-hero::after {
-            position: absolute;
-            right: 2rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 6rem;
-            opacity: 0.04;
-            pointer-events: none;
-        }
-
-    .property-hero-top {
-        display: flex;
-        align-items: flex-start;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-        margin-bottom: 1.8rem;
-    }
-
-    .property-type-badge {
-        background: var(--accent-dim);
-        border: 1px solid rgba(200,150,90,0.2);
-        color: var(--accent);
-        padding: 0.6rem 1rem;
-        border-radius: 8px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        white-space: nowrap;
-    }
-
-    .property-main-info {
-        flex: 1;
-    }
-
-        .property-main-info h2 {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 1.4rem;
-            color: var(--text-primary);
-            margin-bottom: 0.4rem;
-        }
-
-        .property-main-info .address {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-    .property-details-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 1rem;
-    }
-
-    .detail-item {
-        background: var(--bg-elevated);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 1rem 1.2rem;
-    }
-
-        .detail-item .detail-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            margin-bottom: 0.4rem;
-        }
-
-        .detail-item .detail-value {
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-            .detail-item .detail-value.accent {
-                color: var(--accent);
-            }
-
-            .detail-item .detail-value.green {
-                color: var(--green);
-            }
-
-    /* Info sections grid */
-    .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    @@media (max-width: 720px) {
-        .info-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .info-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    .info-card-header {
-        padding: 1rem 1.4rem;
-        border-bottom: 1px solid var(--border);
-        font-family: 'Syne', sans-serif;
-        font-weight: 700;
-        font-size: 0.88rem;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-        .info-card-header .hd {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-        }
-
-    .info-card-body {
-        padding: 1.2rem 1.4rem;
-    }
-
-    .info-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        padding: 0.6rem 0;
-        border-bottom: 1px solid var(--border);
-        gap: 1rem;
-    }
-
-        .info-row:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .info-row:first-child {
-            padding-top: 0;
-        }
-
-    .info-row-label {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-    }
-
-    .info-row-value {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: var(--text-primary);
-        text-align: right;
-    }
-
-        .info-row-value.accent {
-            color: var(--accent);
-        }
-
-        .info-row-value.green {
-            color: var(--green);
-        }
-
-    /* Amenities */
-    .amenities-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-
-    .amenity-tag {
-        background: var(--bg-elevated);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 0.3rem 0.7rem;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-
-    @@keyframes fadeUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .tenant-wrap > * {
-        animation: fadeUp 0.4s ease both;
-    }
-
-    .breadcrumb-nav {
-        animation-delay: 0s;
-    }
-
-    .page-title-row {
-        animation-delay: 0.05s;
-    }
-
-    .property-hero {
-        animation-delay: 0.1s;
-    }
-
-    .info-grid {
-        animation-delay: 0.15s;
-    }
-</style>
-
-<div class="tenant-wrap">
-
-    <nav class="breadcrumb-nav">
-        <a href="/Tenant/Tenant">Dashboard</a>
-        <span>></span>
-        <span>My Property</span>
-    </nav>
-
-    <div class="page-title-row">
-        <h1>My <span>Property</span></h1>
-        <span class="status-active">Active Lease</span>
-    </div>
-
-    <!-- Property hero -->
-    <div class="property-hero">
-        <div class="property-hero-top">
-            <div class="property-type-badge"><i class="bi bi-building"></i> Apartment</div>
-            <div class="property-main-info">
-                <h2>Unit 12A, Sunrise Residences</h2>
-                <div class="address">Jalan Utama 3, 83000 Batu Pahat, Johor</div>
+<div class="tenant-console">
+    <aside class="tenant-rail">
+        <div class="tenant-rail-brand">
+            <span class="tenant-rail-logo"><i class="bi bi-buildings"></i></span>
+            <div>
+                <p class="tenant-rail-title">Tenant Console</p>
+                <p class="tenant-rail-sub">Property Operations</p>
             </div>
         </div>
-        <div class="property-details-grid">
-            <div class="detail-item">
-                <div class="detail-label">Floor</div>
-                <div class="detail-value">12th Floor</div>
+        <nav class="tenant-rail-nav">
+            <a href="/Tenant/Tenant" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a href="/Tenant/MyProperty" class="tenant-rail-link active"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a href="/Tenant/MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a href="/Tenant/Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
+            <a href="/Tenant/Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+        </nav>
+    </aside>
+
+    <section class="tenant-workspace">
+        <div class="tenant-toolbar">
+            <div>
+                <p class="tenant-kicker">Property Profile</p>
+                <h1 class="tenant-heading">Assigned Property</h1>
+                <p class="tenant-sub">Complete property profile with lease terms, contact details, and tenancy rules.</p>
             </div>
-            <div class="detail-item">
-                <div class="detail-label">Unit Size</div>
-                <div class="detail-value">850 sq ft</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Bedrooms</div>
-                <div class="detail-value">3</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Bathrooms</div>
-                <div class="detail-value">2</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Monthly Rent</div>
-                <div class="detail-value green">RM 1,200</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Rent Due</div>
-                <div class="detail-value accent">1st of month</div>
-            </div>
+            <span class="tenant-badge badge-success">Active Lease</span>
         </div>
-    </div>
 
-    <!-- Info cards -->
-    <div class="info-grid">
-
-        <div class="info-card">
-            <div class="info-card-header">
-                <span class="hd" style="background:var(--accent)"></span>
-                Lease Details
+        <div class="tenant-hero">
+            <div>
+                <h2>Sunrise Residences, Unit 12A</h2>
+                <p>Jalan Utama 3, 83000 Batu Pahat, Johor</p>
             </div>
-            <div class="info-card-body">
-                <div class="info-row">
-                    <span class="info-row-label">Start Date</span>
-                    <span class="info-row-value">1 January 2025</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">End Date</span>
-                    <span class="info-row-value accent">31 December 2025</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Duration</span>
-                    <span class="info-row-value">12 months</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Security Deposit</span>
-                    <span class="info-row-value">RM 2,400</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Deposit Status</span>
-                    <span class="info-row-value green">Paid</span>
-                </div>
+            <div>
+                <p class="mb-1">Monthly Rent: <strong>RM 1,200</strong></p>
+                <p class="mb-0">Payment Due: <strong>1st of month</strong></p>
             </div>
         </div>
 
-        <div class="info-card">
-            <div class="info-card-header">
-                <span class="hd" style="background:var(--blue)"></span>
-                Landlord Contact
-            </div>
-            <div class="info-card-body">
-                <div class="info-row">
-                    <span class="info-row-label">Name</span>
-                    <span class="info-row-value">Mr. Ahmad Razali</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Phone</span>
-                    <span class="info-row-value">+60 12-345 6789</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Email</span>
-                    <span class="info-row-value" style="font-size:0.78rem">ahmad.razali@email.com</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Response Hours</span>
-                    <span class="info-row-value">9am - 6pm</span>
-                </div>
-            </div>
+        <div class="tenant-grid-4">
+            <div class="tenant-stat"><div class="tenant-stat-label">Floor</div><div class="tenant-stat-value">12</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Unit Size</div><div class="tenant-stat-value">850 sqft</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Bedrooms</div><div class="tenant-stat-value">3</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Bathrooms</div><div class="tenant-stat-value">2</div></div>
         </div>
 
-        <div class="info-card">
-            <div class="info-card-header">
-                <span class="hd" style="background:var(--green)"></span>
-                Amenities & Utilities
-            </div>
-            <div class="info-card-body">
-                <div class="info-row">
-                    <span class="info-row-label">Water</span>
-                    <span class="info-row-value green">Included</span>
+        <div class="tenant-layout-2">
+            <article class="tenant-panel">
+                <div class="tenant-panel-head"><h3 class="tenant-panel-title">Lease Details</h3></div>
+                <div class="tenant-panel-body">
+                    <div class="tenant-list">
+                        <div class="tenant-list-item"><span class="tenant-sub">Start Date</span><strong>1 January 2025</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">End Date</span><strong>31 December 2025</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Duration</span><strong>12 months</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Security Deposit</span><strong>RM 2,400</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Deposit Status</span><span class="tenant-badge badge-success">Paid</span></div>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <span class="info-row-label">Electricity</span>
-                    <span class="info-row-value accent">Tenant Pays</span>
+            </article>
+
+            <article class="tenant-panel">
+                <div class="tenant-panel-head"><h3 class="tenant-panel-title">Landlord Contact</h3></div>
+                <div class="tenant-panel-body">
+                    <div class="tenant-list">
+                        <div class="tenant-list-item"><span class="tenant-sub">Name</span><strong>Mr. Ahmad Razali</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Phone</span><strong>+60 12-345 6789</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Email</span><strong>ahmad.razali@email.com</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Response Hours</span><strong>9:00 AM - 6:00 PM</strong></div>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <span class="info-row-label">Internet</span>
-                    <span class="info-row-value green">Included</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Parking</span>
-                    <span class="info-row-value">1 Bay (B1-42)</span>
-                </div>
-                <div class="info-row" style="border-bottom:none; padding-bottom:0;">
-                    <span class="info-row-label">Facilities</span>
-                </div>
-                <div class="amenities-list">
-                    <span class="amenity-tag"><i class="bi bi-water"></i> Pool</span>
-                    <span class="amenity-tag"><i class="bi bi-bicycle"></i> Gym</span>
-                    <span class="amenity-tag"><i class="bi bi-shield-check"></i> Security</span>
-                    <span class="amenity-tag"><i class="bi bi-box-seam"></i> Storage</span>
-                    <span class="amenity-tag"><i class="bi bi-droplet"></i> Shower Room</span>
-                </div>
-            </div>
+            </article>
         </div>
 
-        <div class="info-card">
-            <div class="info-card-header">
-                <span class="hd" style="background:var(--yellow)"></span>
-                House Rules
-            </div>
-            <div class="info-card-body">
-                <div class="info-row">
-                    <span class="info-row-label">Pets</span>
-                    <span class="info-row-value" style="color:var(--red,#D97B6C);">Not Allowed</span>
+        <div class="tenant-layout-2">
+            <article class="tenant-panel">
+                <div class="tenant-panel-head"><h3 class="tenant-panel-title">Utilities & Amenities</h3></div>
+                <div class="tenant-panel-body">
+                    <div class="tenant-list">
+                        <div class="tenant-list-item"><span class="tenant-sub">Water</span><span class="tenant-badge badge-success">Included</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Electricity</span><span class="tenant-badge badge-warning">Tenant Pays</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Internet</span><span class="tenant-badge badge-success">Included</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Parking</span><strong>1 Bay (B1-42)</strong></div>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <span class="info-row-label">Smoking</span>
-                    <span class="info-row-value" style="color:var(--red,#D97B6C);">Not Allowed</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Guests</span>
-                    <span class="info-row-value">Max 2 overnight</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Quiet Hours</span>
-                    <span class="info-row-value">10pm - 7am</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row-label">Subletting</span>
-                    <span class="info-row-value" style="color:var(--red,#D97B6C);">Not Allowed</span>
-                </div>
-            </div>
-        </div>
+            </article>
 
-    </div>
+            <article class="tenant-panel">
+                <div class="tenant-panel-head"><h3 class="tenant-panel-title">House Rules</h3></div>
+                <div class="tenant-panel-body">
+                    <div class="tenant-list">
+                        <div class="tenant-list-item"><span class="tenant-sub">Pets</span><span class="tenant-badge badge-danger">Not Allowed</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Smoking</span><span class="tenant-badge badge-danger">Not Allowed</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Guests</span><strong>Max 2 overnight</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Quiet Hours</span><strong>10:00 PM - 7:00 AM</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Subletting</span><span class="tenant-badge badge-danger">Not Allowed</span></div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
 </div>

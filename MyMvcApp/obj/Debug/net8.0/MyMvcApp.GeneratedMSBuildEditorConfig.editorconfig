@@ -32,6 +32,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxSZWdpc3Rlci5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Account/_AuthPage.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxfQXV0aFBhZ2UuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Admin/Admin.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWRtaW5cQWRtaW4uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -52,12 +56,36 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcRGFzaGJvYXJkLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/Landlord.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcTGFuZGxvcmQuY3NodG1s
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/EditMaintenanceRequest.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcRWRpdE1haW50ZW5hbmNlUmVxdWVzdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/EditProperty.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcRWRpdFByb3BlcnR5LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/MaintenanceRequests.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcTWFpbnRlbmFuY2VSZXF1ZXN0cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/MyProperties.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcTXlQcm9wZXJ0aWVzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/Payments.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcUGF5bWVudHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/PropertyDetails.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcUHJvcGVydHlEZXRhaWxzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/TenantDetails.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcVGVuYW50RGV0YWlscy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Landlord/Tenants.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZGxvcmRcVGVuYW50cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/junyong is DaShuaiGe/Desktop/SCHOOL/Y3S2/Design & Developing on Cloud/Code/SuperNiubi_AWS_PROJECT/MyMvcApp/Views/Shared/Error.cshtml]

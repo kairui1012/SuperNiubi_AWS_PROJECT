@@ -9,8 +9,8 @@
     "\\MyMvcApp\\Properties",
     "\\MyMvcApp\\Services",
     "\\MyMvcApp\\Views",
-    "\\MyMvcApp\\Views\\Shared"
+    "\\MyMvcApp\\Views\\Tenant"
   ],
-  "SelectedNode": "\\MyMvcApp\\Data\\AppDbContext.cs",
+  "SelectedNode": "\\MyMvcApp\\Views\\Tenant\\MaintenanceRequest.cshtml",
   "PreviewInSolutionExplorer": false
 }

@@ -1,0 +1,172 @@
+@model List<MyMvcApp.Models.Payment>
+
+@{
+    ViewData["Title"] = "Payment Records";
+}
+
+<div class="landlord-console">
+
+    <aside class="landlord-rail">
+        <div class="landlord-rail-brand">
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
+            <div>
+                <p class="landlord-rail-title">Landlord Console</p>
+                <p class="landlord-rail-sub">Property Operations</p>
+            </div>
+        </div>
+
+        <nav class="landlord-rail-nav">
+            <a href="/Landlord/Dashboard" class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard
+            </a>
+
+            <a href="/Landlord/MyProperties" class="landlord-rail-link">
+                <i class="bi bi-houses-fill"></i> Properties
+            </a>
+
+            <a href="/Landlord/Tenants" class="landlord-rail-link">
+                <i class="bi bi-people-fill"></i> Tenants
+            </a>
+
+            <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link">
+                <i class="bi bi-tools"></i> Maintenance
+            </a>
+
+            <a href="/Landlord/Documents" class="landlord-rail-link">
+                <i class="bi bi-file-earmark-text-fill"></i> Documents
+            </a>
+
+            <a href="/Landlord/Payments" class="landlord-rail-link active">
+                <i class="bi bi-wallet2"></i> Payments
+            </a>
+        </nav>
+    </aside>
+
+    <section class="landlord-workspace">
+
+        <div class="landlord-toolbar">
+            <div>
+                <p class="landlord-kicker">PAYMENT MANAGEMENT</p>
+                <h1 class="landlord-heading">Payment Records</h1>
+                <p class="landlord-sub">
+                    View rental payment records submitted by tenants.
+                </p>
+            </div>
+
+            <div class="landlord-time">
+                <strong>@DateTime.Now.ToString("dddd, dd MMM yyyy")</strong>
+                <span>@DateTime.Now.ToString("hh:mm tt")</span>
+            </div>
+        </div>
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <article class="landlord-panel mb-3">
+                <p class="landlord-error mb-0">@TempData["ErrorMessage"]</p>
+            </article>
+        }
+
+        <div class="landlord-hero">
+            <div>
+                <h2>Rental Payment History</h2>
+                <p class="landlord-sub">
+                    Total payment records: @(Model == null ? 0 : Model.Count)
+                </p>
+            </div>
+
+            <a href="/Landlord/Dashboard" class="landlord-btn landlord-btn-outline">
+                Back to Dashboard
+            </a>
+        </div>
+
+        @if (Model == null || !Model.Any())
+        {
+            <article class="landlord-panel">
+                <div class="landlord-empty">
+                    <i class="bi bi-inbox d-block mb-2"></i>
+                    No payment records found.
+                </div>
+            </article>
+        }
+        else
+        {
+            <article class="landlord-panel">
+                <div class="landlord-panel-head">
+                    <h3 class="landlord-panel-title">Payment List</h3>
+                </div>
+
+                <div class="landlord-list">
+                    @foreach (var payment in Model)
+                    {
+                        var statusClass =
+                            payment.Status == PaymentStatus.Verified ? "badge-success" :
+                            payment.Status == PaymentStatus.Rejected ? "badge-danger" :
+                            payment.Status == PaymentStatus.Overdue ? "badge-warning" :
+                            payment.Status == PaymentStatus.Submitted ? "badge-primary" :
+                            "badge-warning";
+
+                        <div class="landlord-list-item">
+                            <div>
+                                <h4 class="mb-2">
+                                    @payment.PaymentMonth @payment.PaymentYear
+                                </h4>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Property:</strong> @payment.Property.PropertyName
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Tenant:</strong> @payment.Tenant.User.Email
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Amount:</strong> RM @payment.Amount |
+                                    <strong>Due Date:</strong> @payment.DueDate.ToShortDateString()
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Payment Date:</strong>
+                                    @(payment.PaymentDate.HasValue ? payment.PaymentDate.Value.ToShortDateString() : "Not paid yet")
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Payment Method:</strong>
+                                    @(payment.PaymentMethod.HasValue ? payment.PaymentMethod.Value.ToString() : "N/A")
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Reference No:</strong>
+                                    @(string.IsNullOrEmpty(payment.ReferenceNo) ? "N/A" : payment.ReferenceNo)
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Receipt File:</strong>
+                                    @(string.IsNullOrEmpty(payment.ReceiptFileKey) ? "No receipt uploaded" : payment.ReceiptFileKey)
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Landlord Remarks:</strong>
+                                    @(string.IsNullOrEmpty(payment.LandlordRemarks) ? "N/A" : payment.LandlordRemarks)
+                                </p>
+
+                                <p class="landlord-sub mb-0">
+                                    <strong>Created:</strong> @payment.CreatedAt.ToString("dd MMM yyyy") |
+                                    <strong>Updated:</strong> @payment.UpdatedAt.ToString("dd MMM yyyy")
+                                </p>
+                            </div>
+
+                            <div class="landlord-actions">
+                                <span class="landlord-badge @statusClass">
+                                    @payment.Status
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </article>
+        }
+
+    </section>
+</div>

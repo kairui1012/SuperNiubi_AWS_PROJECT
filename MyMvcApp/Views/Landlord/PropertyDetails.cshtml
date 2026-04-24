@@ -1,0 +1,207 @@
+@model MyMvcApp.Models.Property
+
+@{
+    ViewData["Title"] = "Property Details";
+}
+
+<div class="landlord-console">
+
+    <!-- Sidebar -->
+
+    <aside class="landlord-rail">
+
+        <div class="landlord-rail-brand">
+
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
+
+            <div>
+                <p class="landlord-rail-title">
+                    Landlord Console
+                </p>
+
+                <p class="landlord-rail-sub">
+                    Property Operations
+                </p>
+            </div>
+
+        </div>
+
+        <nav class="landlord-rail-nav">
+
+            <a href="/Landlord/Dashboard"
+               class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </a>
+
+            <a href="/Landlord/MyProperties"
+               class="landlord-rail-link active">
+                <i class="bi bi-houses-fill"></i>
+                Properties
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+
+    <!-- Workspace -->
+
+    <section class="landlord-workspace">
+
+        <div class="landlord-toolbar">
+
+            <div>
+
+                <p class="landlord-kicker">
+                    PROPERTY DETAILS
+                </p>
+
+                <h1 class="landlord-heading">
+                    Property Information
+                </h1>
+
+                <p class="landlord-sub">
+                    View full details of the selected property.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Details Panel -->
+
+        <article class="landlord-panel">
+
+            <div class="landlord-list">
+
+                <div class="landlord-list-item">
+                    <strong>Property Name</strong>
+                    <span>@Model.PropertyName</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Property Type</strong>
+                    <span>@Model.PropertyType</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Address</strong>
+                    <span>
+                        @Model.AddressLine1 @Model.AddressLine2,
+                        @Model.City,
+                        @Model.State
+                        @Model.PostalCode
+                    </span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Floor Number</strong>
+                    <span>@Model.FloorNumber</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Unit Number</strong>
+                    <span>@Model.UnitNumber</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Size (Sq Ft)</strong>
+                    <span>@Model.SizeSqFt</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Bedrooms</strong>
+                    <span>@Model.Bedrooms</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Bathrooms</strong>
+                    <span>@Model.Bathrooms</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Monthly Rent</strong>
+                    <span>RM @Model.MonthlyRent</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Deposit Amount</strong>
+                    <span>RM @Model.DepositAmount</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Parking Bay</strong>
+                    <span>@Model.ParkingBay</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Description</strong>
+                    <span>@Model.Description</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Created At</strong>
+                    <span>@Model.CreatedAt</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Updated At</strong>
+                    <span>@Model.UpdatedAt</span>
+                </div>
+
+            </div>
+
+
+
+            <!-- Buttons -->
+
+            <div class="landlord-actions mt-4">
+
+                <a href="/Landlord/EditProperty/@Model.PropertyId"
+                   class="landlord-btn landlord-btn-primary">
+
+                    Edit Property
+
+                </a>
+
+                <a href="/Landlord/MyProperties"
+                   class="landlord-btn landlord-btn-outline">
+
+                    Back to My Properties
+
+                </a>
+
+                <form asp-action="DeleteProperty"
+                      asp-controller="Landlord"
+                      method="post"
+                      class="d-inline">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="id"
+                           value="@Model.PropertyId" />
+
+                    <button type="submit"
+                            class="landlord-btn landlord-btn-danger"
+                            onclick="return confirm('Are you sure you want to delete this property?');">
+
+                        Delete
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </article>
+
+    </section>
+
+</div>

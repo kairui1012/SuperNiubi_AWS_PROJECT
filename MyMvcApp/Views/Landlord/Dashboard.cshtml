@@ -2,46 +2,336 @@
     ViewData["Title"] = "Landlord Dashboard";
 }
 
-<style>
-    body {
-        background-color: #14110F;
-        color: #D9C5B2;
-    }
+<div class="landlord-console">
 
-    .role-card {
-        background-color: #34312D;
-        border-left: 4px solid #7E7F83;
-        padding: 2rem;
-        border-radius: 8px;
-        margin-top: 2rem;
-    }
+    <!-- Sidebar -->
 
-    .btn-custom {
-        background-color: #7E7F83;
-        color: #14110F;
-        border: none;
-        padding: 0.6rem 1.2rem;
-        border-radius: 5px;
-        text-decoration: none;
-        display: inline-block;
-        margin-top: 1rem;
-        font-weight: 600;
-    }
+    <aside class="landlord-rail">
 
-    .btn-custom:hover {
-        background-color: #D9C5B2;
-        color: #14110F;
-    }
-</style>
+        <div class="landlord-rail-brand">
 
-<div class="container">
-    <div class="role-card">
-        <h2>Landlord Workspace</h2>
-        <p style="color: #7E7F83;">
-            You are currently viewing the system as a <strong>Landlord</strong>.
-            You can manage your properties, monitor rental information, and handle property-related operations here.
-        </p>
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
 
-        <a href="/Landlord/MyProperties" class="btn-custom">Manage My Properties</a>
-    </div>
+            <div>
+                <p class="landlord-rail-title">
+                    Landlord Console
+                </p>
+
+                <p class="landlord-rail-sub">
+                    Property Operations
+                </p>
+            </div>
+
+        </div>
+
+
+        <nav class="landlord-rail-nav">
+
+            <a href="/Landlord/Dashboard"
+               class="landlord-rail-link active">
+
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+
+            </a>
+
+
+            <a href="/Landlord/MyProperties"
+               class="landlord-rail-link">
+
+                <i class="bi bi-houses-fill"></i>
+                Properties
+
+            </a>
+
+
+            <a href="/Landlord/Tenants"
+               class="landlord-rail-link">
+
+                <i class="bi bi-people-fill"></i>
+                Tenants
+
+            </a>
+
+
+            <a href="/Landlord/MaintenanceRequests"
+               class="landlord-rail-link">
+
+                <i class="bi bi-tools"></i>
+                Maintenance
+
+            </a>
+
+
+            <a href="/Landlord/Documents"
+               class="landlord-rail-link">
+
+                <i class="bi bi-file-earmark-text-fill"></i>
+                Documents
+
+            </a>
+
+
+            <a href="/Landlord/Payments"
+               class="landlord-rail-link">
+
+                <i class="bi bi-wallet2"></i>
+                Payments
+
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+
+    <!-- Workspace -->
+
+    <section class="landlord-workspace">
+
+        <!-- Header -->
+
+        <div class="landlord-toolbar">
+
+            <div>
+
+                <p class="landlord-kicker">
+                    LANDLORD WORKSPACE
+                </p>
+
+                <h1 class="landlord-heading">
+                    Welcome, Landlord
+                </h1>
+
+                <p class="landlord-sub">
+                    Manage properties, tenants, maintenance,
+                    documents, and payment records.
+                </p>
+
+            </div>
+
+
+            <div class="landlord-time">
+
+                <strong id="currentDate"></strong>
+
+                <span id="currentTime"></span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Hero -->
+
+        <div class="landlord-hero">
+
+            <div>
+
+                <h2>
+                    Property Management Dashboard
+                </h2>
+
+                <p class="landlord-sub">
+                    Select a function below to begin managing your rental portfolio.
+                </p>
+
+            </div>
+
+            <span class="landlord-badge badge-success">
+                Active
+            </span>
+
+        </div>
+
+
+
+        <!-- Quick Actions -->
+
+        <div class="landlord-layout-2">
+
+
+            <!-- Functions Panel -->
+
+            <article class="landlord-panel">
+
+                <div class="landlord-panel-head">
+
+                    <h3 class="landlord-panel-title">
+                        Main Functions
+                    </h3>
+
+                </div>
+
+
+                <div class="landlord-actions">
+
+                    <a href="/Landlord/MyProperties"
+                       class="landlord-btn landlord-btn-primary">
+
+                        Manage Properties
+
+                    </a>
+
+
+                    <a href="/Landlord/Tenants"
+                       class="landlord-btn landlord-btn-outline">
+
+                        View Tenant Details
+
+                    </a>
+
+
+                    <a href="/Landlord/MaintenanceRequests"
+                       class="landlord-btn landlord-btn-outline">
+
+                        Handle Maintenance Requests
+
+                    </a>
+
+
+                    <a href="/Landlord/Documents"
+                       class="landlord-btn landlord-btn-outline">
+
+                        Upload Documents
+
+                    </a>
+
+
+                    <a href="/Landlord/Payments"
+                       class="landlord-btn landlord-btn-outline">
+
+                        View Payment Records
+
+                    </a>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- Responsibilities Panel -->
+
+            <article class="landlord-panel">
+
+                <div class="landlord-panel-head">
+
+                    <h3 class="landlord-panel-title">
+                        Landlord Responsibilities
+                    </h3>
+
+                </div>
+
+
+                <div class="landlord-list">
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            Add and manage properties
+                        </span>
+
+                        <span class="landlord-badge badge-success">
+                            Enabled
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            View tenant details
+                        </span>
+
+                        <span class="landlord-badge badge-success">
+                            Enabled
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            Handle maintenance requests
+                        </span>
+
+                        <span class="landlord-badge badge-warning">
+                            Active
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            Upload documents
+                        </span>
+
+                        <span class="landlord-badge badge-primary">
+                            Cloud Ready
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            View payment records
+                        </span>
+
+                        <span class="landlord-badge badge-primary">
+                            Tracking
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+            </article>
+
+        </div>
+
+    </section>
+
 </div>
+
+
+
+<script>
+
+function updateDateTime() {
+
+    const now = new Date();
+
+    document.getElementById('currentDate').textContent =
+        now.toLocaleDateString('en-MY', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+    document.getElementById('currentTime').textContent =
+        now.toLocaleTimeString('en-MY', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+}
+
+updateDateTime();
+
+setInterval(updateDateTime, 30000);
+
+</script>
