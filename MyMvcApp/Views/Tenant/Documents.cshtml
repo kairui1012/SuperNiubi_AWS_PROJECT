@@ -1,722 +1,184 @@
-﻿@{
+@{
     ViewData["Title"] = "Documents";
 }
-
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-
-<style>
-    :root {
-        --bg-deep: #14110F;
-        --bg-card: #1E1B18;
-        --bg-elevated: #2A2723;
-        --border: rgba(126,127,131,0.25);
-        --border-hover: rgba(126,127,131,0.55);
-        --text-primary: #E8D9C8;
-        --text-muted: #7E7F83;
-        --accent: #C8965A;
-        --accent-dim: rgba(200,150,90,0.08);
-        --green: #6BBF8E;
-        --green-dim: rgba(107,191,142,0.12);
-        --red: #D97B6C;
-        --red-dim: rgba(217,123,108,0.12);
-        --blue: #7AA8C7;
-        --blue-dim: rgba(122,168,199,0.12);
-        --yellow: #D4AC5A;
-        --yellow-dim: rgba(212,172,90,0.12);
-    }
-
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    body {
-        background-color: var(--bg-deep);
-        color: var(--text-primary);
-        font-family: 'DM Sans', sans-serif;
-    }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: -20%;
-            left: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(122,168,199,0.05) 0%, transparent 65%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-    .tenant-wrap {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 2.5rem 1.5rem 4rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .breadcrumb-nav {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        margin-bottom: 1.8rem;
-    }
-
-        .breadcrumb-nav a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-    .page-title-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-        .page-title-row h1 {
-            font-family: 'Syne', sans-serif;
-            font-weight: 800;
-            font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-            letter-spacing: -0.02em;
-        }
-
-            .page-title-row h1 span {
-                color: var(--blue);
-            }
-
-        .page-title-row .subtitle {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 0.3rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-    .s3-badge {
-        background: var(--blue-dim);
-        border: 1px solid rgba(122,168,199,0.2);
-        color: var(--blue);
-        padding: 0.15rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.68rem;
-        font-weight: 500;
-        letter-spacing: 0.05em;
-    }
-
-    .btn-primary {
-        background: var(--blue);
-        color: #14110F;
-        border: none;
-        border-radius: 7px;
-        padding: 0.6rem 1.3rem;
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 600;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: opacity 0.2s, transform 0.15s;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-        .btn-primary:hover {
-            opacity: 0.85;
-            transform: translateY(-1px);
-            color: #14110F;
-            text-decoration: none;
-        }
-
-    .btn-secondary {
-        background: var(--bg-elevated);
-        color: var(--text-muted);
-        border: 1px solid var(--border);
-        border-radius: 7px;
-        padding: 0.6rem 1.1rem;
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 500;
-        font-size: 0.82rem;
-        cursor: pointer;
-        transition: border-color 0.2s, color 0.2s;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-        .btn-secondary:hover {
-            border-color: var(--border-hover);
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-
-    /* Upload form */
-    .form-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-top: 2px solid var(--blue);
-        border-radius: 10px;
-        padding: 1.8rem 2rem;
-        margin-bottom: 2rem;
-        display: none;
-    }
-
-        .form-card.open {
-            display: block;
-            animation: slideDown 0.25s ease;
-        }
-
-    @@keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-8px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .form-card h3 {
-        font-family: 'Syne', sans-serif;
-        font-weight: 700;
-        font-size: 1.05rem;
-        margin-bottom: 1.4rem;
-        color: var(--text-primary);
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.2rem 1.5rem;
-    }
-
-    @@media (max-width: 600px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-
-        .form-group.full {
-            grid-column: 1/-1;
-        }
-
-        .form-group label {
-            font-size: 0.77rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .form-group input, .form-group select, .form-group textarea {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            border-radius: 7px;
-            padding: 0.7rem 0.9rem;
-            font-size: 0.88rem;
-            font-family: 'DM Sans', sans-serif;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            outline: none;
-            width: 100%;
-        }
-
-            .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-                border-color: var(--blue);
-                box-shadow: 0 0 0 3px var(--blue-dim);
-            }
-
-        .form-group textarea {
-            min-height: 80px;
-            resize: vertical;
-        }
-
-    /* Big drop zone */
-    .drop-zone-large {
-        background: var(--bg-elevated);
-        border: 1.5px dashed var(--border);
-        border-radius: 10px;
-        padding: 2.5rem;
-        text-align: center;
-        cursor: pointer;
-        transition: border-color 0.2s, background 0.2s;
-        position: relative;
-    }
-
-        .drop-zone-large:hover, .drop-zone-large.dragover {
-            border-color: var(--blue);
-            background: var(--blue-dim);
-        }
-
-        .drop-zone-large input {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-    .dz-icon {
-        font-size: 2.2rem;
-        margin-bottom: 0.6rem;
-    }
-
-    .dz-text {
-        font-size: 0.88rem;
-        color: var(--text-muted);
-    }
-
-        .dz-text strong {
-            color: var(--blue);
-        }
-
-    .dz-hint {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-        margin-top: 0.3rem;
-    }
-
-    .dz-file-name {
-        font-size: 0.85rem;
-        color: var(--blue);
-        font-weight: 500;
-        margin-top: 0.5rem;
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 0.8rem;
-        margin-top: 1.5rem;
-        justify-content: flex-end;
-    }
-
-    /* Docs grid */
-    .docs-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1.2rem;
-        flex-wrap: wrap;
-        gap: 0.8rem;
-    }
-
-        .docs-header .section-title {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-    .search-input-wrap {
-        position: relative;
-    }
-
-        .search-input-wrap input {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            border-radius: 7px;
-            padding: 0.5rem 0.9rem 0.5rem 2rem;
-            font-size: 0.82rem;
-            outline: none;
-            font-family: 'DM Sans', sans-serif;
-            transition: border-color 0.2s;
-            width: 220px;
-        }
-
-            .search-input-wrap input:focus {
-                border-color: var(--blue);
-            }
-
-        .search-input-wrap::before {
-            position: absolute;
-            left: 0.6rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.75rem;
-            pointer-events: none;
-        }
-
-    .docs-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1rem;
-    }
-
-    .doc-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1.2rem 1.4rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.8rem;
-        transition: border-color 0.2s, transform 0.18s, background 0.2s;
-        cursor: default;
-        position: relative;
-        overflow: hidden;
-    }
-
-        .doc-card:hover {
-            border-color: var(--border-hover);
-            background: var(--bg-elevated);
-            transform: translateY(-2px);
-        }
-
-    .doc-card-top {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.9rem;
-    }
-
-    .doc-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-    }
-
-    .di-pdf {
-        background: var(--red-dim);
-    }
-
-    .di-img {
-        background: var(--blue-dim);
-    }
-
-    .di-doc {
-        background: var(--accent-dim);
-    }
-
-    .doc-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .doc-name {
-        font-size: 0.88rem;
-        font-weight: 500;
-        color: var(--text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .doc-meta {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-        margin-top: 0.2rem;
-    }
-
-    .doc-tag {
-        font-size: 0.65rem;
-        padding: 0.18rem 0.55rem;
-        border-radius: 4px;
-        font-weight: 500;
-        background: var(--bg-elevated);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-    }
-
-    .doc-card-actions {
-        display: flex;
-        gap: 0.5rem;
-        border-top: 1px solid var(--border);
-        padding-top: 0.8rem;
-    }
-
-    .doc-action-btn {
-        flex: 1;
-        background: var(--bg-elevated);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        border-radius: 6px;
-        padding: 0.4rem;
-        font-size: 0.72rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-decoration: none;
-        text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.3rem;
-    }
-
-        .doc-action-btn:hover {
-            border-color: var(--blue);
-            color: var(--blue);
-            text-decoration: none;
-        }
-
-        .doc-action-btn.danger:hover {
-            border-color: var(--red);
-            color: var(--red);
-        }
-
-    .aws-note {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        background: var(--bg-elevated);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.8rem 1.1rem;
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        margin-top: 1.5rem;
-    }
-
-    @@keyframes fadeUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .tenant-wrap > * {
-        animation: fadeUp 0.4s ease both;
-    }
-
-    .breadcrumb-nav {
-        animation-delay: 0s;
-    }
-
-    .page-title-row {
-        animation-delay: 0.05s;
-    }
-
-    .docs-header {
-        animation-delay: 0.1s;
-    }
-
-    .docs-grid {
-        animation-delay: 0.15s;
-    }
-
-    .aws-note {
-        animation-delay: 0.2s;
-    }
-</style>
-
-<div class="tenant-wrap">
-
-    <nav class="breadcrumb-nav">
-        <a asp-action="Tenant">Dashboard</a>
-        <span>></span>
-        <span>Documents</span>
-    </nav>
-
-    <div class="page-title-row">
-        <div>
-            <h1>My <span>Documents</span></h1>
-            <div class="subtitle">Stored securely on <span class="s3-badge">AWS S3</span></div>
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+
+<div class="tenant-console">
+    <aside class="tenant-rail">
+        <div class="tenant-rail-brand">
+            <span class="tenant-rail-logo"><i class="bi bi-buildings"></i></span>
+            <div>
+                <p class="tenant-rail-title">Tenant Console</p>
+                <p class="tenant-rail-sub">Property Operations</p>
+            </div>
         </div>
-        <button class="btn-primary" onclick="toggleForm()">+ Upload Document</button>
-    </div>
+        <nav class="tenant-rail-nav">
+            <a href="/Tenant/Tenant" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a href="/Tenant/MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a href="/Tenant/MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a href="/Tenant/Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
+            <a href="/Tenant/Documents" class="tenant-rail-link active"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+        </nav>
+    </aside>
 
-    <!-- Upload form -->
-    <div class="form-card" id="uploadForm">
-        <h3><i class="bi bi-paperclip"></i> Upload New Document</h3>
-        <form asp-action="UploadDocument" method="post" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Document Name</label>
-                    <input type="text" name="DocumentName" placeholder="e.g. Tenancy Agreement 2025" required />
-                </div>
-                <div class="form-group">
-                    <label>Document Type</label>
-                    <select name="DocumentType" required>
-                        <option value="" disabled selected>Select type</option>
-                        <option>Tenancy Agreement</option>
-                        <option>Identity Card</option>
-                        <option>Payment Receipt</option>
-                        <option>Inspection Report</option>
-                        <option>Others</option>
-                    </select>
-                </div>
-                <div class="form-group full">
-                    <label>Notes (optional)</label>
-                    <textarea name="Notes" placeholder="Any notes about this document..."></textarea>
-                </div>
-                <div class="form-group full">
-                    <label>File</label>
-                    <div class="drop-zone-large" id="dropZone" >
-                        <input type="file" id="docFile" name="File" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
-                        <div class="dz-content">
-                            <div class="dz-icon"><i class="bi bi-cloud-arrow-down"></i></div>
-                            <div class="dz-text"><strong>Click to upload</strong> or drag & drop</div>
-                            <div class="dz-hint">PDF, JPG, PNG, DOCX - max 10MB</div>
-                            <!-- File Icon Show only when the file is selected-->
+    <section class="tenant-workspace">
+        <div class="tenant-toolbar">
+            <div>
+                <p class="tenant-kicker">Document Vault</p>
+                <h1 class="tenant-heading">Tenant Documents</h1>
+                <p class="tenant-sub">Store agreements, identity files, and receipts securely in your S3-backed library.</p>
+            </div>
+            <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ Upload Document</button>
+        </div>
+
+        <div class="tenant-panel" id="uploadForm" style="display:none;">
+            <div class="tenant-panel-head"><h3 class="tenant-panel-title">Upload New Document</h3></div>
+            <div class="tenant-panel-body tenant-form">
+                <form asp-action="UploadDocument" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="tenant-form-grid">
+                        <div>
+                            <label>Document Name</label>
+                            <input class="form-control" type="text" name="DocumentName" placeholder="e.g. Tenancy Agreement 2025" required />
                         </div>
-                        <div id="dz-file" class="dz-icon" style="display:none"><i class="bi bi-file-earmark-text"></i> </div>
-                        <div class="dz-file-name" id="fileNameDisplay"></div>
+                        <div>
+                            <label>Document Type</label>
+                            <select class="form-select" name="DocumentType" required>
+                                <option value="" disabled selected>Select type</option>
+                                <option>Tenancy Agreement</option>
+                                <option>Identity Card</option>
+                                <option>Payment Receipt</option>
+                                <option>Inspection Report</option>
+                                <option>Others</option>
+                            </select>
+                        </div>
+                        <div class="full">
+                            <label>Notes (optional)</label>
+                            <textarea class="form-control" name="Notes" placeholder="Any notes about this document..."></textarea>
+                        </div>
+                        <div class="full">
+                            <label>File</label>
+                            <div class="drop-zone" id="dropZone">
+                                <input type="file" id="docFile" name="File" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                                <div class="dz-content">
+                                    <div class="fs-3"><i class="bi bi-cloud-arrow-up"></i></div>
+                                    <div class="tenant-sub"><strong>Click to upload</strong> or drag and drop</div>
+                                    <div class="tenant-sub">PDF, JPG, PNG, DOCX - max 10MB</div>
+                                </div>
+                                <div id="dz-file" class="fs-4 mt-2" style="display:none;"><i class="bi bi-file-earmark-text"></i></div>
+                                <div class="tenant-sub mt-2" id="fileNameDisplay"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="btn tenant-btn tenant-btn-outline" onclick="toggleForm()">Cancel</button>
+                        <button type="submit" class="btn tenant-btn tenant-btn-primary">Upload to S3</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="tenant-panel">
+            <div class="tenant-panel-head">
+                <h3 class="tenant-panel-title">Document Library</h3>
+                <div style="max-width:240px;">
+                    <input class="form-control" type="text" placeholder="Search documents..." oninput="searchDocs(this.value)" />
+                </div>
+            </div>
+            <div class="tenant-panel-body">
+                <div class="doc-grid" id="docsGrid">
+                    <div class="doc-card doc-item" data-name="tenancy agreement 2025">
+                        <div class="fw-semibold">Tenancy Agreement 2025.pdf</div>
+                        <div class="tenant-sub small mb-2">Uploaded 1 Jan 2025 - 2.4 MB</div>
+                        <span class="tenant-badge badge-primary mb-2">Tenancy Agreement</span>
+                        <div class="d-flex gap-2">
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                        </div>
+                    </div>
+                    <div class="doc-card doc-item" data-name="identity card mykad">
+                        <div class="fw-semibold">MyKad_Scan.jpg</div>
+                        <div class="tenant-sub small mb-2">Uploaded 2 Jan 2025 - 0.8 MB</div>
+                        <span class="tenant-badge badge-primary mb-2">Identity Card</span>
+                        <div class="d-flex gap-2">
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                        </div>
+                    </div>
+                    <div class="doc-card doc-item" data-name="inspection report january">
+                        <div class="fw-semibold">Inspection_Report_Jan2025.pdf</div>
+                        <div class="tenant-sub small mb-2">Uploaded 5 Jan 2025 - 1.2 MB</div>
+                        <span class="tenant-badge badge-primary mb-2">Inspection Report</span>
+                        <div class="d-flex gap-2">
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                        </div>
+                    </div>
+                    <div class="doc-card doc-item" data-name="payment receipt march">
+                        <div class="fw-semibold">Receipt_March2025.png</div>
+                        <div class="tenant-sub small mb-2">Uploaded 2 Mar 2025 - 0.5 MB</div>
+                        <span class="tenant-badge badge-primary mb-2">Payment Receipt</span>
+                        <div class="d-flex gap-2">
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
+                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn-secondary" onclick="toggleForm()">Cancel</button>
-                <button type="submit" class="btn-primary">Upload to S3</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Documents listing -->
-    <div class="docs-header">
-        <div class="section-title">
-            <span style="color:var(--blue)"><i class="bi bi-diamond-fill"></i></span>
-            All Documents
-        </div>
-        <div class="search-input-wrap">
-            <input type="text" placeholder="Search documents..." oninput="searchDocs(this.value)" />
-        </div>
-    </div>
-
-    <div class="docs-grid" id="docsGrid">
-        <!-- Replace with @@foreach (var doc in Model) -->
-
-        <div class="doc-card" data-name="tenancy agreement 2025">
-            <div class="doc-card-top">
-                <div class="doc-icon di-pdf"><i class="bi bi-file-earmark-text"></i></div>
-                <div class="doc-info">
-                    <div class="doc-name">Tenancy Agreement 2025.pdf</div>
-                    <div class="doc-meta">Uploaded 1 Jan 2025 - 2.4 MB</div>
-                </div>
-            </div>
-            <span class="doc-tag">Tenancy Agreement</span>
-            <div class="doc-card-actions">
-                <a href="#" class="doc-action-btn"><i class="bi bi-eye"></i> View</a>
-                <a href="#" class="doc-action-btn"><i class="bi bi-download"></i> Download</a>
-                <button class="doc-action-btn danger"><i class="bi bi-trash"></i> Delete</button>
+                <div class="tenant-sub mt-3">All files are securely stored in AWS S3 and transmitted over HTTPS.</div>
             </div>
         </div>
-
-        <div class="doc-card" data-name="identity card mykad">
-            <div class="doc-card-top">
-                <div class="doc-icon di-img"><i class="bi bi-receipt"></i></div>
-                <div class="doc-info">
-                    <div class="doc-name">MyKad_Scan.jpg</div>
-                    <div class="doc-meta">Uploaded 2 Jan 2025 - 0.8 MB</div>
-                </div>
-            </div>
-            <span class="doc-tag">Identity Card</span>
-            <div class="doc-card-actions">
-                <a href="#" class="doc-action-btn"><i class="bi bi-eye"></i> View</a>
-                <a href="#" class="doc-action-btn"><i class="bi bi-download"></i> Download</a>
-                <button class="doc-action-btn danger"><i class="bi bi-trash"></i> Delete</button>
-            </div>
-        </div>
-
-        <div class="doc-card" data-name="inspection report january">
-            <div class="doc-card-top">
-                <div class="doc-icon di-pdf"><i class="bi bi-file-earmark-text"></i></div>
-                <div class="doc-info">
-                    <div class="doc-name">Inspection_Report_Jan2025.pdf</div>
-                    <div class="doc-meta">Uploaded 5 Jan 2025 - 1.2 MB</div>
-                </div>
-            </div>
-            <span class="doc-tag">Inspection Report</span>
-            <div class="doc-card-actions">
-                <a href="#" class="doc-action-btn"><i class="bi bi-eye"></i> View</a>
-                <a href="#" class="doc-action-btn"><i class="bi bi-download"></i> Download</a>
-                <button class="doc-action-btn danger"><i class="bi bi-trash"></i> Delete</button>
-            </div>
-        </div>
-
-        <div class="doc-card" data-name="payment receipt march">
-            <div class="doc-card-top">
-                <div class="doc-icon di-img"><i class="bi bi-receipt"></i></div>
-                <div class="doc-info">
-                    <div class="doc-name">Receipt_March2025.png</div>
-                    <div class="doc-meta">Uploaded 2 Mar 2025 - 0.5 MB</div>
-                </div>
-            </div>
-            <span class="doc-tag">Payment Receipt</span>
-            <div class="doc-card-actions">
-                <a href="#" class="doc-action-btn"><i class="bi bi-eye"></i> View</a>
-                <a href="#" class="doc-action-btn"><i class="bi bi-download"></i> Download</a>
-                <button class="doc-action-btn danger"><i class="bi bi-trash"></i> Delete</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="aws-note">
-        <span><i class="bi bi-cloud-arrow-down"></i></span>
-        All files are securely stored in <strong style="color:var(--blue)">&nbsp;AWS S3&nbsp;</strong> and accessible only to authorized users.
-        Files are encrypted at rest and transmitted over HTTPS.
-    </div>
+    </section>
 </div>
 
 <script>
     function toggleForm() {
-        const f = document.getElementById('uploadForm');
-        f.classList.toggle('open');
-        if (f.classList.contains('open')) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const form = document.getElementById('uploadForm');
+        form.classList.toggle('console-open');
+        if (form.classList.contains('console-open')) {
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     const fileInput = document.getElementById('docFile');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const dz = document.getElementById('dropZone');
+    const dropZone = document.getElementById('dropZone');
 
     fileInput.addEventListener('change', function () {
-        const dzFileIcon = document.getElementById("dz-file");
-        const dzContent = document.getElementsByClassName("dz-content")[0];
+        const icon = document.getElementById('dz-file');
+        const content = document.getElementsByClassName('dz-content')[0];
 
         if (this.files.length > 0) {
-            dzFileIcon.style.display = "block";
-            dzContent.style.display = "none";
+            icon.style.display = 'block';
+            content.style.display = 'none';
             fileNameDisplay.textContent = this.files[0].name;
         } else {
-            dzFileIcon.style.display = "none";
-            dzContent.style.display = "block";
-            fileNameDisplay.textContent = "";
+            icon.style.display = 'none';
+            content.style.display = 'block';
+            fileNameDisplay.textContent = '';
         }
     });
 
-    // Handle Drag Event
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-    dz.addEventListener('drop', e => {
+    dropZone.addEventListener('dragover', e => {
         e.preventDefault();
-        dz.classList.remove('dragover');
+        dropZone.classList.add('dragover');
+    });
 
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length) {
             fileInput.files = e.dataTransfer.files;
             fileInput.dispatchEvent(new Event('change'));
         }
     });
 
-    // Search
     function searchDocs(query) {
         const q = query.toLowerCase();
-        document.querySelectorAll('#docsGrid .doc-card').forEach(card => {
+        document.querySelectorAll('#docsGrid .doc-item').forEach(card => {
             const name = card.dataset.name || '';
             card.style.display = name.includes(q) ? '' : 'none';
         });
