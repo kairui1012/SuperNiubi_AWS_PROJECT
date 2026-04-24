@@ -1,4 +1,6 @@
-﻿@{
+﻿@model MaintenanceRequestViewModel
+
+@{
     ViewData["Title"] = "Maintenance Requests";
     // Replace with Model data
 }
@@ -420,9 +422,27 @@
         transition: opacity 0.2s;
     }
 
-        .action-link:hover {
-            opacity: 0.7;
-        }
+    .action-link:hover {
+        opacity: 0.7;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        color: #666;
+        font-family: 'DM Sans', sans-serif;
+        text-align: center;
+        width: 100%;
+    }
+
+    .empty-state i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        opacity: 0.5;
+    }
 
     @@media (max-width: 768px) {
         .requests-table thead {
@@ -484,7 +504,7 @@
 <div class="tenant-wrap">
 
     <nav class="breadcrumb-nav">
-        <a href="/Tenant">Dashboard</a>
+        <a asp-action="Tenant">Dashboard</a>
         <span>></span>
         <span>Maintenance Requests</span>
     </nav>
@@ -497,44 +517,52 @@
     <!-- Create form (toggleable) -->
     <div class="form-card" id="createForm">
         <h3><i class="bi bi-wrench"></i> Submit New Maintenance Request</h3>
-        <form asp-action="Create" method="post">
+        <form asp-action="CreateMaintenance" method="post">
             @Html.AntiForgeryToken()
             <div class="form-grid">
                 <div class="form-group">
-                    <label>Issue Title</label>
-                    <input type="text" name="Title" placeholder="e.g. Air conditioner not working" required />
+                    <label for="issue">Issue Title</label>
+                    <input id="issue" type="text" name="NewRequest.Title" value="@Model.NewRequest?.Title" placeholder="e.g. Air conditioner not working" required />
+                    <span asp-validation-for="NewRequest.Title" class="text-danger"></span>
                 </div>
+
                 <div class="form-group">
-                    <label>Category</label>
-                    <select name="Category" required>
-                        <option value="" disabled selected>Select category</option>
+                    <label for="category">Category</label>
+                    <select id="category" asp-for="NewRequest.Category" required>
+                        <option value="" disabled >Select category</option>
                         <option value="Plumbing">Plumbing</option>
                         <option value="Electrical">Electrical</option>
-                        <option value="Air Conditioning">Air Conditioning</option>
+                        <option value="AirConditioning">Air Conditioning</option>
                         <option value="Structural">Structural</option>
                         <option value="Appliances">Appliances</option>
-                        <option value="Pest Control">Pest Control</option>
+                        <option value="PestControl">Pest Control</option>
                         <option value="Others">Others</option>
                     </select>
                 </div>
+
                 <div class="form-group">
-                    <label>Priority</label>
-                    <select name="Priority" required>
-                        <option value="" disabled selected>Select priority</option>
-                        <option value="High"><i class="bi bi-dot text-danger"></i>High - Urgent</option>
-                        <option value="Medium"><i class="bi bi-dot text-warning"> Medium - Normal</option>
-                        <option value="Low"><i class="bi bi-dot text-success"> Low - Non-urgent</option>
+                    <label for="priority">Priority</label>
+                    <select id="priority" asp-for="NewRequest.Priority" required>
+                        <option value="" disabled>Select priority</option>
+                        <option value="High">High - Urgent</option>
+                        <option value="Medium">Medium - Normal</option>
+                        <option value="Low">Low - Non-urgent</option>
                     </select>
                 </div>
+
                 <div class="form-group">
-                    <label>Preferred Date</label>
-                    <input type="date" name="PreferredDate" />
+                    <label for="date">Preferred Date</label>
+                    <input id="date" type="date" name="NewRequest.PreferredDate" />
+                    <span asp-validation-for="NewRequest.PreferredDate" class="text-danger"></span>
                 </div>
+
                 <div class="form-group full">
                     <label>Description</label>
-                    <textarea name="Description" placeholder="Please describe the issue in detail..."></textarea>
+                    <textarea name="NewRequest.Description" placeholder="Please describe the issue in detail..."></textarea>
+                    <span asp-validation-for="NewRequest.Description" class="text-danger"></span>
                 </div>
             </div>
+
             <div class="form-actions">
                 <button type="button" class="btn-secondary" onclick="toggleForm()">Cancel</button>
                 <button type="submit" class="btn-primary">Submit Request</button>
@@ -556,61 +584,60 @@
             <div class="title">
                 <span style="color:var(--accent)"><i class="bi bi-diamond-fill"></i></span>
                 All Requests
-                <span class="count-badge">3</span>
+                <span class="count-badge">@Model.Requests.Count</span>
             </div>
         </div>
-        <table class="requests-table">
-            <thead>
-                <tr>
-                    <th>Issue</th>
-                    <th>Category</th>
-                    <th>Priority</th>
-                    <th>Submitted</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Example rows  replace with @@foreach (var req in Model) -->
-                <tr data-status="Pending">
-                    <td data-label="Issue">
-                        <div class="req-title">Air conditioner not cooling</div>
-                        <div class="req-sub">Unit 12A - Living Room</div>
-                    </td>
-                    <td data-label="Category"><span class="category-tag">Air Conditioning</span></td>
-                    <td data-label="Priority"><span class="priority-dot p-high"></span>High</td>
-                    <td data-label="Submitted" style="color:var(--text-muted);font-size:0.8rem">12 Apr 2025</td>
-                    <td data-label="Status"><span class="status-pill sp-pending">Pending</span></td>
-                    <td><a href="#" class="action-link">View </a></td>
-                </tr>
-                <tr data-status="Approved">
-                    <td data-label="Issue">
-                        <div class="req-title">Leaking pipe in bathroom</div>
-                        <div class="req-sub">Unit 12A - Bathroom</div>
-                    </td>
-                    <td data-label="Category"><span class="category-tag">Plumbing</span></td>
-                    <td data-label="Priority"><span class="priority-dot p-medium"></span>Medium</td>
-                    <td data-label="Submitted" style="color:var(--text-muted);font-size:0.8rem">3 Apr 2025</td>
-                    <td data-label="Status"><span class="status-pill sp-approved">Approved</span></td>
-                    <td><a href="#" class="action-link">View <i class="bi bi-caret-right-fill"></i></a></td>
-                </tr>
-                <tr data-status="Completed">
-                    <td data-label="Issue">
-                        <div class="req-title">Broken door lock</div>
-                        <div class="req-sub">Unit 12A - Main Door</div>
-                    </td>
-                    <td data-label="Category"><span class="category-tag">Structural</span></td>
-                    <td data-label="Priority"><span class="priority-dot p-low"></span>Low</td>
-                    <td data-label="Submitted" style="color:var(--text-muted);font-size:0.8rem">18 Mar 2025</td>
-                    <td data-label="Status"><span class="status-pill sp-completed">Completed</span></td>
-                    <td><a href="#" class="action-link">View <i class="bi bi-caret-right-fill"></i></a></td>
-                </tr>
-            </tbody>
-        </table>
+        @if (@Model.Requests.Count <= 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <div>No Requests Made Recently</div>
+            </div>
+        }
+        else 
+        {
+            <table class="requests-table">
+                <thead>
+                    <tr>
+                        <th>Issue</th>
+                        <th>Category</th>
+                        <th>Priority</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var req in Model.Requests)
+                    {
+                        <tr data-status="@req.Status">
+                            <td data-label="Issue">
+                                <div class="req-title">@req.Title</div>
+                                <!-- <div class="req-sub">Unit 12A - Living Room</div> -->
+                            </td>
+                            <td data-label="Category"><span class="category-tag">@req.Category</span></td>
+                            <td data-label="Priority"><span class="priority-dot p-high"></span>@req.Priority</td>
+                            <td data-label="Submitted" style="color:var(--text-muted);font-size:0.8rem"> @req.CreatedAt</td>
+                            <td data-label="Status"><span class="status-pill sp-pending">@req.Status</span></td>
+                            <td><a href="#" class="action-link">View <i class="bi bi-caret-right-fill"></i></a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
     </div>
 </div>
 
 <script>
+    const hasError = @(ViewData.ModelState.IsValid ? "false" : "true");
+
+    if (hasError) {
+        window.addEventListener('DOMContentLoaded', () => {
+            toggleForm();
+        });
+    }
+
     function toggleForm() {
         const f = document.getElementById('createForm');
         f.classList.toggle('open');

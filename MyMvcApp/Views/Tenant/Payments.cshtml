@@ -457,7 +457,7 @@
 <div class="tenant-wrap">
 
     <nav class="breadcrumb-nav">
-        <a href="/Tenant">Dashboard</a>
+        <a asp-action="Tenant">Dashboard</a>
         <span>></span>
         <span>Payments</span>
     </nav>
@@ -501,7 +501,7 @@
 
     <!-- Upload form -->
     <div class="form-card" id="uploadForm">
-        <h3><i class="bi bi-credit-card"> Upload Payment Receipt</h3>
+        <h3><i class="bi bi-credit-card"></i> Upload Payment Receipt</h3>
         <form asp-action="UploadPayment" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div class="form-grid">

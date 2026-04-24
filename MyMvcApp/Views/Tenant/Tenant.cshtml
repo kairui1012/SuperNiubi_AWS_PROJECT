@@ -1,12 +1,14 @@
+@model TenantDashboardViewModel
 @{
 	ViewData["Title"] = "My Dashboard";
-	// Mock data - replace with your actual Model
-	var tenantName = ViewBag.TenantEmail ?? "Sarah Johnson";
-	var propertyAddress = ViewBag.PropertyAddress ?? "Unit 12A, Sunrise Residences, Jalan Utama 3";
-	var leaseEnd = ViewBag.LeaseEnd ?? "31 Dec 2025";
-	var pendingMaintenance = ViewBag.PendingMaintenance ?? 2;
-	var totalPayments = ViewBag.TotalPayments ?? 5;
-	var pendingDocuments = ViewBag.PendingDocuments ?? 1;
+
+	var tenantName = Model.TenantEmail;
+	var propertyAddress = Model.PropertyAddress ?? "Unit 12A, Sunrise Residences, Jalan Utama 3";
+	var leaseStart = Model.LeaseStartDate.ToString("dd/MM/yyyy") ?? "1 jan 2025";
+	var leaseEnd = Model.LeaseEndDate.ToString("dd/MM/yyyy") ?? "31 Dec 2025";
+	var pendingMaintenance = Model.MaintenanceRequest.Count;
+	var totalPayments = Model.PaymentRecord;
+	var pendingDocuments = Model.DocumentQuantity;
 }
 
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -361,6 +363,24 @@
 		gap: 1.5rem;
 	}
 
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 40px 20px;
+		color: #666; 
+		font-family: 'DM Sans', sans-serif;
+		text-align: center;
+		width: 100%;
+	}
+
+	.empty-state i {
+		font-size: 2rem;
+		margin-bottom: 10px;
+		opacity: 0.5;
+	}
+
 	@@media (max-width: 768px) {
 		.content-grid {
 			grid-template-columns: 1fr;
@@ -688,7 +708,7 @@
 			</div>
 			<div class="meta-item">
 				<div class="meta-label">Status</div>
-				<div class="meta-value" style="color:var(--green);">Active</div>
+				<div class="meta-value" style="color:var(--green);">@Model.LeaseStatus</div>
 			</div>
 			<div class="meta-item">
 				<div class="meta-label">Tenant</div>
@@ -758,9 +778,28 @@
 					<span class="dot dot-orange"></span>
 					Recent Requests
 				</div>
-				<a href="/Tenant/MaintenanceRequest" class="section-action">View All <i class="bi bi-arrow-right"></i></a>
+				<a asp-action="MaintenanceRequest" class="section-action">View All <i class="bi bi-arrow-right"></i></a>
 			</div>
 			<div class="section-body">
+				@if (Model.MaintenanceRequest.Count <= 0)
+				{
+					<div class="empty-state">
+						<i class="bi bi-inbox"></i>
+						<div>No Requests Made Recently</div>
+					</div>
+				}
+				@foreach (var request in Model.MaintenanceRequest)
+				{
+					<div class="request-item">
+						<i class="bi bi-wrench-adjustable request-icon ri-maint"></i>
+						<div class="request-info">
+							<div class="request-title">@request.Title</div>
+							<div class="request-sub">Submitted @request.CreatedAt.ToShortDateString()</div>
+						</div>
+						<span class="status-pill sp-pending">@request.Status</span>
+					</div>
+				}
+				<!--
 				<div class="request-item">
 					<i class="bi bi-wrench-adjustable request-icon ri-maint"></i>
 					<div class="request-info">
@@ -785,6 +824,7 @@
 					</div>
 					<span class="status-pill sp-completed">Completed</span>
 				</div>
+				 -->
 			</div>
 		</div>
 
@@ -807,7 +847,7 @@
 						<span>Upload Payment</span>
 					</a>
 					<a href="/Tenant/Documents/Upload" class="qa-btn">
-						<i class="bi bi-paperclip stat-icon"></i>
+						<i class="bi bi-paperclip qa-icon"></i>
 						<span>Upload Document</span>
 					</a>
 					<a href="/Tenant/MyProperty" class="qa-btn">
@@ -830,7 +870,7 @@
 				<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:1.5rem;">
 					<div style="flex:1; min-width:220px;">
 						<div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem;">Lease Start</div>
-						<div style="font-size:1rem; font-weight:500;">1 Jan 2025</div>
+						<div style="font-size:1rem; font-weight:500;">@leaseStart</div>
 					</div>
 					<div style="flex:1; min-width:220px;">
 						<div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem;">Lease End</div>
@@ -838,13 +878,13 @@
 					</div>
 					<div style="flex:1; min-width:220px;">
 						<div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem;">Monthly Rent</div>
-						<div style="font-size:1rem; font-weight:500; color:var(--green);">RM 1,200</div>
+						<div style="font-size:1rem; font-weight:500; color:var(--green);">RM @Model.MonthlyRent</div>
 					</div>
 				</div>
 				<div class="lease-bar-wrap">
 					<div class="lease-bar-labels">
-						<span>Jan 2025</span>
-						<span>Dec 2025</span>
+						<span>@leaseStart</span>
+						<span>@leaseEnd</span>
 					</div>
 					<div class="lease-bar-track">
 						<div class="lease-bar-fill" id="leaseBar" style="width:0%"></div>
@@ -873,8 +913,8 @@
 
 	// Lease progress bar
 	window.addEventListener('load', () => {
-		const start = new Date('2025-01-01');
-		const end = new Date('2025-12-31');
+		const start = new Date("@Model.LeaseStartDate");
+		const end = new Date("@Model.LeaseEndDate");
 		const now = new Date();
 		const total = end - start;
 		const elapsed = Math.min(Math.max(now - start, 0), total);
