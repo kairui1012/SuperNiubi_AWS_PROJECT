@@ -1,84 +1,537 @@
-@model IEnumerable<MyMvcApp.Models.AppUser>
-@{
-    ViewData["Title"] = "Admin Dashboard";
+@model MyMvcApp.Models.Admin.AdminDashboardViewModel
+@using MyMvcApp.Models
+
+@functions {
+    private static string GetUserStatusLabel(AppUser user)
+    {
+        if (user.IsDisabled)
+        {
+            return "Disabled";
+        }
+
+        return user.IsApproved ? "Approved" : "Pending";
+    }
+
+    private static string GetUserStatusBadgeClass(AppUser user)
+    {
+        if (user.IsDisabled)
+        {
+            return "badge-soft-danger";
+        }
+
+        return user.IsApproved ? "badge-soft-success" : "badge-soft-warning";
+    }
+
+    private static string GetMaintenanceBadgeClass(MaintenanceStatus status)
+    {
+        return status switch
+        {
+            MaintenanceStatus.Pending => "badge-soft-warning",
+            MaintenanceStatus.Approved => "badge-soft-info",
+            MaintenanceStatus.InProgress => "badge-soft-primary",
+            MaintenanceStatus.Completed => "badge-soft-success",
+            _ => "badge-soft-danger"
+        };
+    }
+
+    private static string GetPaymentBadgeClass(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Pending => "badge-soft-secondary",
+            PaymentStatus.Submitted => "badge-soft-info",
+            PaymentStatus.Verified => "badge-soft-success",
+            PaymentStatus.Overdue => "badge-soft-warning",
+            _ => "badge-soft-danger"
+        };
+    }
+
+    private static string GetPriorityBadgeClass(MaintenancePriority priority)
+    {
+        return priority switch
+        {
+            MaintenancePriority.High => "badge-soft-danger",
+            MaintenancePriority.Medium => "badge-soft-warning",
+            _ => "badge-soft-secondary"
+        };
+    }
 }
 
-<style>
-    body { background-color: #14110F; color: #D9C5B2; }
-    .table { color: #D9C5B2; margin-top: 1rem; }
-    .table th { border-bottom: 2px solid #7E7F83; }
-    .table td { border-bottom: 1px solid #34312D; vertical-align: middle; }
-    .btn-approve { background-color: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px; }
-    .btn-disable { background-color: #dc3545; color: white; border: none; padding: 5px 15px; border-radius: 4px; }
-    .btn-role { background-color: #D9C5B2; color: #14110F; border: none; padding: 5px 15px; border-radius: 4px; }
-</style>
+@{
+    ViewData["Title"] = "Admin Dashboard";
 
-<div class="container mt-5">
-    <h2>System Administrator Workspace</h2>
-    <p class="text-muted">Manage user approvals and role assignments below.</p>
+    var totalUsers = Model.Overview.TotalUsers;
+    var totalProperties = Model.Overview.TotalProperties;
+    var occupiedProperties = Model.Overview.OccupiedProperties;
 
-    <form asp-action="Admin" method="get" class="mb-4 d-flex">
-        <input type="text" name="searchEmail" class="form-control me-2" placeholder="Search by Email..." style="max-width: 300px; background-color: #34312D; color: #D9C5B2; border: 1px solid #7E7F83;" value="@Context.Request.Query["searchEmail"]" />
-        <button type="submit" class="btn btn-primary" style="background-color: #D9C5B2; color: #14110F; border: none;">Search</button>
-        <a asp-action="Admin" class="btn btn-secondary ms-2">Clear</a>
-    </form>
+    var occupancyRate = totalProperties > 0
+        ? Math.Round((double)occupiedProperties / totalProperties * 100)
+        : 0;
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Role</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var user in Model)
-            {
-                <tr>
-                    <td>@user.Email</td>
-                    <td>
-                        @if (user.IsDisabled) { <span class="badge bg-danger">Disabled</span> }
-                        else if (!user.IsApproved) { <span class="badge bg-warning text-dark">Pending</span> }
-                        else { <span class="badge bg-success">Approved</span> }
-                    </td>
-                    <td>
-                        <form asp-action="ChangeRole" method="post" class="d-inline-flex">
-                            <input type="hidden" name="id" value="@user.Id" />
-                            <select name="newRole" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: 120px; margin-right: 10px;" @(user.IsDisabled ? "disabled" : "")>
-                                <option value="Tenant" selected="@(user.Role == "Tenant")">Tenant</option>
-                                <option value="Landlord" selected="@(user.Role == "Landlord")">Landlord</option>
-                                <option value="Admin" selected="@(user.Role == "Admin")">Admin</option>
-                            </select>
-                            <button type="submit" class="btn-role btn-sm" @(user.IsDisabled ? "disabled" : "")>Save</button>
-                        </form>
-                    </td>
-                    <td>
-                        @if (user.IsDisabled)
-                        {
-                            <form asp-action="EnableUser" method="post" class="d-inline">
-                                <input type="hidden" name="id" value="@user.Id" />
-                                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Are you sure you want to enable this user?');">Enable</button>
-                            </form>
-                        }
-                        else
-                        {
-                            @if (!user.IsApproved)
+    var pendingApprovalRate = totalUsers > 0
+        ? Math.Round((double)Model.Overview.PendingUsers / totalUsers * 100)
+        : 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/admin.css" asp-append-version="true" />
+}
+
+<div class="admin-shell" data-admin-page data-admin-default="users">
+    <section class="admin-hero">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-8">
+                <div class="admin-kicker">System Administrator Workspace</div>
+                <h1 class="admin-title">Cloud control center</h1>
+                <p class="admin-subtitle mb-0">
+                    A cleaner admin workspace for managing users, properties, maintenance, and payments in one cloud-based view.
+                </p>
+            </div>
+            <div class="col-lg-4">
+                <div class="panel-card h-100 admin-quick-card">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">System pulse</h2>
+                        <span class="badge badge-soft-primary">Live overview</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Total users</span>
+                        <span class="metric-value">@Model.Overview.TotalUsers</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Occupied properties</span>
+                        <span class="metric-value">@Model.Overview.OccupiedProperties</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Open maintenance</span>
+                        <span class="metric-value">@Model.Overview.OpenMaintenanceRequests</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Overdue payments</span>
+                        <span class="metric-value">@Model.Overview.OverduePayments</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-feature-grid">
+            <article class="admin-feature-card">
+                <div class="admin-feature-icon"><i class="bi bi-cloud-check"></i></div>
+                <h2>Cloud-ready workflow</h2>
+                <p>Keep operations centralized with AWS-style visibility across users, properties, and requests.</p>
+            </article>
+            <article class="admin-feature-card">
+                <div class="admin-feature-icon"><i class="bi bi-funnel"></i></div>
+                <h2>Fast filters</h2>
+                <p>Search by email, role, and status without leaving the management surface.</p>
+            </article>
+            <article class="admin-feature-card">
+                <div class="admin-feature-icon"><i class="bi bi-broadcast"></i></div>
+                <h2>Live activity view</h2>
+                <p>Recent users, maintenance, and payment events stay visible for quick review.</p>
+            </article>
+        </div>
+
+        <div class="admin-mode-switch" role="tablist" aria-label="Admin sections">
+            <button type="button" class="admin-mode-tab is-active" data-admin-switch="users" aria-pressed="true">User Management</button>
+            <button type="button" class="admin-mode-tab" data-admin-switch="properties" aria-pressed="false">Property Overview</button>
+            <button type="button" class="admin-mode-tab" data-admin-switch="maintenance" aria-pressed="false">Maintenance Queue</button>
+            <button type="button" class="admin-mode-tab" data-admin-switch="payments" aria-pressed="false">Payment Center</button>
+        </div>
+    </section>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success admin-alert">@successMessage</div>
+    }
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger admin-alert">@errorMessage</div>
+    }
+
+    <section class="admin-pane" data-admin-pane="users">
+        <div class="row g-4">
+            <div class="col-xl-4">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Latest user records</h2>
+                        <span class="panel-meta">Newest DB entries</span>
+                    </div>
+                    @if (Model.LatestUsers.Count == 0)
+                    {
+                        <div class="empty-state">No users available yet.</div>
+                    }
+                    else
+                    {
+                        <div class="activity-list">
+                            @foreach (var user in Model.LatestUsers)
                             {
-                                <form asp-action="ApproveUser" method="post" class="d-inline">
-                                    <input type="hidden" name="id" value="@user.Id" />
-                                    <button type="submit" class="btn-approve btn-sm me-2">Approve & Email</button>
-                                </form>
+                                <div class="activity-item">
+                                    <div class="activity-title">@user.Email</div>
+                                    <div class="activity-meta">
+                                        User #@user.Id • @user.Role •
+                                        <span class="badge @GetUserStatusBadgeClass(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })">
+                                            @GetUserStatusLabel(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })
+                                        </span>
+                                    </div>
+                                </div>
                             }
-                            
-                            <form asp-action="DisableUser" method="post" class="d-inline">
-                                <input type="hidden" name="id" value="@user.Id" />
-                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to disable this user?');">Disable</button>
-                            </form>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-xl-8">
+                <div class="panel-card admin-users-card">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 class="panel-title">Manage users</h2>
+                            <div class="panel-meta">Approval, role assignment, and disable/enable controls stay in one place.</div>
+                        </div>
+                        <span class="badge admin-count-badge">@Model.Users.Count result(s)</span>
+                    </div>
+
+                    <form asp-action="Admin" method="get" class="row g-3 mb-4 admin-filter-bar">
+                        <div class="col-md-5">
+                            <input type="text"
+                                   name="searchEmail"
+                                   class="form-control filter-input"
+                                   placeholder="Search by email"
+                                   value="@Model.SearchEmail" />
+                        </div>
+                        <div class="col-md-3">
+                            <select name="roleFilter" class="form-select filter-select">
+                                <option value="">All roles</option>
+                                <option value="Tenant" selected="@(Model.RoleFilter == "Tenant" ? "selected" : null)">Tenant</option>
+                                <option value="Landlord" selected="@(Model.RoleFilter == "Landlord" ? "selected" : null)">Landlord</option>
+                                <option value="Admin" selected="@(Model.RoleFilter == "Admin" ? "selected" : null)">Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="statusFilter" class="form-select filter-select">
+                                <option value="">All status</option>
+                                <option value="Pending" selected="@(Model.StatusFilter == "Pending" ? "selected" : null)">Pending</option>
+                                <option value="Approved" selected="@(Model.StatusFilter == "Approved" ? "selected" : null)">Approved</option>
+                                <option value="Disabled" selected="@(Model.StatusFilter == "Disabled" ? "selected" : null)">Disabled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button type="submit" class="btn admin-btn-primary">Apply</button>
+                        </div>
+                        <div class="col-12 admin-filter-actions">
+                            <a asp-action="Admin" class="btn admin-btn-secondary btn-sm">Reset filters</a>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Users.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 muted-copy">No users matched the current filter.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var user in Model.Users)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@user.Email</div>
+                                                <div class="panel-meta">User #@user.Id</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetUserStatusBadgeClass(user)">@GetUserStatusLabel(user)</span>
+                                            </td>
+                                            <td>
+                                                <form asp-action="ChangeRole" method="post" class="d-flex flex-wrap gap-2 align-items-center">
+                                                    <input type="hidden" name="id" value="@user.Id" />
+                                                    <select name="newRole"
+                                                            class="form-select form-select-sm filter-select"
+                                                            style="width: 150px;"
+                                                            @(user.IsDisabled ? "disabled" : null)>
+                                                        <option value="Tenant" selected="@(user.Role == "Tenant" ? "selected" : null)">Tenant</option>
+                                                        <option value="Landlord" selected="@(user.Role == "Landlord" ? "selected" : null)">Landlord</option>
+                                                        <option value="Admin" selected="@(user.Role == "Admin" ? "selected" : null)">Admin</option>
+                                                    </select>
+                                                    <button type="submit"
+                                                            class="btn admin-btn-secondary btn-sm"
+                                                            @(user.IsDisabled ? "disabled" : null)>
+                                                        Save
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                <div class="table-actions">
+                                                    @if (user.IsDisabled)
+                                                    {
+                                                        <form asp-action="EnableUser" method="post" class="d-inline">
+                                                            <input type="hidden" name="id" value="@user.Id" />
+                                                            <button type="submit"
+                                                                    class="btn btn-success btn-sm"
+                                                                    onclick="return confirm('Enable this user account?');">
+                                                                Enable
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                    else
+                                                    {
+                                                        @if (!user.IsApproved)
+                                                        {
+                                                            <form asp-action="ApproveUser" method="post" class="d-inline">
+                                                                <input type="hidden" name="id" value="@user.Id" />
+                                                                <button type="submit" class="btn btn-warning btn-sm">Approve & Email</button>
+                                                            </form>
+                                                        }
+
+                                                        <form asp-action="DisableUser" method="post" class="d-inline">
+                                                            <input type="hidden" name="id" value="@user.Id" />
+                                                            <button type="submit"
+                                                                    class="btn btn-danger btn-sm"
+                                                                    onclick="return confirm('Disable this user account?');">
+                                                                Disable
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-pane d-none" data-admin-pane="properties">
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="panel-card">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Property overview</h2>
+                        <span class="panel-meta">Occupancy and asset health</span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="summary-card">
+                                <div class="summary-label">Total properties</div>
+                                <div class="summary-value">@Model.PropertyReport.TotalProperties</div>
+                                <div class="summary-footnote">Managed units in the system</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="summary-card">
+                                <div class="summary-label">Occupied properties</div>
+                                <div class="summary-value">@Model.PropertyReport.OccupiedProperties</div>
+                                <div class="summary-footnote">Active rentals currently assigned</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="summary-card">
+                                <div class="summary-label">Vacant properties</div>
+                                <div class="summary-value">@Model.PropertyReport.VacantProperties</div>
+                                <div class="summary-footnote">Available for new tenants</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="summary-card">
+                                <div class="summary-label">Active tenancies</div>
+                                <div class="summary-value">@Model.PropertyReport.ActiveTenancies</div>
+                                <div class="summary-footnote">Live rental assignments</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Platform features</h2>
+                        <span class="panel-meta">New additions</span>
+                    </div>
+                    <div class="activity-list">
+                        <div class="activity-item">
+                            <div class="activity-title">Documents tracked in cloud</div>
+                            <div class="activity-meta">@Model.Overview.TotalDocuments files are available for review and audit.</div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-title">Occupancy monitoring</div>
+                            <div class="activity-meta">The control panel keeps rental occupancy and vacancies visible at a glance.</div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-title">Property workflow shortcuts</div>
+                            <div class="activity-meta">Quick actions help move from overview into management with fewer clicks.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-pane d-none" data-admin-pane="maintenance">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Maintenance queue</h2>
+                        <span class="panel-meta">Request pipeline</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Pending</span>
+                        <span class="metric-value">@Model.MaintenanceReport.PendingCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Approved</span>
+                        <span class="metric-value">@Model.MaintenanceReport.ApprovedCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>In progress</span>
+                        <span class="metric-value">@Model.MaintenanceReport.InProgressCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Completed</span>
+                        <span class="metric-value">@Model.MaintenanceReport.CompletedCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>High priority open</span>
+                        <span class="metric-value">@Model.MaintenanceReport.HighPriorityOpenCount</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Recent maintenance</h2>
+                        <span class="panel-meta">Latest requests submitted</span>
+                    </div>
+                    @if (Model.RecentMaintenanceRequests.Count == 0)
+                    {
+                        <div class="empty-state">No maintenance requests found.</div>
+                    }
+                    else
+                    {
+                        <div class="activity-list">
+                            @foreach (var item in Model.RecentMaintenanceRequests)
+                            {
+                                <div class="activity-item">
+                                    <div class="activity-title">@item.Title</div>
+                                    <div class="activity-meta">@item.PropertyName • @item.TenantEmail</div>
+                                    <div class="activity-meta mt-2">
+                                        <span class="badge @GetMaintenanceBadgeClass(item.Status)">@item.Status</span>
+                                        <span class="badge @GetPriorityBadgeClass(item.Priority)">@item.Priority priority</span>
+                                        <span>@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-pane d-none" data-admin-pane="payments">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Payment center</h2>
+                        <span class="panel-meta">Collection and exceptions</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Pending</span>
+                        <span class="metric-value">@Model.PaymentReport.PendingCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Submitted</span>
+                        <span class="metric-value">@Model.PaymentReport.SubmittedCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Verified</span>
+                        <span class="metric-value">@Model.PaymentReport.VerifiedCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Overdue</span>
+                        <span class="metric-value">@Model.PaymentReport.OverdueCount</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Total verified amount</span>
+                        <span class="metric-value">@Model.PaymentReport.TotalVerifiedAmount.ToString("C")</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Recent payments</h2>
+                        <span class="panel-meta">Latest payment activity</span>
+                    </div>
+                    @if (Model.RecentPayments.Count == 0)
+                    {
+                        <div class="empty-state">No payments found.</div>
+                    }
+                    else
+                    {
+                        <div class="activity-list">
+                            @foreach (var item in Model.RecentPayments)
+                            {
+                                <div class="activity-item">
+                                    <div class="activity-title">@item.TenantEmail</div>
+                                    <div class="activity-meta">@item.PropertyName • @item.PaymentMonth @item.PaymentYear</div>
+                                    <div class="activity-meta mt-2">
+                                        <span class="badge @GetPaymentBadgeClass(item.Status)">@item.Status</span>
+                                        <span>@item.Amount.ToString("C")</span>
+                                        <span>@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const page = document.querySelector('[data-admin-page]');
+            const tabs = document.querySelectorAll('[data-admin-switch]');
+            const panes = document.querySelectorAll('[data-admin-pane]');
+
+            const setPane = (paneName) => {
+                panes.forEach((pane) => {
+                    pane.classList.toggle('d-none', pane.dataset.adminPane !== paneName);
+                });
+
+                tabs.forEach((tab) => {
+                    const active = tab.dataset.adminSwitch === paneName;
+                    tab.classList.toggle('is-active', active);
+                    tab.setAttribute('aria-pressed', active ? 'true' : 'false');
+                });
+            };
+
+            tabs.forEach((tab) => {
+                tab.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    setPane(tab.dataset.adminSwitch);
+                });
+            });
+
+            setPane(page?.dataset.adminDefault || 'users');
+        })();
+    </script>
+}
