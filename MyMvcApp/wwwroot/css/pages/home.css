@@ -1,0 +1,157 @@
+/* Container & Layout */
+.home-container {
+    max-width: 1300px;
+}
+
+.hub-section {
+    padding-top: 8vh;      /* 顶部留白 */
+    padding-bottom: 12vh;  /* 底部留白，确保下一块不会立刻挤上来 */
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+
+.hub-section:last-child {
+    border-bottom: none;
+    padding-bottom: 20vh; /* 最后一块给更多空间 */
+}
+
+.section-title-wrapper {
+    margin-bottom: 3rem; 
+}
+
+.section-title-wrapper h4 {
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+}
+
+/* 调整卡片在宽屏下的比例 */
+.notice-card {
+    min-height: 280px; /* 增加卡片基础高度，防止在宽屏下显得太扁 */
+}
+
+/* 针对 16:9 屏幕的优化：如果屏幕非常宽，增加容器内边距 */
+@media (min-width: 1400px) {
+    .home-container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+/* Filter Pills */
+.filter-scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+}
+.filter-scroll-container::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.filter-pill {
+    appearance: none;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    color: var(--bs-secondary-color);
+    border-radius: 999px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.filter-pill:hover {
+    background: rgba(13, 110, 253, 0.05);
+    color: var(--bs-body-color);
+}
+
+.filter-pill.active {
+    background: var(--bs-primary);
+    color: #fff;
+    border-color: var(--bs-primary);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+}
+
+[data-bs-theme="dark"] .filter-pill {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .filter-pill.active {
+    background: #0d6efd;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+}
+
+/* Pinned Card Styling */
+.pinned-card {
+    background: linear-gradient(145deg, rgba(220, 53, 69, 0.05) 0%, transparent 100%);
+    border: 1px solid rgba(220, 53, 69, 0.15) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+[data-bs-theme="dark"] .pinned-card {
+    background: linear-gradient(145deg, rgba(234, 134, 143, 0.08) 0%, #1e1e1e 100%);
+    border-color: rgba(234, 134, 143, 0.2) !important;
+}
+
+/* Notice Cards */
+.notice-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.notice-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] .notice-card {
+    background: #1e1e1e;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+[data-bs-theme="dark"] .notice-card:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
+.notice-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* Typography Utilities */
+.w-fit {
+    width: fit-content;
+}
+
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.text-truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.notice-link {
+    color: var(--bs-primary);
+    transition: opacity 0.2s;
+}
+
+.notice-link:hover {
+    opacity: 0.8;
+}
+
+[data-bs-theme="dark"] .notice-link {
+    color: #6ea8fe;
+}

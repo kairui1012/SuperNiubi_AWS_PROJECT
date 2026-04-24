@@ -1,8 +1,119 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Community Hub";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome to trigger</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/home.css" asp-append-version="true" />
+}
+
+<div class="container home-container">
+    
+    <header class="pt-5 pb-4">
+        <div class="row align-items-end">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-3"><span class="text-gradient">Community Hub</span></h1>
+                <p class="text-muted fs-5 mb-4">Welcome to PropEase. Explore your community updates below.</p>
+            </div>
+        </div>
+        <div class="filter-scroll-container">
+            <div class="d-flex gap-2">
+                <button class="filter-pill active">All Updates</button>
+                <button class="filter-pill">🎉 Events</button>
+                <button class="filter-pill">🏷️ Discounts</button>
+                <button class="filter-pill">🛠️ Notices</button>
+            </div>
+        </div>
+    </header>
+
+    <section class="hub-section">
+        <div class="section-title-wrapper">
+            <h4 class="fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-megaphone text-danger"></i> Important Notice
+            </h4>
+        </div>
+        <div class="card pinned-card border-0 position-relative overflow-hidden">
+            <div class="card-body p-5 d-flex align-items-center gap-4 flex-wrap flex-md-nowrap">
+                <div class="pinned-icon badge-soft-danger d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width: 80px; height: 80px; font-size: 2rem;">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <span class="badge badge-soft-danger px-3 py-2 mb-3 text-black">Urgent Notice</span>
+                    <h3 class="fw-bold mb-2">Scheduled Water Tank Maintenance</h3>
+                    <p class="fs-5 text-muted mb-0">Water supply will be interrupted on Block A and B from 10:00 AM to 2:00 PM.</p>
+                </div>
+                <button class="btn btn-danger btn-lg rounded-pill px-5">Details</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="events" class="hub-section">
+        <div class="section-title-wrapper">
+            <h4 class="fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-calendar-star text-success"></i> Upcoming Events
+            </h4>
+            <p class="text-muted">Don't miss out on these neighborhood gatherings.</p>
+        </div>
+        <div class="row g-5">
+            <div class="col-12 col-lg-6">
+                <div class="card notice-card h-100 border-0">
+                    <div class="card-body p-4 d-flex flex-column">
+                         <div class="d-flex justify-content-between mb-4">
+                            <div class="notice-icon badge-soft-success"><i class="bi bi-cup-hot"></i></div>
+                            <small class="text-muted">Oct 24, 2026</small>
+                        </div>
+                        <h4 class="fw-bold mb-3">Monthly Rooftop BBQ Party</h4>
+                        <p class="text-muted flex-grow-1">Join us at the Level 15 Rooftop Garden for our monthly resident get-together!</p>
+                        <div class="mt-4 pt-4 border-top d-flex justify-content-between align-items-center">
+                            <span class="text-muted"><i class="bi bi-clock me-2"></i>7:00 PM</span>
+                            <a href="#" class="fw-bold notice-link text-decoration-none">RSVP Now <i class="bi bi-arrow-right"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card notice-card h-100 border-0">
+                     <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between mb-4">
+                           <div class="notice-icon badge-soft-info"><i class="bi bi-person-arms-up"></i></div>
+                           <small class="text-muted">Every Saturday</small>
+                       </div>
+                       <h4 class="fw-bold mb-3">Morning Yoga Session</h4>
+                       <p class="text-muted flex-grow-1">Start your weekend right with a relaxing yoga session by the pool.</p>
+                       <div class="mt-4 pt-4 border-top d-flex justify-content-between align-items-center">
+                           <span class="text-muted"><i class="bi bi-geo-alt me-2"></i>Pool Deck</span>
+                           <a href="#" class="fw-bold notice-link text-decoration-none">View Details <i class="bi bi-arrow-right"></i></a>
+                       </div>
+                   </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="promotions" class="hub-section">
+        <div class="section-title-wrapper">
+            <h4 class="fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-tags text-primary"></i> Exclusive Promotions
+            </h4>
+            <p class="text-muted">Special offers curated for our residents.</p>
+        </div>
+        <div class="row g-5">
+            <div class="col-12 col-lg-6">
+                <div class="card notice-card h-100 border-0">
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between mb-4">
+                           <div class="notice-icon badge-soft-primary"><i class="bi bi-percent"></i></div>
+                           <small class="text-muted">Valid till Nov 5</small>
+                       </div>
+                       <h4 class="fw-bold mb-3">50% Off Badminton Court</h4>
+                       <p class="text-muted flex-grow-1">Book your slots during off-peak hours and save half the price!</p>
+                       <div class="mt-4 pt-4 border-top d-flex justify-content-between align-items-center">
+                           <span class="text-danger fw-bold">Ends in 12 days</span>
+                           <a href="#" class="fw-bold notice-link text-decoration-none">Book Now <i class="bi bi-arrow-right"></i></a>
+                       </div>
+                   </div>
+                </div>
+            </div>
+            </div>
+    </section>
+
 </div>
