@@ -1,0 +1,123 @@
+@model MyMvcApp.Models.Tenant
+
+@{
+    ViewData["Title"] = "Tenant Details";
+}
+
+<style>
+    body {
+        background-color: #14110F;
+        color: #D9C5B2;
+    }
+
+    .details-card {
+        background-color: #34312D;
+        border-left: 4px solid #7E7F83;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .detail-row {
+        margin-bottom: 0.8rem;
+    }
+
+    .label-text {
+        font-weight: 700;
+        color: #D9C5B2;
+    }
+
+    .value-text {
+        color: #C7B299;
+    }
+
+    .btn-custom {
+        background-color: #7E7F83;
+        color: #14110F;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 0.8rem;
+        margin-top: 1rem;
+        font-weight: 600;
+    }
+
+    .btn-custom:hover {
+        background-color: #D9C5B2;
+        color: #14110F;
+    }
+</style>
+
+<div class="container">
+    <div class="details-card">
+        <h2>Tenant Details</h2>
+        <p style="color: #7E7F83;">
+            View full information for this tenant.
+        </p>
+
+        <div class="detail-row">
+            <span class="label-text">Tenant Email:</span>
+            <span class="value-text">@Model.User.Email</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Property:</span>
+            <span class="value-text">@Model.Property.PropertyName</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Lease Start Date:</span>
+            <span class="value-text">@Model.LeaseStartDate.ToShortDateString()</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Lease End Date:</span>
+            <span class="value-text">@Model.LeaseEndDate.ToShortDateString()</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Monthly Rent:</span>
+            <span class="value-text">RM @Model.MonthlyRent</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Deposit Paid:</span>
+            <span class="value-text">RM @Model.DepositPaid</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Deposit Status:</span>
+            <span class="value-text">@Model.DepositStatus</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Rent Due Day:</span>
+            <span class="value-text">@Model.RentDueDay</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Lease Status:</span>
+            <span class="value-text">@Model.LeaseStatus</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Notes:</span>
+            <span class="value-text">@Model.Notes</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Created At:</span>
+            <span class="value-text">@Model.CreatedAt</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Updated At:</span>
+            <span class="value-text">@Model.UpdatedAt</span>
+        </div>
+
+        <a href="/Landlord/Tenants" class="btn-custom">Back to Tenant List</a>
+        <a href="/Landlord/Dashboard" class="btn-custom">Back to Dashboard</a>
+    </div>
+</div>

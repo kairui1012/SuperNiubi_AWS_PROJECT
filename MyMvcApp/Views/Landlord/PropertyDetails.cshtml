@@ -1,0 +1,175 @@
+@model MyMvcApp.Models.Property
+
+@{
+    ViewData["Title"] = "Property Details";
+}
+
+<style>
+    body {
+        background-color: #14110F;
+        color: #D9C5B2;
+    }
+
+    .details-card {
+        background-color: #34312D;
+        border-left: 4px solid #7E7F83;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .detail-row {
+        margin-bottom: 0.8rem;
+    }
+
+    .label-text {
+        font-weight: 700;
+        color: #D9C5B2;
+    }
+
+    .value-text {
+        color: #C7B299;
+    }
+
+    .btn-custom {
+        background-color: #7E7F83;
+        color: #14110F;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 0.8rem;
+        margin-top: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-custom:hover {
+        background-color: #D9C5B2;
+        color: #14110F;
+    }
+
+    .action-row {
+        margin-top: 1.5rem;
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .inline-form {
+        display: inline;
+    }
+</style>
+
+<div class="container">
+    <div class="details-card">
+        <h2>Property Details</h2>
+        <p style="color: #7E7F83;">
+            View full information for this property.
+        </p>
+
+        <div class="detail-row">
+            <span class="label-text">Property Name:</span>
+            <span class="value-text">@Model.PropertyName</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Property Type:</span>
+            <span class="value-text">@Model.PropertyType</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Address Line 1:</span>
+            <span class="value-text">@Model.AddressLine1</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Address Line 2:</span>
+            <span class="value-text">@Model.AddressLine2</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">City:</span>
+            <span class="value-text">@Model.City</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">State:</span>
+            <span class="value-text">@Model.State</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Postal Code:</span>
+            <span class="value-text">@Model.PostalCode</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Floor Number:</span>
+            <span class="value-text">@Model.FloorNumber</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Unit Number:</span>
+            <span class="value-text">@Model.UnitNumber</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Size (Sq Ft):</span>
+            <span class="value-text">@Model.SizeSqFt</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Bedrooms:</span>
+            <span class="value-text">@Model.Bedrooms</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Bathrooms:</span>
+            <span class="value-text">@Model.Bathrooms</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Monthly Rent:</span>
+            <span class="value-text">RM @Model.MonthlyRent</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Deposit Amount:</span>
+            <span class="value-text">RM @Model.DepositAmount</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Parking Bay:</span>
+            <span class="value-text">@Model.ParkingBay</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Description:</span>
+            <span class="value-text">@Model.Description</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Created At:</span>
+            <span class="value-text">@Model.CreatedAt</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label-text">Updated At:</span>
+            <span class="value-text">@Model.UpdatedAt</span>
+        </div>
+
+        <div class="action-row">
+            <a href="/Landlord/EditProperty/@Model.PropertyId" class="btn-custom">Edit</a>
+            <a href="/Landlord/MyProperties" class="btn-custom">Back to My Properties</a>
+
+            <form asp-action="DeleteProperty" asp-controller="Landlord" method="post" class="inline-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.PropertyId" />
+                <button type="submit" class="btn-custom" onclick="return confirm('Are you sure you want to delete this property?');">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

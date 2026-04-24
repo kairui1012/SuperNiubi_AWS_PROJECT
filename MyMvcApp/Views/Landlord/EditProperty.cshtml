@@ -1,7 +1,7 @@
 @model MyMvcApp.Models.Property
 
 @{
-    ViewData["Title"] = "Add Property";
+    ViewData["Title"] = "Edit Property";
 }
 
 <style>
@@ -61,29 +61,24 @@
         color: #ff8a8a;
         margin-bottom: 1rem;
     }
-
-    .success-text {
-        color: #90ee90;
-        margin-bottom: 1rem;
-    }
 </style>
 
 <div class="container">
     <div class="form-card">
-        <h2>Add New Property</h2>
+        <h2>Edit Property</h2>
         <p style="color: #7E7F83;">
-            Fill in the property information below.
+            Update the property information below.
         </p>
-
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="success-text">@TempData["SuccessMessage"]</div>
-        }
 
         <div asp-validation-summary="All" class="summary-validation"></div>
 
-        <form asp-action="AddProperty" asp-controller="Landlord" method="post">
+        <form asp-action="EditProperty" asp-controller="Landlord" method="post">
             @Html.AntiForgeryToken()
+
+            <input asp-for="PropertyId" type="hidden" />
+            <input asp-for="LandlordId" type="hidden" />
+            <input asp-for="CreatedAt" type="hidden" />
+            <input asp-for="UpdatedAt" type="hidden" />
 
             <label asp-for="PropertyName">Property Name</label>
             <input asp-for="PropertyName" />
@@ -149,7 +144,7 @@
             <textarea asp-for="Description"></textarea>
             <span asp-validation-for="Description" class="validation-text"></span>
 
-            <button type="submit" class="btn-custom">Save Property</button>
+            <button type="submit" class="btn-custom">Update Property</button>
             <a href="/Landlord/MyProperties" class="btn-custom">Back to My Properties</a>
         </form>
     </div>
