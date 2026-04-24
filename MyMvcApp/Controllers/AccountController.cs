@@ -24,7 +24,13 @@ namespace MyMvcApp.Controllers
 
         // --- LOGIN ---
         [HttpGet]
-        public IActionResult Login() => View();
+        public IActionResult Login(string? mode = null)
+        {
+            ViewBag.AuthMode = string.Equals(mode, "register", StringComparison.OrdinalIgnoreCase)
+                ? "register"
+                : "login";
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -35,17 +41,20 @@ namespace MyMvcApp.Controllers
                 var appUser = _dbContext.Users.FirstOrDefault(u => u.Email.ToLower() == model.Email.ToLower());
                 
                 if (appUser == null) {
-                    ModelState.AddModelError(string.Empty, "User does not exist.");
+                    ViewBag.AuthMode = "login";
+                    ViewBag.LoginError = "User does not exist.";
                     return View(model);
                 }
 
                 if (appUser.IsDisabled) {
-                    ModelState.AddModelError(string.Empty, "Your account has been disabled by the administrator.");
+                    ViewBag.AuthMode = "login";
+                    ViewBag.LoginError = "Your account has been disabled by the administrator.";
                     return View(model);
                 }
 
                 if (!appUser.IsApproved) {
-                    ModelState.AddModelError(string.Empty, "Your account is pending Admin approval.");
+                    ViewBag.AuthMode = "login";
+                    ViewBag.LoginError = "Your account is pending Admin approval.";
                     return View(model);
                 }
 
@@ -60,13 +69,14 @@ namespace MyMvcApp.Controllers
                         if (appUser.Role == "Landlord") return RedirectToAction("Dashboard", "Landlord");
                         return RedirectToAction("Tenant", "Tenant");
                     }
-                    ModelState.AddModelError(string.Empty, "Invalid password.");
+                    ViewBag.LoginError = "Invalid password.";
                 }
                 catch (Amazon.CognitoIdentityProvider.Model.UserNotConfirmedException)
                 {
-                    ModelState.AddModelError(string.Empty, "Your account has not been confirmed by the administrator yet.");
+                    ViewBag.LoginError = "Your account has not been confirmed by the administrator yet.";
                 }
             }
+            ViewBag.AuthMode = "login";
             return View(model);
         }
 
@@ -78,7 +88,7 @@ namespace MyMvcApp.Controllers
 
         // --- REGISTER ---
         [HttpGet]
-        public IActionResult Register() => View();
+        public IActionResult Register() => RedirectToAction(nameof(Login), new { mode = "register" });
 
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
@@ -101,18 +111,27 @@ namespace MyMvcApp.Controllers
                     await _dbContext.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = "Registration successful! Please wait for admin approval.";
-                    return RedirectToAction("Login");
+                    return RedirectToAction(nameof(Login));
                 }
-                foreach (var error in result.Errors) ModelState.AddModelError(string.Empty, error.Description);
+                ViewBag.RegisterError = result.Errors.FirstOrDefault()?.Description;
             }
-            return View(model);
+
+            ViewBag.AuthMode = "register";
+            var loginModel = new LoginViewModel
+            {
+                Email = model.Email ?? string.Empty,
+                Password = model.Password ?? string.Empty,
+                RememberMe = false
+            };
+
+            return View(nameof(Login), loginModel);
         }
 
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            return RedirectToAction("Login", "Account");
+            return RedirectToAction(nameof(Login), "Account");
         }
     }
 }

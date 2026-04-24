@@ -1,0 +1,121 @@
+.app-topbar-shell {
+    min-height: 56px;
+    gap: 0.75rem;
+}
+
+.app-topbar-toggler {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    padding: 0.28rem 0.5rem;
+}
+
+.app-topbar-links {
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.app-topbar-links .nav-link {
+    color: var(--bs-body-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0;
+    background: transparent;
+    transition: color 0.15s ease;
+}
+
+.app-topbar-links .nav-link:hover,
+.app-topbar-links .nav-link:focus-visible {
+    color: var(--bs-primary);
+    background: transparent;
+    box-shadow: none;
+}
+
+.app-topbar-actions {
+    gap: 0.4rem;
+}
+
+.app-theme-toggle-wrap {
+    display: inline-flex;
+    align-items: center;
+}
+
+.app-topbar-actions .auth-page-theme-toggle {
+    border: 0;
+    background: transparent;
+    box-shadow: none !important;
+    padding: 0.2rem 0.35rem;
+    outline: none !important;
+    transition: none;
+}
+
+.app-topbar-actions .auth-page-theme-toggle:hover,
+.app-topbar-actions .auth-page-theme-toggle:focus,
+.app-topbar-actions .auth-page-theme-toggle:focus-visible,
+.app-topbar-actions .auth-page-theme-toggle:active {
+    background: transparent;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.app-topbar-actions .auth-page-theme-toggle:hover i,
+.app-topbar-actions .auth-page-theme-toggle:focus i,
+.app-topbar-actions .auth-page-theme-toggle:active i {
+    filter: none;
+}
+
+.app-user-chip {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bs-body-bg) 92%, transparent);
+    color: var(--bs-body-color);
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0.38rem 0.8rem;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-user-chip:hover,
+.app-user-chip:focus-visible {
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+    background: color-mix(in srgb, var(--bs-primary) 10%, var(--bs-body-bg));
+    box-shadow: none;
+}
+
+@media (max-width: 991.98px) {
+    .app-topbar-shell {
+        align-items: flex-start;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .auth-page-topbar .navbar-collapse {
+        width: 100%;
+        border-top: 1px solid var(--bs-border-color);
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+    }
+
+    .app-topbar-links {
+        align-items: stretch;
+        margin-bottom: 0.5rem;
+    }
+
+    .app-topbar-links .nav-link {
+        border-radius: 0.55rem;
+    }
+
+    .app-topbar-actions {
+        align-items: stretch;
+    }
+
+    .app-user-chip {
+        width: 100%;
+        max-width: none;
+    }
+}

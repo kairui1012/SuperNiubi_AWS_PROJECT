@@ -1,0 +1,124 @@
+@model MyMvcApp.Models.LoginViewModel
+@{
+    var authMode = (ViewBag.AuthMode as string ?? "login").ToLowerInvariant();
+    var authImageUrl = ViewBag.AuthImageUrl as string ?? "/images/auth-side.jpg";
+    var isLogin = authMode != "register";
+    var loginErrorMessage = ViewBag.LoginError as string;
+    var registerErrorMessage = ViewBag.RegisterError as string;
+}
+
+<div class="auth-page" data-auth-page data-auth-mode="@(isLogin ? "login" : "register")">
+    <main class="auth-layout">
+        <section class="auth-panel auth-panel-form">
+            <div class="auth-copy-block">
+                <h1 class="auth-title" data-auth-title>@(isLogin ? "Login to your account" : "Create your account")</h1>
+                <p class="auth-subtitle" data-auth-subtitle>@(isLogin ? "Welcome back. Login to continue." : "Create an account and get started.")</p>
+            </div>
+
+            <div class="auth-mode-switch" role="tablist" aria-label="Authentication mode">
+                <button type="button" class="auth-mode-tab @(isLogin ? "is-active" : "")" data-auth-switch="login" aria-pressed="@(isLogin ? "true" : "false")">Login</button>
+                <button type="button" class="auth-mode-tab @(!isLogin ? "is-active" : "")" data-auth-switch="register" aria-pressed="@(!isLogin ? "true" : "false")">Sign up</button>
+            </div>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success auth-alert">@TempData["SuccessMessage"]</div>
+            }
+
+            <div class="auth-form-stack">
+                <form asp-action="Login" method="post" autocomplete="off" class="auth-form @(isLogin ? "" : "d-none")" data-auth-form="login">
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email</label>
+                        <input asp-for="Email" class="form-control auth-input" placeholder="name@company.com" />
+                        <span asp-validation-for="Email" class="invalid-feedback d-block"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                        <input asp-for="Password" type="password" class="form-control auth-input" placeholder="Enter your password" />
+                        <span asp-validation-for="Password" class="invalid-feedback d-block"></span>
+                    </div>
+
+                    <div class="auth-form-row">
+                        <div class="form-check">
+                            <input asp-for="RememberMe" class="form-check-input" />
+                            <label asp-for="RememberMe" class="form-check-label"></label>
+                        </div>
+                    </div>
+
+                    @if (isLogin && !string.IsNullOrWhiteSpace(loginErrorMessage))
+                    {
+                        <div class="auth-inline-error">@loginErrorMessage</div>
+                    }
+
+                    <div class="auth-action-row">
+                        <button type="submit" class="btn btn-primary auth-submit w-100 auth-submit-login">Login</button>
+                    </div>
+                </form>
+
+                <form asp-action="Register" method="post" autocomplete="off" class="auth-form @(!isLogin ? "" : "d-none")" data-auth-form="register">
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email</label>
+                        <input asp-for="Email" id="registerEmail" class="form-control auth-input" placeholder="name@company.com" />
+                        <span asp-validation-for="Email" class="invalid-feedback d-block"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                        <input asp-for="Password" id="registerPassword" type="password" class="form-control auth-input" placeholder="Create a password" />
+                        <span asp-validation-for="Password" class="invalid-feedback d-block"></span>
+                    </div>
+
+                    @if (!isLogin && !string.IsNullOrWhiteSpace(registerErrorMessage))
+                    {
+                        <div class="auth-inline-error">@registerErrorMessage</div>
+                    }
+
+                    <div class="auth-action-row">
+                        <button type="submit" class="btn btn-primary auth-submit w-100 auth-submit-register">Register</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="auth-panel auth-panel-visual" style="background-image: url('@authImageUrl');">
+        </section>
+    </main>
+</div>
+
+<script>
+    (() => {
+        const page = document.querySelector('[data-auth-page]');
+        const tabs = document.querySelectorAll('[data-auth-switch]');
+        const loginForm = document.querySelector('[data-auth-form="login"]');
+        const registerForm = document.querySelector('[data-auth-form="register"]');
+        const modeTabs = document.querySelectorAll('.auth-mode-tab');
+        const loginSubmit = document.querySelector('.auth-submit-login');
+        const registerSubmit = document.querySelector('.auth-submit-register');
+        const title = document.querySelector('[data-auth-title]');
+        const subtitle = document.querySelector('[data-auth-subtitle]');
+
+        const setMode = (mode) => {
+            const isLogin = mode === 'login';
+            if (page) page.dataset.authMode = mode;
+            loginForm?.classList.toggle('d-none', !isLogin);
+            registerForm?.classList.toggle('d-none', isLogin);
+            title.textContent = isLogin ? 'Login to your account' : 'Create your account';
+            subtitle.textContent = isLogin ? 'Welcome back. Login to continue.' : 'Create an account and get started.';
+            loginSubmit && (loginSubmit.textContent = 'Login');
+            registerSubmit && (registerSubmit.textContent = 'Register');
+            modeTabs.forEach(tab => {
+                const active = tab.dataset.authSwitch === mode;
+                tab.classList.toggle('is-active', active);
+                tab.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+        };
+
+        tabs.forEach(tab => tab.addEventListener('click', (event) => {
+            event.preventDefault();
+            setMode(tab.dataset.authSwitch);
+        }));
+
+        setMode(page?.dataset.authMode || 'login');
+    })();
+</script>
