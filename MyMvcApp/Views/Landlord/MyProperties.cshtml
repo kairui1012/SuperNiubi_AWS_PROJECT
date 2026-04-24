@@ -4,128 +4,151 @@
     ViewData["Title"] = "My Properties";
 }
 
-<style>
-    body {
-        background-color: #14110F;
-        color: #D9C5B2;
-    }
+<div class="landlord-console">
 
-    .page-card {
-        background-color: #34312D;
-        border-left: 4px solid #7E7F83;
-        padding: 2rem;
-        border-radius: 8px;
-        margin-top: 2rem;
-    }
+    <aside class="landlord-rail">
+        <div class="landlord-rail-brand">
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
+            <div>
+                <p class="landlord-rail-title">Landlord Console</p>
+                <p class="landlord-rail-sub">Property Operations</p>
+            </div>
+        </div>
 
-    .btn-custom {
-        background-color: #7E7F83;
-        color: #14110F;
-        border: none;
-        padding: 0.6rem 1.2rem;
-        border-radius: 5px;
-        text-decoration: none;
-        display: inline-block;
-        margin-right: 0.8rem;
-        margin-top: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-    }
+        <nav class="landlord-rail-nav">
+            <a href="/Landlord/Dashboard" class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard
+            </a>
+            <a href="/Landlord/MyProperties" class="landlord-rail-link active">
+                <i class="bi bi-houses-fill"></i> Properties
+            </a>
+            <a href="/Landlord/Tenants" class="landlord-rail-link">
+                <i class="bi bi-people-fill"></i> Tenants
+            </a>
+            <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link">
+                <i class="bi bi-tools"></i> Maintenance
+            </a>
+            <a href="/Landlord/Documents" class="landlord-rail-link">
+                <i class="bi bi-file-earmark-text-fill"></i> Documents
+            </a>
+            <a href="/Landlord/Payments" class="landlord-rail-link">
+                <i class="bi bi-wallet2"></i> Payments
+            </a>
+        </nav>
+    </aside>
 
-    .btn-custom:hover {
-        background-color: #D9C5B2;
-        color: #14110F;
-    }
+    <section class="landlord-workspace">
 
-    .property-box {
-        background-color: #2A2724;
-        border: 1px solid #7E7F83;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-top: 1.5rem;
-    }
+        <div class="landlord-toolbar">
+            <div>
+                <p class="landlord-kicker">PROPERTY MANAGEMENT</p>
+                <h1 class="landlord-heading">My Properties</h1>
+                <p class="landlord-sub">
+                    View, manage, update, and remove your registered rental properties.
+                </p>
+            </div>
 
-    .muted-text {
-        color: #7E7F83;
-    }
-
-    .error-text {
-        color: #ff8a8a;
-        margin-top: 1rem;
-    }
-
-    .success-text {
-        color: #90ee90;
-        margin-top: 1rem;
-    }
-
-    .action-row {
-        margin-top: 1rem;
-        display: flex;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-    }
-
-    .inline-form {
-        display: inline;
-    }
-</style>
-
-<div class="container">
-    <div class="page-card">
-        <h2>My Properties</h2>
-        <p class="muted-text">
-            View and manage all your properties here.
-        </p>
+            <div class="landlord-time">
+                <strong>@DateTime.Now.ToString("dddd, dd MMM yyyy")</strong>
+                <span>@DateTime.Now.ToString("hh:mm tt")</span>
+            </div>
+        </div>
 
         @if (TempData["ErrorMessage"] != null)
         {
-            <p class="error-text">@TempData["ErrorMessage"]</p>
+            <div class="landlord-panel mb-3">
+                <p class="landlord-error mb-0">@TempData["ErrorMessage"]</p>
+            </div>
         }
 
         @if (TempData["SuccessMessage"] != null)
         {
-            <p class="success-text">@TempData["SuccessMessage"]</p>
+            <div class="landlord-panel mb-3">
+                <p class="landlord-success mb-0">@TempData["SuccessMessage"]</p>
+            </div>
         }
 
-        <a href="/Landlord/AddProperty" class="btn-custom">Add New Property</a>
-        <a href="/Landlord/Dashboard" class="btn-custom">Back to Dashboard</a>
+        <div class="landlord-hero">
+            <div>
+                <h2>Property Portfolio</h2>
+                <p class="landlord-sub">
+                    Total properties: @(Model == null ? 0 : Model.Count)
+                </p>
+            </div>
+
+            <a href="/Landlord/AddProperty" class="landlord-btn landlord-btn-primary">
+                <i class="bi bi-plus-circle"></i> Add New Property
+            </a>
+        </div>
 
         @if (Model == null || !Model.Any())
         {
-            <div class="property-box">
-                <p>No properties found. Start by adding your first property.</p>
-            </div>
+            <article class="landlord-panel">
+                <div class="landlord-empty">
+                    <i class="bi bi-inbox d-block mb-2"></i>
+                    No properties found. Start by adding your first property.
+                </div>
+            </article>
         }
         else
         {
-            @foreach (var property in Model)
-            {
-                <div class="property-box">
-                    <h4>@property.PropertyName</h4>
-                    <p><strong>Type:</strong> @property.PropertyType</p>
-                    <p><strong>Address:</strong> @property.AddressLine1 @property.AddressLine2</p>
-                    <p><strong>City:</strong> @property.City</p>
-                    <p><strong>State:</strong> @property.State</p>
-                    <p><strong>Postal Code:</strong> @property.PostalCode</p>
-                    <p><strong>Bedrooms:</strong> @property.Bedrooms</p>
-                    <p><strong>Bathrooms:</strong> @property.Bathrooms</p>
-                    <p><strong>Monthly Rent:</strong> RM @property.MonthlyRent</p>
-
-                    <div class="action-row">
-                        <a href="/Landlord/PropertyDetails/@property.PropertyId" class="btn-custom">Details</a>
-                        <a href="/Landlord/EditProperty/@property.PropertyId" class="btn-custom">Edit</a>
-
-                        <form asp-action="DeleteProperty" asp-controller="Landlord" method="post" class="inline-form">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@property.PropertyId" />
-                            <button type="submit" class="btn-custom" onclick="return confirm('Are you sure you want to delete this property?');">
-                                Delete
-                            </button>
-                        </form>
-                    </div>
+            <article class="landlord-panel">
+                <div class="landlord-panel-head">
+                    <h3 class="landlord-panel-title">Property List</h3>
+                    <a href="/Landlord/Dashboard" class="landlord-link">Back to Dashboard</a>
                 </div>
-            }
+
+                <div class="landlord-list">
+                    @foreach (var property in Model)
+                    {
+                        <div class="landlord-list-item">
+                            <div>
+                                <h4 class="mb-2">@property.PropertyName</h4>
+                                <p class="landlord-sub mb-1">
+                                    <strong>Type:</strong> @property.PropertyType |
+                                    <strong>Rent:</strong> RM @property.MonthlyRent
+                                </p>
+                                <p class="landlord-sub mb-1">
+                                    <strong>Address:</strong> @property.AddressLine1 @property.AddressLine2,
+                                    @property.City, @property.State @property.PostalCode
+                                </p>
+                                <p class="landlord-sub mb-0">
+                                    <strong>Bedrooms:</strong> @property.Bedrooms |
+                                    <strong>Bathrooms:</strong> @property.Bathrooms
+                                </p>
+                            </div>
+
+                            <div class="landlord-actions">
+                                <a href="/Landlord/PropertyDetails/@property.PropertyId"
+                                   class="landlord-btn landlord-btn-outline">
+                                    Details
+                                </a>
+
+                                <a href="/Landlord/EditProperty/@property.PropertyId"
+                                   class="landlord-btn landlord-btn-outline">
+                                    Edit
+                                </a>
+
+                                <form asp-action="DeleteProperty"
+                                      asp-controller="Landlord"
+                                      method="post"
+                                      class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@property.PropertyId" />
+                                    <button type="submit"
+                                            class="landlord-btn landlord-btn-danger"
+                                            onclick="return confirm('Are you sure you want to delete this property?');">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </article>
         }
-    </div>
+
+    </section>
 </div>

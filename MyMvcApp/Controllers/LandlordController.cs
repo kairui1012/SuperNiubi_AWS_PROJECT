@@ -24,8 +24,7 @@ namespace MyMvcApp.Controllers
 
         public IActionResult MyProperties()
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -33,10 +32,9 @@ namespace MyMvcApp.Controllers
                 return View(new List<Property>());
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -55,8 +53,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult PropertyDetails(int id)
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -64,10 +61,9 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction("MyProperties");
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -97,8 +93,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult AddProperty(Property model)
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -106,10 +101,9 @@ namespace MyMvcApp.Controllers
                 return View(model);
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -144,8 +138,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult EditProperty(int id)
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -153,10 +146,9 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction("MyProperties");
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -180,8 +172,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult EditProperty(Property model)
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -189,10 +180,9 @@ namespace MyMvcApp.Controllers
                 return View(model);
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -250,8 +240,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult DeleteProperty(int id)
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -259,10 +248,9 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction("MyProperties");
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -296,8 +284,7 @@ namespace MyMvcApp.Controllers
 
         public IActionResult Tenants()
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -305,10 +292,9 @@ namespace MyMvcApp.Controllers
                 return View(new List<Tenant>());
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -329,8 +315,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult TenantDetails(int id)
         {
-            var userEmail = User.Claims
-                .FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -338,10 +323,9 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction("Tenants");
             }
 
-            var landlord = _dbContext.Users
-                .FirstOrDefault(u =>
-                    u.Email.ToLower() == userEmail.ToLower() &&
-                    u.Role == "Landlord");
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
 
             if (landlord == null)
             {
@@ -361,6 +345,161 @@ namespace MyMvcApp.Controllers
             }
 
             return View(tenant);
+        }
+
+        public IActionResult MaintenanceRequests()
+        {
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                TempData["ErrorMessage"] = "User email not found.";
+                return View(new List<MaintenanceRequest>());
+            }
+
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return View(new List<MaintenanceRequest>());
+            }
+
+            var requests = _dbContext.MaintenanceRequests
+                .Include(m => m.Property)
+                .Include(m => m.Tenant)
+                .ThenInclude(t => t.User)
+                .Where(m => m.Property.LandlordId == landlord.Id)
+                .OrderByDescending(m => m.CreatedAt)
+                .ToList();
+
+            return View(requests);
+        }
+
+        [HttpGet]
+        public IActionResult EditMaintenanceRequest(int id)
+        {
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                TempData["ErrorMessage"] = "User email not found.";
+                return RedirectToAction("MaintenanceRequests");
+            }
+
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return RedirectToAction("MaintenanceRequests");
+            }
+
+            var request = _dbContext.MaintenanceRequests
+                .Include(m => m.Property)
+                .Include(m => m.Tenant)
+                .ThenInclude(t => t.User)
+                .FirstOrDefault(m =>
+                    m.RequestId == id &&
+                    m.Property.LandlordId == landlord.Id);
+
+            if (request == null)
+            {
+                TempData["ErrorMessage"] = "Maintenance request not found.";
+                return RedirectToAction("MaintenanceRequests");
+            }
+
+            return View(request);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EditMaintenanceRequest(MaintenanceRequest model)
+        {
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                TempData["ErrorMessage"] = "User email not found.";
+                return RedirectToAction("MaintenanceRequests");
+            }
+
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return RedirectToAction("MaintenanceRequests");
+            }
+
+            var existingRequest = _dbContext.MaintenanceRequests
+                .Include(m => m.Property)
+                .FirstOrDefault(m =>
+                    m.RequestId == model.RequestId &&
+                    m.Property.LandlordId == landlord.Id);
+
+            if (existingRequest == null)
+            {
+                TempData["ErrorMessage"] = "Maintenance request not found.";
+                return RedirectToAction("MaintenanceRequests");
+            }
+
+            existingRequest.Priority = model.Priority;
+            existingRequest.Status = model.Status;
+            existingRequest.LandlordRemarks = model.LandlordRemarks;
+            existingRequest.UpdatedAt = DateTime.UtcNow;
+
+            if (model.Status == MaintenanceStatus.Completed)
+            {
+                existingRequest.ResolvedDate = DateTime.UtcNow;
+            }
+            else
+            {
+                existingRequest.ResolvedDate = null;
+            }
+
+            _dbContext.SaveChanges();
+
+            TempData["SuccessMessage"] = "Maintenance request updated successfully.";
+            return RedirectToAction("MaintenanceRequests");
+        }
+
+        public IActionResult Payments()
+        {
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                TempData["ErrorMessage"] = "User email not found.";
+                return View(new List<Payment>());
+            }
+
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return View(new List<Payment>());
+            }
+
+            var payments = _dbContext.Payments
+                .Include(p => p.Property)
+                .Include(p => p.Tenant)
+                .ThenInclude(t => t.User)
+                .Where(p => p.Property.LandlordId == landlord.Id)
+                .OrderByDescending(p => p.PaymentYear)
+                .ThenByDescending(p => p.CreatedAt)
+                .ToList();
+
+            return View(payments);
         }
     }
 }

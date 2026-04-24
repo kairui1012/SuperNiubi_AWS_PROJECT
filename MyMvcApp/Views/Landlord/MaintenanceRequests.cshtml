@@ -1,7 +1,7 @@
-@model List<MyMvcApp.Models.Tenant>
+@model List<MyMvcApp.Models.MaintenanceRequest>
 
 @{
-    ViewData["Title"] = "Tenant Details";
+    ViewData["Title"] = "Maintenance Requests";
 }
 
 <div class="landlord-console">
@@ -26,11 +26,11 @@
                 <i class="bi bi-houses-fill"></i> Properties
             </a>
 
-            <a href="/Landlord/Tenants" class="landlord-rail-link active">
+            <a href="/Landlord/Tenants" class="landlord-rail-link">
                 <i class="bi bi-people-fill"></i> Tenants
             </a>
 
-            <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link">
+            <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link active">
                 <i class="bi bi-tools"></i> Maintenance
             </a>
 
@@ -48,10 +48,10 @@
 
         <div class="landlord-toolbar">
             <div>
-                <p class="landlord-kicker">TENANT MANAGEMENT</p>
-                <h1 class="landlord-heading">Tenant Details</h1>
+                <p class="landlord-kicker">MAINTENANCE MANAGEMENT</p>
+                <h1 class="landlord-heading">Maintenance Requests</h1>
                 <p class="landlord-sub">
-                    View tenants assigned to your properties and check their lease information.
+                    Review tenant maintenance issues and update request status.
                 </p>
             </div>
 
@@ -68,11 +68,18 @@
             </article>
         }
 
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <article class="landlord-panel mb-3">
+                <p class="landlord-success mb-0">@TempData["SuccessMessage"]</p>
+            </article>
+        }
+
         <div class="landlord-hero">
             <div>
-                <h2>Tenant Records</h2>
+                <h2>Request Queue</h2>
                 <p class="landlord-sub">
-                    Total tenants: @(Model == null ? 0 : Model.Count)
+                    Total requests: @(Model == null ? 0 : Model.Count)
                 </p>
             </div>
 
@@ -86,7 +93,7 @@
             <article class="landlord-panel">
                 <div class="landlord-empty">
                     <i class="bi bi-inbox d-block mb-2"></i>
-                    No tenants found for your properties.
+                    No maintenance requests found.
                 </div>
             </article>
         }
@@ -94,42 +101,52 @@
         {
             <article class="landlord-panel">
                 <div class="landlord-panel-head">
-                    <h3 class="landlord-panel-title">Assigned Tenants</h3>
+                    <h3 class="landlord-panel-title">Maintenance List</h3>
                 </div>
 
                 <div class="landlord-list">
-                    @foreach (var tenant in Model)
+                    @foreach (var request in Model)
                     {
+                        var statusClass = request.Status.ToString() == "Completed"
+                            ? "badge-success"
+                            : request.Status.ToString() == "Rejected"
+                                ? "badge-danger"
+                                : "badge-warning";
+
                         <div class="landlord-list-item">
                             <div>
-                                <h4 class="mb-2">@tenant.User.Email</h4>
+                                <h4 class="mb-2">@request.Title</h4>
 
                                 <p class="landlord-sub mb-1">
-                                    <strong>Property:</strong> @tenant.Property.PropertyName
+                                    <strong>Property:</strong> @request.Property.PropertyName
                                 </p>
 
                                 <p class="landlord-sub mb-1">
-                                    <strong>Lease:</strong>
-                                    @tenant.LeaseStartDate.ToShortDateString()
-                                    -
-                                    @tenant.LeaseEndDate.ToShortDateString()
+                                    <strong>Tenant:</strong> @request.Tenant.User.Email
                                 </p>
 
                                 <p class="landlord-sub mb-1">
-                                    <strong>Monthly Rent:</strong> RM @tenant.MonthlyRent |
-                                    <strong>Deposit:</strong> RM @tenant.DepositPaid
+                                    <strong>Category:</strong> @request.Category |
+                                    <strong>Priority:</strong> @request.Priority
+                                </p>
+
+                                <p class="landlord-sub mb-1">
+                                    <strong>Description:</strong> @request.Description
                                 </p>
 
                                 <p class="landlord-sub mb-0">
-                                    <strong>Deposit Status:</strong> @tenant.DepositStatus |
-                                    <strong>Lease Status:</strong> @tenant.LeaseStatus
+                                    <strong>Created:</strong> @request.CreatedAt.ToString("dd MMM yyyy")
                                 </p>
                             </div>
 
                             <div class="landlord-actions">
-                                <a href="/Landlord/TenantDetails/@tenant.TenantId"
+                                <span class="landlord-badge @statusClass">
+                                    @request.Status
+                                </span>
+
+                                <a href="/Landlord/EditMaintenanceRequest/@request.RequestId"
                                    class="landlord-btn landlord-btn-primary">
-                                    View Details
+                                    Handle
                                 </a>
                             </div>
                         </div>
