@@ -1,658 +1,162 @@
-﻿@{
+@{
     ViewData["Title"] = "Payments";
 }
-
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-
-<style>
-    :root {
-        --bg-deep: #14110F;
-        --bg-card: #1E1B18;
-        --bg-elevated: #2A2723;
-        --border: rgba(126,127,131,0.25);
-        --border-hover: rgba(126,127,131,0.55);
-        --text-primary: #E8D9C8;
-        --text-muted: #7E7F83;
-        --accent: #C8965A;
-        --accent-dim: rgba(200,150,90,0.08);
-        --green: #6BBF8E;
-        --green-dim: rgba(107,191,142,0.12);
-        --red: #D97B6C;
-        --red-dim: rgba(217,123,108,0.12);
-        --blue: #7AA8C7;
-        --blue-dim: rgba(122,168,199,0.12);
-        --yellow: #D4AC5A;
-        --yellow-dim: rgba(212,172,90,0.12);
-    }
-
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    body {
-        background-color: var(--bg-deep);
-        color: var(--text-primary);
-        font-family: 'DM Sans', sans-serif;
-    }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: -20%;
-            right: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(107,191,142,0.05) 0%, transparent 65%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-    .tenant-wrap {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 2.5rem 1.5rem 4rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .breadcrumb-nav {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        margin-bottom: 1.8rem;
-    }
-
-        .breadcrumb-nav a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-    .page-title-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-        .page-title-row h1 {
-            font-family: 'Syne', sans-serif;
-            font-weight: 800;
-            font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-            letter-spacing: -0.02em;
-        }
-
-            .page-title-row h1 span {
-                color: var(--green);
-            }
-
-    .btn-primary {
-        background: var(--green);
-        color: #14110F;
-        border: none;
-        border-radius: 7px;
-        padding: 0.6rem 1.3rem;
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 600;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: opacity 0.2s, transform 0.15s;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-        .btn-primary:hover {
-            opacity: 0.85;
-            transform: translateY(-1px);
-            color: #14110F;
-            text-decoration: none;
-        }
-
-    .btn-secondary {
-        background: var(--bg-elevated);
-        color: var(--text-muted);
-        border: 1px solid var(--border);
-        border-radius: 7px;
-        padding: 0.6rem 1.1rem;
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 500;
-        font-size: 0.82rem;
-        cursor: pointer;
-        transition: border-color 0.2s, color 0.2s;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-        .btn-secondary:hover {
-            border-color: var(--border-hover);
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-
-    /* Summary stats */
-    .stats-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .stat-mini {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 9px;
-        padding: 1.2rem 1.4rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .stat-mini-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        flex-shrink: 0;
-    }
-
-    .stat-mini-text .value {
-        font-family: 'Syne', sans-serif;
-        font-weight: 700;
-        font-size: 1.4rem;
-        line-height: 1;
-        letter-spacing: -0.02em;
-    }
-
-    .stat-mini-text .label {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-top: 0.2rem;
-    }
-
-    /* Upload form */
-    .form-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-top: 2px solid var(--green);
-        border-radius: 10px;
-        padding: 1.8rem 2rem;
-        margin-bottom: 2rem;
-        display: none;
-    }
-
-        .form-card.open {
-            display: block;
-            animation: slideDown 0.25s ease;
-        }
-
-    @@keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-8px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .form-card h3 {
-        font-family: 'Syne', sans-serif;
-        font-weight: 700;
-        font-size: 1.05rem;
-        margin-bottom: 1.4rem;
-        color: var(--text-primary);
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.2rem 1.5rem;
-    }
-
-    @@media (max-width: 600px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-
-        .form-group.full {
-            grid-column: 1/-1;
-        }
-
-        .form-group label {
-            font-size: 0.77rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .form-group input, .form-group select {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            border-radius: 7px;
-            padding: 0.7rem 0.9rem;
-            font-size: 0.88rem;
-            font-family: 'DM Sans', sans-serif;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            outline: none;
-            width: 100%;
-        }
-
-            .form-group input:focus, .form-group select:focus {
-                border-color: var(--green);
-                box-shadow: 0 0 0 3px var(--green-dim);
-            }
-
-    /* File drop zone */
-    .drop-zone {
-        background: var(--bg-elevated);
-        border: 1.5px dashed var(--border);
-        border-radius: 8px;
-        padding: 2rem;
-        text-align: center;
-        cursor: pointer;
-        transition: border-color 0.2s, background 0.2s;
-    }
-
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--green);
-            background: var(--green-dim);
-        }
-
-        .drop-zone input[type="file"] {
-            display: none;
-        }
-
-    .drop-zone-icon {
-        font-size: 1.8rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .drop-zone-text {
-        font-size: 0.82rem;
-        color: var(--text-muted);
-    }
-
-        .drop-zone-text strong {
-            color: var(--green);
-        }
-
-    .drop-zone-hint {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-        margin-top: 0.3rem;
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 0.8rem;
-        margin-top: 1.5rem;
-        justify-content: flex-end;
-    }
-
-    /* Payments table */
-    .table-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    .table-card-header {
-        padding: 1.1rem 1.5rem;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-        .table-card-header .title {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-    .payments-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-        .payments-table th {
-            padding: 0.8rem 1.5rem;
-            text-align: left;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            font-weight: 500;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .payments-table td {
-            padding: 1rem 1.5rem;
-            font-size: 0.85rem;
-            border-bottom: 1px solid var(--border);
-            vertical-align: middle;
-        }
-
-        .payments-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .payments-table tbody tr:hover {
-            background: var(--bg-elevated);
-        }
-
-    .pay-month {
-        font-weight: 500;
-        color: var(--text-primary);
-    }
-
-    .pay-ref {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        font-family: monospace;
-    }
-
-    .pay-amount {
-        font-family: 'Syne', sans-serif;
-        font-weight: 600;
-        color: var(--green);
-    }
-
-    .status-pill {
-        font-size: 0.65rem;
-        padding: 0.25rem 0.65rem;
-        border-radius: 20px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        white-space: nowrap;
-    }
-
-    .sp-verified {
-        background: var(--green-dim);
-        color: var(--green);
-    }
-
-    .sp-pending {
-        background: var(--yellow-dim);
-        color: var(--yellow);
-    }
-
-    .sp-overdue {
-        background: var(--red-dim);
-        color: var(--red);
-    }
-
-    .dl-link {
-        font-size: 0.75rem;
-        color: var(--blue);
-        text-decoration: none;
-        transition: opacity 0.2s;
-    }
-
-        .dl-link:hover {
-            opacity: 0.7;
-        }
-
-    @@keyframes fadeUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .tenant-wrap > * {
-        animation: fadeUp 0.4s ease both;
-    }
-
-    .breadcrumb-nav {
-        animation-delay: 0s;
-    }
-
-    .page-title-row {
-        animation-delay: 0.05s;
-    }
-
-    .stats-row {
-        animation-delay: 0.1s;
-    }
-
-    .table-card {
-        animation-delay: 0.15s;
-    }
-</style>
-
-<div class="tenant-wrap">
-
-    <nav class="breadcrumb-nav">
-        <a href="/Tenant">Dashboard</a>
-        <span>></span>
-        <span>Payments</span>
-    </nav>
-
-    <div class="page-title-row">
-        <h1>Payment <span>Records</span></h1>
-        <button class="btn-primary" onclick="toggleForm()">+ Upload Receipt</button>
-    </div>
-
-    <!-- Summary stats -->
-    <div class="stats-row">
-        <div class="stat-mini">
-            <div class="stat-mini-icon" style="background:var(--green-dim)"><i class="bi bi-credit-card"></i></div>
-            <div class="stat-mini-text">
-                <div class="value" style="color:var(--green)">RM 6,000</div>
-                <div class="label">Total Paid (2025)</div>
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+
+<div class="tenant-console">
+    <aside class="tenant-rail">
+        <div class="tenant-rail-brand">
+            <span class="tenant-rail-logo"><i class="bi bi-buildings"></i></span>
+            <div>
+                <p class="tenant-rail-title">Tenant Console</p>
+                <p class="tenant-rail-sub">Property Operations</p>
             </div>
         </div>
-        <div class="stat-mini">
-            <div class="stat-mini-icon" style="background:var(--blue-dim)"><i class="bi bi-calendar"></i></div>
-            <div class="stat-mini-text">
-                <div class="value" style="color:var(--blue)">5</div>
-                <div class="label">Payments Recorded</div>
-            </div>
-        </div>
-        <div class="stat-mini">
-            <div class="stat-mini-icon" style="background:var(--yellow-dim)"><i class="bi bi-hourglass"></i></div>
-            <div class="stat-mini-text">
-                <div class="value" style="color:var(--yellow)">1 May</div>
-                <div class="label">Next Payment Due</div>
-            </div>
-        </div>
-        <div class="stat-mini">
-            <div class="stat-mini-icon" style="background:var(--accent-dim)"><i class="bi bi-house"></i></div>
-            <div class="stat-mini-text">
-                <div class="value" style="color:var(--accent)">RM 1,200</div>
-                <div class="label">Monthly Rent</div>
-            </div>
-        </div>
-    </div>
+        <nav class="tenant-rail-nav">
+            <a href="/Tenant/Tenant" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a href="/Tenant/MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a href="/Tenant/MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a href="/Tenant/Payments" class="tenant-rail-link active"><i class="bi bi-wallet2"></i> Payments</a>
+            <a href="/Tenant/Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+        </nav>
+    </aside>
 
-    <!-- Upload form -->
-    <div class="form-card" id="uploadForm">
-        <h3><i class="bi bi-credit-card"> Upload Payment Receipt</h3>
-        <form asp-action="UploadPayment" method="post" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Payment Month</label>
-                    <select name="PaymentMonth" required>
-                        <option value="" disabled selected>Select month</option>
-                        <option>January 2025</option>
-                        <option>February 2025</option>
-                        <option>March 2025</option>
-                        <option>April 2025</option>
-                        <option>May 2025</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Amount Paid (RM)</label>
-                    <input type="number" name="Amount" placeholder="1200.00" step="0.01" min="0" required />
-                </div>
-                <div class="form-group">
-                    <label>Payment Date</label>
-                    <input type="date" name="PaymentDate" required />
-                </div>
-                <div class="form-group">
-                    <label>Payment Method</label>
-                    <select name="PaymentMethod">
-                        <option>Online Transfer</option>
-                        <option>Cash</option>
-                        <option>Cheque</option>
-                        <option>DuitNow / QR</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Reference No.</label>
-                    <input type="text" name="ReferenceNo" placeholder="e.g. TXN123456789" />
-                </div>
-                <div class="form-group">
-                    <label>Receipt / Proof</label>
-                    <div class="drop-zone" onclick="document.getElementById('fileInput').click()"
-                         id="dropZone">
-                        <input type="file" id="fileInput" name="ReceiptFile" accept=".pdf,.jpg,.jpeg,.png" />
-                        <div class="drop-zone-icon"><i class="bi bi-paperclip"></i></div>
-                        <div class="drop-zone-text">
-                            <strong>Click to upload</strong> or drag & drop
+    <section class="tenant-workspace">
+        <div class="tenant-toolbar">
+            <div>
+                <p class="tenant-kicker">Billing Center</p>
+                <h1 class="tenant-heading">Rent Payments</h1>
+                <p class="tenant-sub">Track payment cycles, upload receipts, and keep billing records audit-ready.</p>
+            </div>
+            <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ Upload Receipt</button>
+        </div>
+
+        <div class="tenant-grid-4">
+            <div class="tenant-stat"><div class="tenant-stat-label">Total Paid (2025)</div><div class="tenant-stat-value">RM 6,000</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Payments Recorded</div><div class="tenant-stat-value">5</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Next Due</div><div class="tenant-stat-value">1 May</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Monthly Rent</div><div class="tenant-stat-value">RM 1,200</div></div>
+        </div>
+
+        <div class="tenant-panel" id="uploadForm" style="display:none;">
+            <div class="tenant-panel-head"><h3 class="tenant-panel-title">Upload Payment Receipt</h3></div>
+            <div class="tenant-panel-body tenant-form">
+                <form asp-action="UploadPayment" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="tenant-form-grid">
+                        <div>
+                            <label>Payment Month</label>
+                            <select class="form-select" name="PaymentMonth" required>
+                                <option value="" disabled selected>Select month</option>
+                                <option>January 2025</option>
+                                <option>February 2025</option>
+                                <option>March 2025</option>
+                                <option>April 2025</option>
+                                <option>May 2025</option>
+                            </select>
                         </div>
-                        <div class="drop-zone-hint">PDF, JPG, PNG - max 5MB</div>
+                        <div>
+                            <label>Amount Paid (RM)</label>
+                            <input class="form-control" type="number" name="Amount" placeholder="1200.00" step="0.01" min="0" required />
+                        </div>
+                        <div>
+                            <label>Payment Date</label>
+                            <input class="form-control" type="date" name="PaymentDate" required />
+                        </div>
+                        <div>
+                            <label>Payment Method</label>
+                            <select class="form-select" name="PaymentMethod">
+                                <option>Online Transfer</option>
+                                <option>Cash</option>
+                                <option>Cheque</option>
+                                <option>DuitNow / QR</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Reference No.</label>
+                            <input class="form-control" type="text" name="ReferenceNo" placeholder="e.g. TXN123456789" />
+                        </div>
+                        <div>
+                            <label>Receipt / Proof</label>
+                            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                                <input type="file" id="fileInput" name="ReceiptFile" accept=".pdf,.jpg,.jpeg,.png" />
+                                <div><i class="bi bi-paperclip fs-4"></i></div>
+                                <div class="tenant-sub drop-zone-text"><strong>Click to upload</strong> or drag and drop</div>
+                                <div class="tenant-sub">PDF, JPG, PNG - max 5MB</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn-secondary" onclick="toggleForm()">Cancel</button>
-                <button type="submit" class="btn-primary">Upload Payment</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Payment history table -->
-    <div class="table-card">
-        <div class="table-card-header">
-            <div class="title">
-                <span style="color:var(--green)"><i class="bi bi-diamond-fill"></i></span>
-                Payment History
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="btn tenant-btn tenant-btn-outline" onclick="toggleForm()">Cancel</button>
+                        <button type="submit" class="btn tenant-btn tenant-btn-primary">Upload Payment</button>
+                    </div>
+                </form>
             </div>
         </div>
-        <table class="payments-table">
-            <thead>
-                <tr>
-                    <th>Month</th>
-                    <th>Amount</th>
-                    <th>Date Paid</th>
-                    <th>Method</th>
-                    <th>Reference</th>
-                    <th>Status</th>
-                    <th>Receipt</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Replace with @@foreach (var p in Model) -->
-                <tr>
-                    <td><div class="pay-month">April 2025</div></td>
-                    <td><span class="pay-amount">RM 1,200.00</span></td>
-                    <td style="color:var(--text-muted);font-size:0.8rem">1 Apr 2025</td>
-                    <td style="font-size:0.82rem">Online Transfer</td>
-                    <td><span class="pay-ref">TXN-0041234</span></td>
-                    <td><span class="status-pill sp-verified">Verified</span></td>
-                    <td><a href="#" class="dl-link"><i class="bi bi-download"></i> Download</a></td>
-                </tr>
-                <tr>
-                    <td><div class="pay-month">March 2025</div></td>
-                    <td><span class="pay-amount">RM 1,200.00</span></td>
-                    <td style="color:var(--text-muted);font-size:0.8rem">2 Mar 2025</td>
-                    <td style="font-size:0.82rem">DuitNow</td>
-                    <td><span class="pay-ref">TXN-0038921</span></td>
-                    <td><span class="status-pill sp-verified">Verified</span></td>
-                    <td><a href="#" class="dl-link"><i class="bi bi-download"></i> Download</a></td>
-                </tr>
-                <tr>
-                    <td><div class="pay-month">February 2025</div></td>
-                    <td><span class="pay-amount">RM 1,200.00</span></td>
-                    <td style="color:var(--text-muted);font-size:0.8rem">1 Feb 2025</td>
-                    <td style="font-size:0.82rem">Online Transfer</td>
-                    <td><span class="pay-ref">TXN-0035678</span></td>
-                    <td><span class="status-pill sp-verified">Verified</span></td>
-                    <td><a href="#" class="dl-link"><i class="bi bi-download"></i> Download</a></td>
-                </tr>
-                <tr>
-                    <td><div class="pay-month">January 2025</div></td>
-                    <td><span class="pay-amount">RM 1,200.00</span></td>
-                    <td style="color:var(--text-muted);font-size:0.8rem">1 Jan 2025</td>
-                    <td style="font-size:0.82rem">Cash</td>
-                    <td><span class="pay-ref">-</span></td>
-                    <td><span class="status-pill sp-verified">Verified</span></td>
-                    <td><a href="#" class="dl-link"><i class="bi bi-download"></i> Download</a></td>
-                </tr>
-                <tr>
-                    <td><div class="pay-month">May 2025</div></td>
-                    <td><span class="pay-amount">RM 1,200.00</span></td>
-                    <td style="color:var(--text-muted);font-size:0.8rem">-</td>
-                    <td style="font-size:0.82rem">-</td>
-                    <td><span class="pay-ref">-</span></td>
-                    <td><span class="status-pill sp-pending">Pending</span></td>
-                    <td>-</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+
+        <div class="tenant-panel">
+            <div class="tenant-panel-head"><h3 class="tenant-panel-title">Payment History</h3></div>
+            <div class="tenant-panel-body p-0">
+                <div class="table-responsive">
+                    <table class="tenant-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Amount</th>
+                                <th>Date Paid</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                                <th>Receipt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>April 2025</strong></td><td>RM 1,200.00</td><td>1 Apr 2025</td><td>Online Transfer</td><td>TXN-0041234</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
+                            <tr><td><strong>March 2025</strong></td><td>RM 1,200.00</td><td>2 Mar 2025</td><td>DuitNow</td><td>TXN-0038921</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
+                            <tr><td><strong>February 2025</strong></td><td>RM 1,200.00</td><td>1 Feb 2025</td><td>Online Transfer</td><td>TXN-0035678</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
+                            <tr><td><strong>January 2025</strong></td><td>RM 1,200.00</td><td>1 Jan 2025</td><td>Cash</td><td>-</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
+                            <tr><td><strong>May 2025</strong></td><td>RM 1,200.00</td><td>-</td><td>-</td><td>-</td><td><span class="tenant-badge badge-warning">Pending</span></td><td>-</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 <script>
     function toggleForm() {
-        const f = document.getElementById('uploadForm');
-        f.classList.toggle('open');
-        if (f.classList.contains('open')) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const form = document.getElementById('uploadForm');
+        form.classList.toggle('console-open');
+        if (form.classList.contains('console-open')) {
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
-    // File drag & drop
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
 
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
     dropZone.addEventListener('drop', e => {
-        e.preventDefault(); dropZone.classList.remove('dragover');
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length) {
             fileInput.files = e.dataTransfer.files;
-            dropZone.querySelector('.drop-zone-text').innerHTML = `<strong style="color:var(--green)">${e.dataTransfer.files[0].name}</strong>`;
+            dropZone.querySelector('.drop-zone-text').innerHTML = '<strong>' + e.dataTransfer.files[0].name + '</strong>';
         }
     });
 
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length) {
-            dropZone.querySelector('.drop-zone-text').innerHTML = `<strong style="color:var(--green)">${fileInput.files[0].name}</strong>`;
+            dropZone.querySelector('.drop-zone-text').innerHTML = '<strong>' + fileInput.files[0].name + '</strong>';
         }
     });
 </script>
