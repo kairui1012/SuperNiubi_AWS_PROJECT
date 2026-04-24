@@ -4,159 +4,323 @@
     ViewData["Title"] = "Add Property";
 }
 
-<style>
-    body {
-        background-color: #14110F;
-        color: #D9C5B2;
-    }
+<div class="landlord-console">
 
-    .form-card {
-        background-color: #34312D;
-        border-left: 4px solid #7E7F83;
-        padding: 2rem;
-        border-radius: 8px;
-        margin-top: 2rem;
-    }
+    <!-- Sidebar -->
 
-    label {
-        display: block;
-        margin-top: 1rem;
-        margin-bottom: 0.4rem;
-        font-weight: 600;
-    }
+    <aside class="landlord-rail">
 
-    input, select, textarea {
-        width: 100%;
-        padding: 0.7rem;
-        border-radius: 5px;
-        border: none;
-        margin-bottom: 0.5rem;
-    }
+        <div class="landlord-rail-brand">
 
-    .btn-custom {
-        background-color: #7E7F83;
-        color: #14110F;
-        border: none;
-        padding: 0.6rem 1.2rem;
-        border-radius: 5px;
-        text-decoration: none;
-        display: inline-block;
-        margin-top: 1rem;
-        margin-right: 0.8rem;
-        font-weight: 600;
-        cursor: pointer;
-    }
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
 
-    .btn-custom:hover {
-        background-color: #D9C5B2;
-        color: #14110F;
-    }
+            <div>
+                <p class="landlord-rail-title">
+                    Landlord Console
+                </p>
 
-    .validation-text {
-        color: #ff8a8a;
-        font-size: 0.9rem;
-    }
+                <p class="landlord-rail-sub">
+                    Property Operations
+                </p>
+            </div>
 
-    .summary-validation {
-        color: #ff8a8a;
-        margin-bottom: 1rem;
-    }
+        </div>
 
-    .success-text {
-        color: #90ee90;
-        margin-bottom: 1rem;
-    }
-</style>
+        <nav class="landlord-rail-nav">
 
-<div class="container">
-    <div class="form-card">
-        <h2>Add New Property</h2>
-        <p style="color: #7E7F83;">
-            Fill in the property information below.
-        </p>
+            <a href="/Landlord/Dashboard"
+               class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </a>
 
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="success-text">@TempData["SuccessMessage"]</div>
-        }
+            <a href="/Landlord/MyProperties"
+               class="landlord-rail-link active">
+                <i class="bi bi-houses-fill"></i>
+                Properties
+            </a>
 
-        <div asp-validation-summary="All" class="summary-validation"></div>
+        </nav>
 
-        <form asp-action="AddProperty" asp-controller="Landlord" method="post">
-            @Html.AntiForgeryToken()
+    </aside>
 
-            <label asp-for="PropertyName">Property Name</label>
-            <input asp-for="PropertyName" />
-            <span asp-validation-for="PropertyName" class="validation-text"></span>
 
-            <label asp-for="PropertyType">Property Type</label>
-            <select asp-for="PropertyType" asp-items="Html.GetEnumSelectList<MyMvcApp.Models.PropertyType>()"></select>
-            <span asp-validation-for="PropertyType" class="validation-text"></span>
 
-            <label asp-for="AddressLine1">Address Line 1</label>
-            <input asp-for="AddressLine1" />
-            <span asp-validation-for="AddressLine1" class="validation-text"></span>
+    <!-- Workspace -->
 
-            <label asp-for="AddressLine2">Address Line 2</label>
-            <input asp-for="AddressLine2" />
-            <span asp-validation-for="AddressLine2" class="validation-text"></span>
+    <section class="landlord-workspace">
 
-            <label asp-for="City">City</label>
-            <input asp-for="City" />
-            <span asp-validation-for="City" class="validation-text"></span>
+        <div class="landlord-toolbar">
 
-            <label asp-for="State">State</label>
-            <input asp-for="State" />
-            <span asp-validation-for="State" class="validation-text"></span>
+            <div>
 
-            <label asp-for="PostalCode">Postal Code</label>
-            <input asp-for="PostalCode" />
-            <span asp-validation-for="PostalCode" class="validation-text"></span>
+                <p class="landlord-kicker">
+                    ADD PROPERTY
+                </p>
 
-            <label asp-for="FloorNumber">Floor Number</label>
-            <input asp-for="FloorNumber" />
-            <span asp-validation-for="FloorNumber" class="validation-text"></span>
+                <h1 class="landlord-heading">
+                    Register New Property
+                </h1>
 
-            <label asp-for="UnitNumber">Unit Number</label>
-            <input asp-for="UnitNumber" />
-            <span asp-validation-for="UnitNumber" class="validation-text"></span>
+                <p class="landlord-sub">
+                    Enter property details below to add a new rental unit.
+                </p>
 
-            <label asp-for="SizeSqFt">Size (Sq Ft)</label>
-            <input asp-for="SizeSqFt" type="number" step="0.01" />
-            <span asp-validation-for="SizeSqFt" class="validation-text"></span>
+            </div>
 
-            <label asp-for="Bedrooms">Bedrooms</label>
-            <input asp-for="Bedrooms" type="number" />
-            <span asp-validation-for="Bedrooms" class="validation-text"></span>
+        </div>
 
-            <label asp-for="Bathrooms">Bathrooms</label>
-            <input asp-for="Bathrooms" type="number" />
-            <span asp-validation-for="Bathrooms" class="validation-text"></span>
 
-            <label asp-for="MonthlyRent">Monthly Rent</label>
-            <input asp-for="MonthlyRent" type="number" step="0.01" />
-            <span asp-validation-for="MonthlyRent" class="validation-text"></span>
 
-            <label asp-for="DepositAmount">Deposit Amount</label>
-            <input asp-for="DepositAmount" type="number" step="0.01" />
-            <span asp-validation-for="DepositAmount" class="validation-text"></span>
+        <!-- Form Panel -->
 
-            <label asp-for="ParkingBay">Parking Bay</label>
-            <input asp-for="ParkingBay" />
-            <span asp-validation-for="ParkingBay" class="validation-text"></span>
+        <article class="landlord-panel">
 
-            <label asp-for="Description">Description</label>
-            <textarea asp-for="Description"></textarea>
-            <span asp-validation-for="Description" class="validation-text"></span>
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="landlord-success mb-3">
+                    @TempData["SuccessMessage"]
+                </div>
+            }
 
-            <button type="submit" class="btn-custom">Save Property</button>
-            <a href="/Landlord/MyProperties" class="btn-custom">Back to My Properties</a>
-        </form>
-    </div>
+            <div asp-validation-summary="All"
+                 class="landlord-error mb-3">
+            </div>
+
+
+            <form asp-action="AddProperty"
+                  asp-controller="Landlord"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+
+                <!-- Basic Info -->
+
+                <h4 class="mb-3">
+                    Basic Information
+                </h4>
+
+                <label asp-for="PropertyName"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="PropertyName"
+                       class="landlord-input" />
+
+                <span asp-validation-for="PropertyName"
+                      class="landlord-error">
+                </span>
+
+
+
+                <label asp-for="PropertyType"
+                       class="landlord-label">
+                </label>
+
+                <select asp-for="PropertyType"
+                        class="landlord-select"
+                        asp-items="Html.GetEnumSelectList<MyMvcApp.Models.PropertyType>()">
+                </select>
+
+                <span asp-validation-for="PropertyType"
+                      class="landlord-error">
+                </span>
+
+
+
+                <!-- Address -->
+
+                <h4 class="mt-4 mb-3">
+                    Address Information
+                </h4>
+
+                <label asp-for="AddressLine1"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="AddressLine1"
+                       class="landlord-input" />
+
+                <span asp-validation-for="AddressLine1"
+                      class="landlord-error">
+                </span>
+
+
+
+                <label asp-for="AddressLine2"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="AddressLine2"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="City"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="City"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="State"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="State"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="PostalCode"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="PostalCode"
+                       class="landlord-input" />
+
+
+
+                <!-- Unit Details -->
+
+                <h4 class="mt-4 mb-3">
+                    Unit Details
+                </h4>
+
+                <label asp-for="FloorNumber"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="FloorNumber"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="UnitNumber"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="UnitNumber"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="SizeSqFt"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="SizeSqFt"
+                       type="number"
+                       step="0.01"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="Bedrooms"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="Bedrooms"
+                       type="number"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="Bathrooms"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="Bathrooms"
+                       type="number"
+                       class="landlord-input" />
+
+
+
+                <!-- Financial -->
+
+                <h4 class="mt-4 mb-3">
+                    Financial Details
+                </h4>
+
+                <label asp-for="MonthlyRent"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="MonthlyRent"
+                       type="number"
+                       step="0.01"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="DepositAmount"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="DepositAmount"
+                       type="number"
+                       step="0.01"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="ParkingBay"
+                       class="landlord-label">
+                </label>
+
+                <input asp-for="ParkingBay"
+                       class="landlord-input" />
+
+
+
+                <label asp-for="Description"
+                       class="landlord-label">
+                </label>
+
+                <textarea asp-for="Description"
+                          class="landlord-textarea">
+                </textarea>
+
+
+
+                <!-- Buttons -->
+
+                <div class="landlord-actions mt-4">
+
+                    <button type="submit"
+                            class="landlord-btn landlord-btn-primary">
+
+                        Save Property
+
+                    </button>
+
+                    <a href="/Landlord/MyProperties"
+                       class="landlord-btn landlord-btn-outline">
+
+                        Back to My Properties
+
+                    </a>
+
+                </div>
+
+            </form>
+
+        </article>
+
+    </section>
+
 </div>
 
+
 @section Scripts {
+
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
 }

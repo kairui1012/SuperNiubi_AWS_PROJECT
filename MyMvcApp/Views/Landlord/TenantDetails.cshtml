@@ -4,120 +4,174 @@
     ViewData["Title"] = "Tenant Details";
 }
 
-<style>
-    body {
-        background-color: #14110F;
-        color: #D9C5B2;
-    }
+<div class="landlord-console">
 
-    .details-card {
-        background-color: #34312D;
-        border-left: 4px solid #7E7F83;
-        padding: 2rem;
-        border-radius: 8px;
-        margin-top: 2rem;
-    }
+    <!-- Sidebar -->
 
-    .detail-row {
-        margin-bottom: 0.8rem;
-    }
+    <aside class="landlord-rail">
 
-    .label-text {
-        font-weight: 700;
-        color: #D9C5B2;
-    }
+        <div class="landlord-rail-brand">
 
-    .value-text {
-        color: #C7B299;
-    }
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
 
-    .btn-custom {
-        background-color: #7E7F83;
-        color: #14110F;
-        border: none;
-        padding: 0.6rem 1.2rem;
-        border-radius: 5px;
-        text-decoration: none;
-        display: inline-block;
-        margin-right: 0.8rem;
-        margin-top: 1rem;
-        font-weight: 600;
-    }
+            <div>
+                <p class="landlord-rail-title">
+                    Landlord Console
+                </p>
 
-    .btn-custom:hover {
-        background-color: #D9C5B2;
-        color: #14110F;
-    }
-</style>
+                <p class="landlord-rail-sub">
+                    Property Operations
+                </p>
+            </div>
 
-<div class="container">
-    <div class="details-card">
-        <h2>Tenant Details</h2>
-        <p style="color: #7E7F83;">
-            View full information for this tenant.
-        </p>
-
-        <div class="detail-row">
-            <span class="label-text">Tenant Email:</span>
-            <span class="value-text">@Model.User.Email</span>
         </div>
 
-        <div class="detail-row">
-            <span class="label-text">Property:</span>
-            <span class="value-text">@Model.Property.PropertyName</span>
+        <nav class="landlord-rail-nav">
+
+            <a href="/Landlord/Dashboard"
+               class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </a>
+
+            <a href="/Landlord/MyProperties"
+               class="landlord-rail-link">
+                <i class="bi bi-houses-fill"></i>
+                Properties
+            </a>
+
+            <a href="/Landlord/Tenants"
+               class="landlord-rail-link active">
+                <i class="bi bi-people-fill"></i>
+                Tenants
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+
+    <!-- Workspace -->
+
+    <section class="landlord-workspace">
+
+        <div class="landlord-toolbar">
+
+            <div>
+
+                <p class="landlord-kicker">
+                    TENANT DETAILS
+                </p>
+
+                <h1 class="landlord-heading">
+                    Tenant Information
+                </h1>
+
+                <p class="landlord-sub">
+                    View complete details of the selected tenant.
+                </p>
+
+            </div>
+
         </div>
 
-        <div class="detail-row">
-            <span class="label-text">Lease Start Date:</span>
-            <span class="value-text">@Model.LeaseStartDate.ToShortDateString()</span>
-        </div>
 
-        <div class="detail-row">
-            <span class="label-text">Lease End Date:</span>
-            <span class="value-text">@Model.LeaseEndDate.ToShortDateString()</span>
-        </div>
 
-        <div class="detail-row">
-            <span class="label-text">Monthly Rent:</span>
-            <span class="value-text">RM @Model.MonthlyRent</span>
-        </div>
+        <!-- Details Panel -->
 
-        <div class="detail-row">
-            <span class="label-text">Deposit Paid:</span>
-            <span class="value-text">RM @Model.DepositPaid</span>
-        </div>
+        <article class="landlord-panel">
 
-        <div class="detail-row">
-            <span class="label-text">Deposit Status:</span>
-            <span class="value-text">@Model.DepositStatus</span>
-        </div>
+            <div class="landlord-list">
 
-        <div class="detail-row">
-            <span class="label-text">Rent Due Day:</span>
-            <span class="value-text">@Model.RentDueDay</span>
-        </div>
+                <div class="landlord-list-item">
+                    <strong>Tenant Email</strong>
+                    <span>@Model.User.Email</span>
+                </div>
 
-        <div class="detail-row">
-            <span class="label-text">Lease Status:</span>
-            <span class="value-text">@Model.LeaseStatus</span>
-        </div>
+                <div class="landlord-list-item">
+                    <strong>Property</strong>
+                    <span>@Model.Property.PropertyName</span>
+                </div>
 
-        <div class="detail-row">
-            <span class="label-text">Notes:</span>
-            <span class="value-text">@Model.Notes</span>
-        </div>
+                <div class="landlord-list-item">
+                    <strong>Lease Start Date</strong>
+                    <span>@Model.LeaseStartDate.ToShortDateString()</span>
+                </div>
 
-        <div class="detail-row">
-            <span class="label-text">Created At:</span>
-            <span class="value-text">@Model.CreatedAt</span>
-        </div>
+                <div class="landlord-list-item">
+                    <strong>Lease End Date</strong>
+                    <span>@Model.LeaseEndDate.ToShortDateString()</span>
+                </div>
 
-        <div class="detail-row">
-            <span class="label-text">Updated At:</span>
-            <span class="value-text">@Model.UpdatedAt</span>
-        </div>
+                <div class="landlord-list-item">
+                    <strong>Monthly Rent</strong>
+                    <span>RM @Model.MonthlyRent</span>
+                </div>
 
-        <a href="/Landlord/Tenants" class="btn-custom">Back to Tenant List</a>
-        <a href="/Landlord/Dashboard" class="btn-custom">Back to Dashboard</a>
-    </div>
+                <div class="landlord-list-item">
+                    <strong>Deposit Paid</strong>
+                    <span>RM @Model.DepositPaid</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Deposit Status</strong>
+                    <span>@Model.DepositStatus</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Rent Due Day</strong>
+                    <span>@Model.RentDueDay</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Lease Status</strong>
+                    <span>@Model.LeaseStatus</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Notes</strong>
+                    <span>@Model.Notes</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Created At</strong>
+                    <span>@Model.CreatedAt</span>
+                </div>
+
+                <div class="landlord-list-item">
+                    <strong>Updated At</strong>
+                    <span>@Model.UpdatedAt</span>
+                </div>
+
+            </div>
+
+
+
+            <!-- Buttons -->
+
+            <div class="landlord-actions mt-4">
+
+                <a href="/Landlord/Tenants"
+                   class="landlord-btn landlord-btn-outline">
+
+                    Back to Tenant List
+
+                </a>
+
+                <a href="/Landlord/Dashboard"
+                   class="landlord-btn landlord-btn-primary">
+
+                    Back to Dashboard
+
+                </a>
+
+            </div>
+
+        </article>
+
+    </section>
+
 </div>

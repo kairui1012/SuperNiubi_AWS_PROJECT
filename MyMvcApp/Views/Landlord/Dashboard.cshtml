@@ -2,80 +2,336 @@
     ViewData["Title"] = "Landlord Dashboard";
 }
 
-<style>
-    body {
-        background-color: #14110F;
-        color: #D9C5B2;
-    }
+<div class="landlord-console">
 
-    .dashboard-card {
-        background-color: #34312D;
-        border-left: 4px solid #7E7F83;
-        padding: 2rem;
-        border-radius: 8px;
-        margin-top: 2rem;
-    }
+    <!-- Sidebar -->
 
-    .dashboard-title {
-        margin-bottom: 0.8rem;
-    }
+    <aside class="landlord-rail">
 
-    .dashboard-subtitle {
-        color: #7E7F83;
-        margin-bottom: 1.5rem;
-    }
+        <div class="landlord-rail-brand">
 
-    .button-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin-top: 1rem;
-    }
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
 
-    .btn-custom {
-        background-color: #7E7F83;
-        color: #14110F;
-        border: none;
-        padding: 0.8rem 1.2rem;
-        border-radius: 6px;
-        text-decoration: none;
-        display: inline-block;
-        font-weight: 600;
-        min-width: 220px;
-        text-align: center;
-    }
+            <div>
+                <p class="landlord-rail-title">
+                    Landlord Console
+                </p>
 
-    .btn-custom:hover {
-        background-color: #D9C5B2;
-        color: #14110F;
-    }
+                <p class="landlord-rail-sub">
+                    Property Operations
+                </p>
+            </div>
 
-    .section-note {
-        margin-top: 1.5rem;
-        color: #C7B299;
-    }
-</style>
-
-<div class="container">
-    <div class="dashboard-card">
-        <h2 class="dashboard-title">Landlord Workspace</h2>
-
-        <p class="dashboard-subtitle">
-            You are currently viewing the system as a <strong>Landlord</strong>.
-            You can manage properties, review tenant details, handle maintenance requests,
-            upload documents, and view payment records from this dashboard.
-        </p>
-
-        <div class="button-grid">
-            <a href="/Landlord/MyProperties" class="btn-custom">Manage Properties</a>
-            <a href="/Landlord/Tenants" class="btn-custom">View Tenant Details</a>
-            <a href="/Landlord/MaintenanceRequests" class="btn-custom">Handle Maintenance Requests</a>
-            <a href="/Landlord/Documents" class="btn-custom">Upload Documents</a>
-            <a href="/Landlord/Payments" class="btn-custom">View Payment Records</a>
         </div>
 
-        <p class="section-note">
-            Select a function above to continue managing your rental properties.
-        </p>
-    </div>
+
+        <nav class="landlord-rail-nav">
+
+            <a href="/Landlord/Dashboard"
+               class="landlord-rail-link active">
+
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+
+            </a>
+
+
+            <a href="/Landlord/MyProperties"
+               class="landlord-rail-link">
+
+                <i class="bi bi-houses-fill"></i>
+                Properties
+
+            </a>
+
+
+            <a href="/Landlord/Tenants"
+               class="landlord-rail-link">
+
+                <i class="bi bi-people-fill"></i>
+                Tenants
+
+            </a>
+
+
+            <a href="/Landlord/MaintenanceRequests"
+               class="landlord-rail-link">
+
+                <i class="bi bi-tools"></i>
+                Maintenance
+
+            </a>
+
+
+            <a href="/Landlord/Documents"
+               class="landlord-rail-link">
+
+                <i class="bi bi-file-earmark-text-fill"></i>
+                Documents
+
+            </a>
+
+
+            <a href="/Landlord/Payments"
+               class="landlord-rail-link">
+
+                <i class="bi bi-wallet2"></i>
+                Payments
+
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+
+    <!-- Workspace -->
+
+    <section class="landlord-workspace">
+
+        <!-- Header -->
+
+        <div class="landlord-toolbar">
+
+            <div>
+
+                <p class="landlord-kicker">
+                    LANDLORD WORKSPACE
+                </p>
+
+                <h1 class="landlord-heading">
+                    Welcome, Landlord
+                </h1>
+
+                <p class="landlord-sub">
+                    Manage properties, tenants, maintenance,
+                    documents, and payment records.
+                </p>
+
+            </div>
+
+
+            <div class="landlord-time">
+
+                <strong id="currentDate"></strong>
+
+                <span id="currentTime"></span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Hero -->
+
+        <div class="landlord-hero">
+
+            <div>
+
+                <h2>
+                    Property Management Dashboard
+                </h2>
+
+                <p class="landlord-sub">
+                    Select a function below to begin managing your rental portfolio.
+                </p>
+
+            </div>
+
+            <span class="landlord-badge badge-success">
+                Active
+            </span>
+
+        </div>
+
+
+
+        <!-- Quick Actions -->
+
+        <div class="landlord-layout-2">
+
+
+            <!-- Functions Panel -->
+
+            <article class="landlord-panel">
+
+                <div class="landlord-panel-head">
+
+                    <h3 class="landlord-panel-title">
+                        Main Functions
+                    </h3>
+
+                </div>
+
+
+                <div class="landlord-actions">
+
+                    <a href="/Landlord/MyProperties"
+                       class="landlord-btn landlord-btn-primary">
+
+                        Manage Properties
+
+                    </a>
+
+
+                    <a href="/Landlord/Tenants"
+                       class="landlord-btn landlord-btn-outline">
+
+                        View Tenant Details
+
+                    </a>
+
+
+                    <a href="/Landlord/MaintenanceRequests"
+                       class="landlord-btn landlord-btn-outline">
+
+                        Handle Maintenance Requests
+
+                    </a>
+
+
+                    <a href="/Landlord/Documents"
+                       class="landlord-btn landlord-btn-outline">
+
+                        Upload Documents
+
+                    </a>
+
+
+                    <a href="/Landlord/Payments"
+                       class="landlord-btn landlord-btn-outline">
+
+                        View Payment Records
+
+                    </a>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- Responsibilities Panel -->
+
+            <article class="landlord-panel">
+
+                <div class="landlord-panel-head">
+
+                    <h3 class="landlord-panel-title">
+                        Landlord Responsibilities
+                    </h3>
+
+                </div>
+
+
+                <div class="landlord-list">
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            Add and manage properties
+                        </span>
+
+                        <span class="landlord-badge badge-success">
+                            Enabled
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            View tenant details
+                        </span>
+
+                        <span class="landlord-badge badge-success">
+                            Enabled
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            Handle maintenance requests
+                        </span>
+
+                        <span class="landlord-badge badge-warning">
+                            Active
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            Upload documents
+                        </span>
+
+                        <span class="landlord-badge badge-primary">
+                            Cloud Ready
+                        </span>
+
+                    </div>
+
+
+                    <div class="landlord-list-item">
+
+                        <span>
+                            View payment records
+                        </span>
+
+                        <span class="landlord-badge badge-primary">
+                            Tracking
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+            </article>
+
+        </div>
+
+    </section>
+
 </div>
+
+
+
+<script>
+
+function updateDateTime() {
+
+    const now = new Date();
+
+    document.getElementById('currentDate').textContent =
+        now.toLocaleDateString('en-MY', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+    document.getElementById('currentTime').textContent =
+        now.toLocaleTimeString('en-MY', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+}
+
+updateDateTime();
+
+setInterval(updateDateTime, 30000);
+
+</script>
