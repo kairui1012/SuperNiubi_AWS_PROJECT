@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Services;
 using Microsoft.AspNetCore.Authentication;
+using QuestPDF.Infrastructure; 
 
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 

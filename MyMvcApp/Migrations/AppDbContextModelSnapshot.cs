@@ -407,6 +407,65 @@ namespace MyMvcApp.Migrations
                     b.ToTable("Tenants");
                 });
 
+            modelBuilder.Entity("MyMvcApp.Models.VisitorPass", b =>
+                {
+                    b.Property<int>("VisitorPassId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VisitorPassId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PassCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("QrPayload")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("VisitDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VisitorName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("VisitorPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("VisitorPassId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("VisitorPasses");
+                });
+
             modelBuilder.Entity("MyMvcApp.Models.Document", b =>
                 {
                     b.HasOne("MyMvcApp.Models.Property", "Property")
@@ -509,6 +568,17 @@ namespace MyMvcApp.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MyMvcApp.Models.VisitorPass", b =>
+                {
+                    b.HasOne("MyMvcApp.Models.Tenant", "Tenant")
+                        .WithMany("VisitorPasses")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("MyMvcApp.Models.Property", b =>
                 {
                     b.Navigation("Amenities");
@@ -529,6 +599,8 @@ namespace MyMvcApp.Migrations
                     b.Navigation("MaintenanceRequests");
 
                     b.Navigation("Payments");
+
+                    b.Navigation("VisitorPasses");
                 });
 #pragma warning restore 612, 618
         }

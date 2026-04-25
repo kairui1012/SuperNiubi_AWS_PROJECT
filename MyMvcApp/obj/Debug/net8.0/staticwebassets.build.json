@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "VFQR4zzPcsgmEB6/2keZxHV93c27lTy3EPDfHEvXHBE=",
+  "Hash": "P+lYHPZ24ZMJNfqcuxb7+kR9I4rQRuKWiYMEp5dqm4Q=",
   "Source": "MyMvcApp",
   "BasePath": "_content/MyMvcApp",
   "Mode": "Default",
@@ -1326,6 +1326,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\lib\\jquery\\LICENSE.txt"
+    },
+    {
+      "Identity": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\uploads\\tenant\\9\\payments\\receipt-2026-may-000004.pdf",
+      "SourceId": "MyMvcApp",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\",
+      "BasePath": "_content/MyMvcApp",
+      "RelativePath": "uploads/tenant/9/payments/receipt-2026-may-000004.pdf",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\tenant\\9\\payments\\receipt-2026-may-000004.pdf"
     }
   ]
 }

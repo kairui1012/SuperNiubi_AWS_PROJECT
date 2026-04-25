@@ -1,3 +1,4 @@
+@model TenantDocumentsViewModel
 @{
     ViewData["Title"] = "Documents";
 }
@@ -13,20 +14,26 @@
             </div>
         </div>
         <nav class="tenant-rail-nav">
-            <a href="/Tenant/Tenant" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-            <a href="/Tenant/MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
-            <a href="/Tenant/MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
-            <a href="/Tenant/Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
-            <a href="/Tenant/Documents" class="tenant-rail-link active"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+            <a asp-action="TenantDashboard" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a asp-action="MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a asp-action="MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a asp-action="Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
+            <a asp-action="Visitors" class="tenant-rail-link"><i class="bi bi-qr-code-scan"></i> Visitors</a>
+            <a asp-action="Documents" class="tenant-rail-link active"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
         </nav>
     </aside>
 
     <section class="tenant-workspace">
+        @if (TempData["SuccessMessage"] is string successMessage)
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+
         <div class="tenant-toolbar">
             <div>
                 <p class="tenant-kicker">Document Vault</p>
                 <h1 class="tenant-heading">Tenant Documents</h1>
-                <p class="tenant-sub">Store agreements, identity files, and receipts securely in your S3-backed library.</p>
+                <p class="tenant-sub">Store agreements, identity files, and receipts securely in your tenant document library.</p>
             </div>
             <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ Upload Document</button>
         </div>
@@ -39,27 +46,30 @@
                     <div class="tenant-form-grid">
                         <div>
                             <label>Document Name</label>
-                            <input class="form-control" type="text" name="DocumentName" placeholder="e.g. Tenancy Agreement 2025" required />
+                            <input class="form-control" asp-for="NewDocument.DocumentName" placeholder="e.g. Tenancy Agreement 2025" />
+                            <span asp-validation-for="NewDocument.DocumentName" class="text-danger"></span>
                         </div>
                         <div>
                             <label>Document Type</label>
-                            <select class="form-select" name="DocumentType" required>
-                                <option value="" disabled selected>Select type</option>
-                                <option>Tenancy Agreement</option>
-                                <option>Identity Card</option>
-                                <option>Payment Receipt</option>
-                                <option>Inspection Report</option>
-                                <option>Others</option>
+                            <select class="form-select" asp-for="NewDocument.DocumentType">
+                                <option value="">Select type</option>
+                                <option value="TenancyAgreement">Tenancy Agreement</option>
+                                <option value="IdentityCard">Identity Card</option>
+                                <option value="PaymentReceipt">Payment Receipt</option>
+                                <option value="InspectionReport">Inspection Report</option>
+                                <option value="Others">Others</option>
                             </select>
+                            <span asp-validation-for="NewDocument.DocumentType" class="text-danger"></span>
                         </div>
                         <div class="full">
                             <label>Notes (optional)</label>
-                            <textarea class="form-control" name="Notes" placeholder="Any notes about this document..."></textarea>
+                            <textarea class="form-control" asp-for="NewDocument.Notes" placeholder="Any notes about this document..."></textarea>
+                            <span asp-validation-for="NewDocument.Notes" class="text-danger"></span>
                         </div>
                         <div class="full">
                             <label>File</label>
                             <div class="drop-zone" id="dropZone">
-                                <input type="file" id="docFile" name="File" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                                <input type="file" id="docFile" asp-for="NewDocument.File" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
                                 <div class="dz-content">
                                     <div class="fs-3"><i class="bi bi-cloud-arrow-up"></i></div>
                                     <div class="tenant-sub"><strong>Click to upload</strong> or drag and drop</div>
@@ -68,6 +78,7 @@
                                 <div id="dz-file" class="fs-4 mt-2" style="display:none;"><i class="bi bi-file-earmark-text"></i></div>
                                 <div class="tenant-sub mt-2" id="fileNameDisplay"></div>
                             </div>
+                            <span asp-validation-for="NewDocument.File" class="text-danger"></span>
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
@@ -87,44 +98,32 @@
             </div>
             <div class="tenant-panel-body">
                 <div class="doc-grid" id="docsGrid">
-                    <div class="doc-card doc-item" data-name="tenancy agreement 2025">
-                        <div class="fw-semibold">Tenancy Agreement 2025.pdf</div>
-                        <div class="tenant-sub small mb-2">Uploaded 1 Jan 2025 - 2.4 MB</div>
-                        <span class="tenant-badge badge-primary mb-2">Tenancy Agreement</span>
-                        <div class="d-flex gap-2">
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
-                        </div>
-                    </div>
-                    <div class="doc-card doc-item" data-name="identity card mykad">
-                        <div class="fw-semibold">MyKad_Scan.jpg</div>
-                        <div class="tenant-sub small mb-2">Uploaded 2 Jan 2025 - 0.8 MB</div>
-                        <span class="tenant-badge badge-primary mb-2">Identity Card</span>
-                        <div class="d-flex gap-2">
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
-                        </div>
-                    </div>
-                    <div class="doc-card doc-item" data-name="inspection report january">
-                        <div class="fw-semibold">Inspection_Report_Jan2025.pdf</div>
-                        <div class="tenant-sub small mb-2">Uploaded 5 Jan 2025 - 1.2 MB</div>
-                        <span class="tenant-badge badge-primary mb-2">Inspection Report</span>
-                        <div class="d-flex gap-2">
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
-                        </div>
-                    </div>
-                    <div class="doc-card doc-item" data-name="payment receipt march">
-                        <div class="fw-semibold">Receipt_March2025.png</div>
-                        <div class="tenant-sub small mb-2">Uploaded 2 Mar 2025 - 0.5 MB</div>
-                        <span class="tenant-badge badge-primary mb-2">Payment Receipt</span>
-                        <div class="d-flex gap-2">
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
-                            <a href="#" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
-                        </div>
-                    </div>
+                    @if (Model.Documents.Count == 0)
+                    {
+                        <div class="tenant-empty">No documents uploaded yet.</div>
+                    }
+                    else
+                    {
+                        @foreach (var document in Model.Documents)
+                        {
+                            var fileUrl = "/" + document.FileKey;
+                            var fileSizeText = document.FileSize.HasValue
+                                ? $"{Math.Round(document.FileSize.Value / 1024d, 1)} KB"
+                                : "Unknown size";
+
+                            <div class="doc-card doc-item" data-name="@document.DocumentName.ToLowerInvariant()">
+                                <div class="fw-semibold">@document.DocumentName</div>
+                                <div class="tenant-sub small mb-2">Uploaded @document.CreatedAt.ToLocalTime().ToString("dd MMM yyyy") - @fileSizeText</div>
+                                <span class="tenant-badge badge-primary mb-2">@document.DocumentType</span>
+                                <div class="d-flex gap-2">
+                                    <a href="@fileUrl" target="_blank" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
+                                    <a href="@fileUrl" download class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                                </div>
+                            </div>
+                        }
+                    }
                 </div>
-                <div class="tenant-sub mt-3">All files are securely stored in AWS S3 and transmitted over HTTPS.</div>
+                <div class="tenant-sub mt-3">Uploaded files are linked to your tenant account and kept in one place for easy access.</div>
             </div>
         </div>
     </section>
@@ -137,6 +136,10 @@
         if (form.classList.contains('console-open')) {
             form.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+    }
+
+    if (document.querySelector('.text-danger:not(:empty)')) {
+        toggleForm();
     }
 
     const fileInput = document.getElementById('docFile');

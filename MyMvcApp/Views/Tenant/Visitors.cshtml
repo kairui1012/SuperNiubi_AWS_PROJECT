@@ -1,0 +1,209 @@
+@model TenantVisitorsViewModel
+@{
+    ViewData["Title"] = "Visitors";
+    var selectedPassId = Model.LatestPass?.VisitorPassId;
+}
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+
+<style>
+    .visitor-select-row {
+        cursor: pointer;
+    }
+
+    .visitor-select-row.is-selected {
+        background: rgba(28, 140, 210, 0.1);
+    }
+</style>
+
+<div class="tenant-console">
+    <aside class="tenant-rail">
+        <div class="tenant-rail-brand">
+            <span class="tenant-rail-logo"><i class="bi bi-buildings"></i></span>
+            <div>
+                <p class="tenant-rail-title">Tenant Console</p>
+                <p class="tenant-rail-sub">Property Operations</p>
+            </div>
+        </div>
+        <nav class="tenant-rail-nav">
+            <a asp-action="TenantDashboard" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a asp-action="MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a asp-action="MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a asp-action="Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
+            <a asp-action="Visitors" class="tenant-rail-link active"><i class="bi bi-qr-code-scan"></i> Visitors</a>
+            <a asp-action="Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+        </nav>
+    </aside>
+
+    <section class="tenant-workspace">
+        @if (TempData["SuccessMessage"] is string successMessage)
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+
+        <div class="tenant-toolbar">
+            <div>
+                <p class="tenant-kicker">Visitor Control</p>
+                <h1 class="tenant-heading">Generate visitor QR passes</h1>
+                <p class="tenant-sub">Register a visitor, save the record in the database, and generate a QR code for entry verification.</p>
+            </div>
+            <span class="tenant-badge badge-primary">@Model.PropertyName</span>
+        </div>
+
+        <div class="tenant-layout-2">
+            <article class="tenant-panel">
+                <div class="tenant-panel-head">
+                    <h3 class="tenant-panel-title">Register Visitor</h3>
+                </div>
+                <div class="tenant-panel-body tenant-form">
+                    <form asp-action="RegisterVisitor" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="tenant-form-grid">
+                            <div>
+                                <label asp-for="NewVisitor.VisitorName">Visitor Name</label>
+                                <input class="form-control" asp-for="NewVisitor.VisitorName" placeholder="Visitor full name" required/>
+                                <span asp-validation-for="NewVisitor.VisitorName" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label asp-for="NewVisitor.VisitorPhone">Phone Number</label>
+                                <input class="form-control" asp-for="NewVisitor.VisitorPhone" placeholder="e.g. 012-345 6789" required/>
+                                <span asp-validation-for="NewVisitor.VisitorPhone" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label asp-for="NewVisitor.VisitDate">Visit Date</label>
+                                <input class="form-control" asp-for="NewVisitor.VisitDate" type="date" required/>
+                                <span asp-validation-for="NewVisitor.VisitDate" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label asp-for="NewVisitor.Purpose">Purpose</label>
+                                <input class="form-control" asp-for="NewVisitor.Purpose" placeholder="Delivery, repair, friend visit, etc." required/>
+                                <span asp-validation-for="NewVisitor.Purpose" class="text-danger"></span>
+                            </div>
+                            <div class="full">
+                                <label asp-for="NewVisitor.Notes">Notes</label>
+                                <textarea class="form-control" asp-for="NewVisitor.Notes" placeholder="Optional remarks for security or reception."></textarea>
+                                <span asp-validation-for="NewVisitor.Notes" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="submit" class="btn tenant-btn tenant-btn-primary">Generate QR Pass</button>
+                        </div>
+                    </form>
+                </div>
+            </article>
+
+            <article class="tenant-panel">
+                <div class="tenant-panel-head">
+                    <h3 class="tenant-panel-title">Latest QR Pass</h3>
+                </div>
+                <div class="tenant-panel-body">
+                    @if (Model.LatestPass is null || string.IsNullOrWhiteSpace(Model.GeneratedQrCodeDataUrl))
+                    {
+                        <div class="tenant-empty">Register a visitor to generate the first QR pass.</div>
+                    }
+                    else
+                    {
+                        <div class="visitor-qr-stage">
+                            <img class="visitor-qr-image" src="@Model.GeneratedQrCodeDataUrl" alt="Visitor QR code" />
+                            <div class="tenant-list mt-3">
+                                <div class="tenant-list-item"><span class="tenant-sub">Visitor</span><strong>@Model.LatestPass.VisitorName</strong></div>
+                                <div class="tenant-list-item"><span class="tenant-sub">Phone</span><strong>@(string.IsNullOrWhiteSpace(Model.LatestPass.VisitorPhone) ? "-" : Model.LatestPass.VisitorPhone)</strong></div>
+                                <div class="tenant-list-item"><span class="tenant-sub">Visit Date</span><strong>@Model.LatestPass.VisitDate.ToLocalTime().ToString("dd MMM yyyy")</strong></div>
+                                <div class="tenant-list-item"><span class="tenant-sub">Pass Code</span><strong>@Model.LatestPass.PassCode</strong></div>
+                                <div class="tenant-list-item"><span class="tenant-sub">Purpose</span><strong>@Model.LatestPass.Purpose</strong></div>
+                                <div class="tenant-list-item"><span class="tenant-sub">Status</span><strong>@Model.LatestPass.Status</strong></div>
+                                <div class="tenant-list-item"><span class="tenant-sub">Notes</span><strong>@(string.IsNullOrWhiteSpace(Model.LatestPass.Notes) ? "-" : Model.LatestPass.Notes)</strong></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </article>
+        </div>
+
+        <div class="tenant-panel">
+            <div class="tenant-panel-head">
+                <h3 class="tenant-panel-title">Visitor Pass History</h3>
+            </div>
+            <div class="tenant-panel-body p-0">
+                <div class="table-responsive">
+                    <table class="tenant-table">
+                        <thead>
+                            <tr>
+                                <th>Visitor</th>
+                                <th>Date</th>
+                                <th>Purpose</th>
+                                <th>Pass Code</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Visitors.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">No visitor passes created yet.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var visitor in Model.Visitors)
+                                {
+                                    var isSelected = selectedPassId.HasValue && visitor.VisitorPassId == selectedPassId.Value;
+                                    <tr class="visitor-select-row @(isSelected ? "is-selected" : string.Empty)"
+                                        data-pass-url="@Url.Action("Visitors", "Tenant", new { passId = visitor.VisitorPassId })"
+                                        role="button"
+                                        tabindex="0"
+                                        aria-label="View QR pass for @visitor.VisitorName">
+                                        <td>
+                                            <strong>@visitor.VisitorName</strong>
+                                            <div class="tenant-sub">@(string.IsNullOrWhiteSpace(visitor.VisitorPhone) ? "-" : visitor.VisitorPhone)</div>
+                                        </td>
+                                        <td>@visitor.VisitDate.ToLocalTime().ToString("dd MMM yyyy")</td>
+                                        <td>@visitor.Purpose</td>
+                                        <td>@visitor.PassCode</td>
+                                        <td><span class="tenant-badge badge-primary">@visitor.Status</span></td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm tenant-btn tenant-btn-primary"
+                                               asp-action="Visitors"
+                                               asp-route-passId="@visitor.VisitorPassId">
+                                                View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        const rows = document.querySelectorAll('.visitor-select-row');
+
+        const goToPass = (row) => {
+            const url = row.getAttribute('data-pass-url');
+            if (url) {
+                window.location.href = url;
+            }
+        };
+
+        rows.forEach((row) => {
+            row.addEventListener('click', (event) => {
+                if (event.target.closest('a, button, input, textarea, select, label')) {
+                    return;
+                }
+                goToPass(row);
+            });
+
+            row.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    goToPass(row);
+                }
+            });
+        });
+    })();
+</script>

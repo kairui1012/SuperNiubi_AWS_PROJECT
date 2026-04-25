@@ -273,6 +273,10 @@
       "PackagePath": "staticwebassets\\lib\\jquery\\dist\\jquery.min.map"
     },
     {
+      "Id": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\uploads\\tenant\\9\\payments\\receipt-2026-may-000004.pdf",
+      "PackagePath": "staticwebassets\\uploads\\tenant\\9\\payments\\receipt-2026-may-000004.pdf"
+    },
+    {
       "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.MyMvcApp.Microsoft.AspNetCore.StaticWebAssets.props",
       "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
     },

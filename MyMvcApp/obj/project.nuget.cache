@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Z+BtatH/zP1x+3dPU0qojGJgk4nnjupHKpc4A+xD1ogf0Kn555Dj6oUe0cBjo3L9Bp16BMkkUnYLtGFvLaN6Pg==",
+  "dgSpecHash": "4GOkimowBwPIufykYmdAPL9IJ5urOOBAzpP+pplIK1OV59ELWrHC62MhRttxBPHROX6TNn9sUllrelHTFa+vsQ==",
   "success": true,
   "projectFilePath": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\MyMvcApp.csproj",
   "expectedPackageFiles": [
@@ -40,9 +40,12 @@
     "C:\\Users\\yeo yu le\\.nuget\\packages\\microsoft.identitymodel.protocols\\6.8.0\\microsoft.identitymodel.protocols.6.8.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\6.8.0\\microsoft.identitymodel.protocols.openidconnect.6.8.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\microsoft.identitymodel.tokens\\6.8.0\\microsoft.identitymodel.tokens.6.8.0.nupkg.sha512",
+    "C:\\Users\\yeo yu le\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\mono.texttemplating\\2.2.1\\mono.texttemplating.2.2.1.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\npgsql\\8.0.3\\npgsql.8.0.3.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql\\8.0.4\\npgsql.entityframeworkcore.postgresql.8.0.4.nupkg.sha512",
+    "C:\\Users\\yeo yu le\\.nuget\\packages\\qrcoder\\1.8.0\\qrcoder.1.8.0.nupkg.sha512",
+    "C:\\Users\\yeo yu le\\.nuget\\packages\\questpdf\\2025.7.2\\questpdf.2025.7.2.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.codedom\\4.4.0\\system.codedom.4.4.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.collections.immutable\\6.0.0\\system.collections.immutable.6.0.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.composition\\6.0.0\\system.composition.6.0.0.nupkg.sha512",
@@ -51,6 +54,7 @@
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.composition.hosting\\6.0.0\\system.composition.hosting.6.0.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.composition.runtime\\6.0.0\\system.composition.runtime.6.0.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.composition.typedparts\\6.0.0\\system.composition.typedparts.6.0.0.nupkg.sha512",
+    "C:\\Users\\yeo yu le\\.nuget\\packages\\system.drawing.common\\6.0.0\\system.drawing.common.6.0.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.identitymodel.tokens.jwt\\6.8.0\\system.identitymodel.tokens.jwt.6.8.0.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.io.pipelines\\6.0.3\\system.io.pipelines.6.0.3.nupkg.sha512",
     "C:\\Users\\yeo yu le\\.nuget\\packages\\system.reflection.metadata\\6.0.1\\system.reflection.metadata.6.0.1.nupkg.sha512",
