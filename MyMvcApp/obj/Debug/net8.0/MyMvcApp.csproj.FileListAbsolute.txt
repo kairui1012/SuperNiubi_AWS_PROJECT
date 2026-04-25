@@ -252,6 +252,7 @@ C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\C
 C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\AWSSDK.CognitoIdentityProvider.dll
 C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\AWSSDK.Core.dll
 C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\AWSSDK.Extensions.NETCore.Setup.dll
+C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\AWSSDK.S3.dll
 C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\AWSSDK.SecurityToken.dll
 C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\Humanizer.dll
 C:\Users\junyong is DaShuaiGe\Desktop\SCHOOL\Y3S2\Design & Developing on Cloud\Code\SuperNiubi_AWS_PROJECT\MyMvcApp\bin\Debug\net8.0\Microsoft.Bcl.AsyncInterfaces.dll

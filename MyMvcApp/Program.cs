@@ -21,6 +21,13 @@ builder.Services.AddCognitoIdentity();
 
 builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIdentityProvider>();
 
+// 1. Add Amazon AWS setup
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
+
+// 2. Register your custom S3 Image Service
+builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

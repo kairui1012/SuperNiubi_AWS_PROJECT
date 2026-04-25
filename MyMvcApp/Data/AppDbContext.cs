@@ -15,12 +15,14 @@ namespace MyMvcApp.Data
         public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Document> Documents { get; set; }
+        public DbSet<CommunityUpdate> CommunityUpdates { get; set; }
 
         // Setting rules to store the data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Store ENUM as String for easier check, if not it will be 1, 2, 3 in db
             modelBuilder.Entity<Property>().Property(p => p.PropertyType).HasConversion<string>();
+            modelBuilder.Entity<CommunityUpdate>().Property(c => c.Type).HasConversion<string>();
             modelBuilder.Entity<Tenant>().Property(t => t.DepositStatus).HasConversion<string>();
             modelBuilder.Entity<Tenant>().Property(t => t.LeaseStatus).HasConversion<string>();
             modelBuilder.Entity<MaintenanceRequest>().Property(m => m.Category).HasConversion<string>();

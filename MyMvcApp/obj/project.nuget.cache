@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "cY3T1K4uLzw=",
+  "dgSpecHash": "XKG+0+n8c4Q=",
   "success": true,
   "projectFilePath": "C:\\Users\\junyong is DaShuaiGe\\Desktop\\SCHOOL\\Y3S2\\Design & Developing on Cloud\\Code\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\MyMvcApp.csproj",
   "expectedPackageFiles": [
@@ -8,8 +8,9 @@
     "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\amazon.extensions.cognitoauthentication\\3.1.4\\amazon.extensions.cognitoauthentication.3.1.4.nupkg.sha512",
     "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.cognitoidentity\\4.0.2.18\\awssdk.cognitoidentity.4.0.2.18.nupkg.sha512",
     "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.cognitoidentityprovider\\4.0.6.2\\awssdk.cognitoidentityprovider.4.0.6.2.nupkg.sha512",
-    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.core\\4.0.3.17\\awssdk.core.4.0.3.17.nupkg.sha512",
-    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.extensions.netcore.setup\\4.0.3.25\\awssdk.extensions.netcore.setup.4.0.3.25.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.core\\4.0.4\\awssdk.core.4.0.4.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.extensions.netcore.setup\\4.0.3.35\\awssdk.extensions.netcore.setup.4.0.3.35.nupkg.sha512",
+    "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.s3\\4.0.22.1\\awssdk.s3.4.0.22.1.nupkg.sha512",
     "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\awssdk.securitytoken\\4.0.5.12\\awssdk.securitytoken.4.0.5.12.nupkg.sha512",
     "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\junyong is DaShuaiGe\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\6.0.0\\microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",

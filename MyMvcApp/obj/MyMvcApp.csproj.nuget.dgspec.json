@@ -51,6 +51,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "AWSSDK.Extensions.NETCore.Setup": {
+              "target": "Package",
+              "version": "[4.0.3.35, )"
+            },
+            "AWSSDK.S3": {
+              "target": "Package",
+              "version": "[4.0.22.1, )"
+            },
             "Amazon.AspNetCore.Identity.Cognito": {
               "target": "Package",
               "version": "[4.0.2, )"
