@@ -16,6 +16,8 @@ namespace MyMvcApp.Data
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Document> Documents { get; set; }
         public DbSet<CommunityUpdate> CommunityUpdates { get; set; }
+        public DbSet<VisitorPass> VisitorPasses { get; set; }
+
 
         // Setting rules to store the data
         protected override void OnModelCreating(ModelBuilder modelBuilder)

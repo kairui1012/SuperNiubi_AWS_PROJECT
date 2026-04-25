@@ -17,6 +17,10 @@
       "PackagePath": "staticwebassets\\css\\pages\\auth.css"
     },
     {
+      "Id": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\css\\pages\\home.css",
+      "PackagePath": "staticwebassets\\css\\pages\\home.css"
+    },
+    {
       "Id": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\css\\pages\\landlord.css",
       "PackagePath": "staticwebassets\\css\\pages\\landlord.css"
     },
@@ -271,6 +275,10 @@
     {
       "Id": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\lib\\jquery\\dist\\jquery.min.map",
       "PackagePath": "staticwebassets\\lib\\jquery\\dist\\jquery.min.map"
+    },
+    {
+      "Id": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\uploads\\tenant\\9\\payments\\receipt-2026-june-000005.pdf",
+      "PackagePath": "staticwebassets\\uploads\\tenant\\9\\payments\\receipt-2026-june-000005.pdf"
     },
     {
       "Id": "C:\\Users\\yeo yu le\\ReactJs\\SuperNiubi_AWS_PROJECT\\MyMvcApp\\wwwroot\\uploads\\tenant\\9\\payments\\receipt-2026-may-000004.pdf",
