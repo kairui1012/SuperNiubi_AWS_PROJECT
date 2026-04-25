@@ -577,7 +577,7 @@ namespace MyMvcApp.Controllers
             payment.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Mock payment completed and marked as verified.";
+            TempData["SuccessMessage"] = "Ppayment completed and marked as verified.";
             return RedirectToAction(nameof(Payments));
         }
 
