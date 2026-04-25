@@ -22,11 +22,12 @@
             </div>
         </div>
         <nav class="tenant-rail-nav">
-            <a href="/Tenant/Tenant" class="tenant-rail-link active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-            <a href="/Tenant/MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
-            <a href="/Tenant/MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
-            <a href="/Tenant/Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
-            <a href="/Tenant/Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+            <a asp-action="TenantDashboard" class="tenant-rail-link active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a asp-action="MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a asp-action="MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a asp-action="Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
+            <a asp-action="Visitors" class="tenant-rail-link"><i class="bi bi-qr-code-scan"></i> Visitors</a>
+            <a asp-action="Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
         </nav>
     </aside>
 
@@ -74,6 +75,11 @@
                 <div class="tenant-stat-value">@pendingDocuments</div>
                 <span class="tenant-badge badge-primary">Stored</span>
             </div>
+            <div class="tenant-stat">
+                <div class="tenant-stat-label">Visitor Passes</div>
+                <div class="tenant-stat-value">@Model.VisitorPassCount</div>
+                <span class="tenant-badge badge-primary">Generated</span>
+            </div>
         </div>
 
         <div class="tenant-layout-2">
@@ -112,10 +118,11 @@
                 </div>
                 <div class="tenant-panel-body">
                     <div class="tenant-actions mb-3">
-                        <a href="/Tenant/MaintenanceRequest" class="btn tenant-btn tenant-btn-primary">Create Request</a>
-                        <a href="/Tenant/Payments" class="btn tenant-btn tenant-btn-outline">Upload Payment</a>
-                        <a href="/Tenant/Documents" class="btn tenant-btn tenant-btn-outline">Upload Document</a>
-                        <a href="/Tenant/MyProperty" class="btn tenant-btn tenant-btn-outline">View Property</a>
+                        <a asp-action="MyProperty" class="btn tenant-btn tenant-btn-outline">View Property</a>
+                        <a asp-action="MaintenanceRequest" class="btn tenant-btn tenant-btn-outline">Create Request</a>
+                        <a asp-action="Payments" class="btn tenant-btn tenant-btn-outline">Make Payment</a>
+                        <a asp-action="Visitors" class="btn tenant-btn tenant-btn-outline">Register Visitor</a>
+                        <a asp-action="Documents" class="btn tenant-btn tenant-btn-outline">Upload Document</a>
                     </div>
                     <div class="tenant-list">
                         <div class="tenant-list-item"><span class="tenant-sub">Lease Start</span><strong>@leaseStart</strong></div>
