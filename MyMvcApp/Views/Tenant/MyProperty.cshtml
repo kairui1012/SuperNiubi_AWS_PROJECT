@@ -1,5 +1,16 @@
+@model TenantPropertyViewModel
 @{
     ViewData["Title"] = "My Property";
+
+    var property = Model.Property;
+    var fullAddress = string.Join(", ", new[]
+    {
+        property.AddressLine1,
+        property.AddressLine2,
+        property.City,
+        property.State,
+        property.PostalCode
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
 }
 <link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
 
@@ -13,11 +24,12 @@
             </div>
         </div>
         <nav class="tenant-rail-nav">
-            <a href="/Tenant/Tenant" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-            <a href="/Tenant/MyProperty" class="tenant-rail-link active"><i class="bi bi-house-door-fill"></i> Property</a>
-            <a href="/Tenant/MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
-            <a href="/Tenant/Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
-            <a href="/Tenant/Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+            <a asp-action="TenantDashboard" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a asp-action="MyProperty" class="tenant-rail-link active"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a asp-action="MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a asp-action="Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
+            <a asp-action="Visitors" class="tenant-rail-link"><i class="bi bi-qr-code-scan"></i> Visitors</a>
+            <a asp-action="Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
         </nav>
     </aside>
 
@@ -28,25 +40,25 @@
                 <h1 class="tenant-heading">Assigned Property</h1>
                 <p class="tenant-sub">Complete property profile with lease terms, contact details, and tenancy rules.</p>
             </div>
-            <span class="tenant-badge badge-success">Active Lease</span>
+            <span class="tenant-badge badge-success">@Model.LeaseStatus Lease</span>
         </div>
 
         <div class="tenant-hero">
             <div>
-                <h2>Sunrise Residences, Unit 12A</h2>
-                <p>Jalan Utama 3, 83000 Batu Pahat, Johor</p>
+                <h2>@property.PropertyName</h2>
+                <p>@fullAddress</p>
             </div>
             <div>
-                <p class="mb-1">Monthly Rent: <strong>RM 1,200</strong></p>
-                <p class="mb-0">Payment Due: <strong>1st of month</strong></p>
+                <p class="mb-1">Monthly Rent: <strong>@Model.MonthlyRent.ToString("C")</strong></p>
+                <p class="mb-0">Payment Due: <strong>@Model.RentDueDay day of month</strong></p>
             </div>
         </div>
 
         <div class="tenant-grid-4">
-            <div class="tenant-stat"><div class="tenant-stat-label">Floor</div><div class="tenant-stat-value">12</div></div>
-            <div class="tenant-stat"><div class="tenant-stat-label">Unit Size</div><div class="tenant-stat-value">850 sqft</div></div>
-            <div class="tenant-stat"><div class="tenant-stat-label">Bedrooms</div><div class="tenant-stat-value">3</div></div>
-            <div class="tenant-stat"><div class="tenant-stat-label">Bathrooms</div><div class="tenant-stat-value">2</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Floor</div><div class="tenant-stat-value">@(string.IsNullOrWhiteSpace(property.FloorNumber) ? "-" : property.FloorNumber)</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Unit Size</div><div class="tenant-stat-value">@(property.SizeSqFt.HasValue ? $"{property.SizeSqFt.Value:0} sqft" : "-")</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Bedrooms</div><div class="tenant-stat-value">@property.Bedrooms</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Bathrooms</div><div class="tenant-stat-value">@property.Bathrooms</div></div>
         </div>
 
         <div class="tenant-layout-2">
@@ -54,23 +66,23 @@
                 <div class="tenant-panel-head"><h3 class="tenant-panel-title">Lease Details</h3></div>
                 <div class="tenant-panel-body">
                     <div class="tenant-list">
-                        <div class="tenant-list-item"><span class="tenant-sub">Start Date</span><strong>1 January 2025</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">End Date</span><strong>31 December 2025</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Duration</span><strong>12 months</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Security Deposit</span><strong>RM 2,400</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Deposit Status</span><span class="tenant-badge badge-success">Paid</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Start Date</span><strong>@Model.LeaseStartDate.ToString("dd MMMM yyyy")</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">End Date</span><strong>@Model.LeaseEndDate.ToString("dd MMMM yyyy")</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Duration</span><strong>@Math.Max(1, ((Model.LeaseEndDate.Year - Model.LeaseStartDate.Year) * 12) + Model.LeaseEndDate.Month - Model.LeaseStartDate.Month) months</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Security Deposit</span><strong>@Model.DepositPaid.ToString("C")</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Deposit Status</span><span class="tenant-badge @(Model.DepositStatus == DepositStatus.Paid ? "badge-success" : "badge-warning")">@Model.DepositStatus</span></div>
                     </div>
                 </div>
             </article>
 
             <article class="tenant-panel">
-                <div class="tenant-panel-head"><h3 class="tenant-panel-title">Landlord Contact</h3></div>
+                <div class="tenant-panel-head"><h3 class="tenant-panel-title">Property Details</h3></div>
                 <div class="tenant-panel-body">
                     <div class="tenant-list">
-                        <div class="tenant-list-item"><span class="tenant-sub">Name</span><strong>Mr. Ahmad Razali</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Phone</span><strong>+60 12-345 6789</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Email</span><strong>ahmad.razali@email.com</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Response Hours</span><strong>9:00 AM - 6:00 PM</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Property Type</span><strong>@property.PropertyType</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Unit Number</span><strong>@(string.IsNullOrWhiteSpace(property.UnitNumber) ? "-" : property.UnitNumber)</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Parking Bay</span><strong>@(string.IsNullOrWhiteSpace(property.ParkingBay) ? "-" : property.ParkingBay)</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Tenant Email</span><strong>@Model.TenantEmail</strong></div>
                     </div>
                 </div>
             </article>
@@ -81,10 +93,20 @@
                 <div class="tenant-panel-head"><h3 class="tenant-panel-title">Utilities & Amenities</h3></div>
                 <div class="tenant-panel-body">
                     <div class="tenant-list">
-                        <div class="tenant-list-item"><span class="tenant-sub">Water</span><span class="tenant-badge badge-success">Included</span></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Electricity</span><span class="tenant-badge badge-warning">Tenant Pays</span></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Internet</span><span class="tenant-badge badge-success">Included</span></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Parking</span><strong>1 Bay (B1-42)</strong></div>
+                        @if (Model.Amenities.Count == 0)
+                        {
+                            <div class="tenant-list-item"><span class="tenant-sub">Amenities</span><strong>None listed</strong></div>
+                        }
+                        else
+                        {
+                            @foreach (var amenity in Model.Amenities)
+                            {
+                                <div class="tenant-list-item">
+                                    <span class="tenant-sub">@amenity.AmenityName</span>
+                                    <span class="tenant-badge badge-success">Available</span>
+                                </div>
+                            }
+                        }
                     </div>
                 </div>
             </article>
@@ -93,11 +115,14 @@
                 <div class="tenant-panel-head"><h3 class="tenant-panel-title">House Rules</h3></div>
                 <div class="tenant-panel-body">
                     <div class="tenant-list">
-                        <div class="tenant-list-item"><span class="tenant-sub">Pets</span><span class="tenant-badge badge-danger">Not Allowed</span></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Smoking</span><span class="tenant-badge badge-danger">Not Allowed</span></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Guests</span><strong>Max 2 overnight</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Quiet Hours</span><strong>10:00 PM - 7:00 AM</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Subletting</span><span class="tenant-badge badge-danger">Not Allowed</span></div>
+                        @if (!string.IsNullOrWhiteSpace(property.Description))
+                        {
+                            <div class="tenant-list-item"><span class="tenant-sub">Notes</span><strong>@property.Description</strong></div>
+                        }
+                        <div class="tenant-list-item"><span class="tenant-sub">Lease Status</span><span class="tenant-badge @(Model.LeaseStatus == LeaseStatus.Active ? "badge-success" : "badge-warning")">@Model.LeaseStatus</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Deposit</span><span class="tenant-badge @(Model.DepositStatus == DepositStatus.Paid ? "badge-success" : "badge-warning")">@Model.DepositStatus</span></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Created</span><strong>@property.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</strong></div>
+                        <div class="tenant-list-item"><span class="tenant-sub">Last Updated</span><strong>@property.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy")</strong></div>
                     </div>
                 </div>
             </article>

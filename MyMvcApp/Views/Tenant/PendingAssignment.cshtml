@@ -1,0 +1,85 @@
+@{
+    ViewData["Title"] = "Account Pending";
+}
+
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+
+<style>
+    .pending-container {
+        height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    .status-card {
+        background: white;
+        padding: 3rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        max-width: 500px;
+        width: 100%;
+    }
+    .pulse-icon {
+        font-size: 4rem;
+        color: #0d6efd;
+        animation: pulse 2s infinite;
+        margin-bottom: 1.5rem;
+    }
+    @@keyframes pulse {
+        0% { transform: scale(0.95); opacity: 0.7; }
+        70% { transform: scale(1.05); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.7; }
+    }
+    .step-list {
+        text-align: left;
+        margin-top: 2rem;
+        padding-left: 0;
+        list-style: none;
+    }
+    .step-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        color: #6c757d;
+    }
+    .step-item.active { color: #0d6efd; font-weight: bold; }
+    .step-item i { margin-right: 15px; font-size: 1.2rem; }
+</style>
+
+<div class="pending-container">
+    <div class="status-card">
+        <div class="pulse-icon">
+            <i class="bi bi-house-gear-fill"></i>
+        </div>
+        
+        <h2 class="mb-3">Welcome Aboard!</h2>
+        <p class="text-muted">
+            Your account has been successfully created. We are currently linking your profile to your property.
+        </p>
+
+        <ul class="step-list">
+            <li class="step-item text-success">
+                <i class="bi bi-check-circle-fill"></i> Account Registration Complete
+            </li>
+            <li class="step-item active">
+                <i class="bi bi-hourglass-split"></i> Awaiting Property Assignment by Admin
+            </li>
+            <li class="step-item">
+                <i class="bi bi-circle"></i> Access to Tenant Dashboard
+            </li>
+        </ul>
+
+        <div class="mt-4">
+            <hr />
+            <p class="small text-secondary">
+                Need help? Contact support at <a href="mailto:support@@yourdomain.com">support@@yourdomain.com</a>
+            </p>
+            <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-outline-danger btn-sm mt-2 px-5" style="border-color: red;">
+                    Sign Out
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

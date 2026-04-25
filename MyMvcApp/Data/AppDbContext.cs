@@ -31,6 +31,7 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<Payment>().Property(p => p.PaymentMethod).HasConversion<string>();
             modelBuilder.Entity<Payment>().Property(p => p.Status).HasConversion<string>();
             modelBuilder.Entity<Document>().Property(d => d.DocumentType).HasConversion<string>();
+            modelBuilder.Entity<VisitorPass>().Property(v => v.Status).HasConversion<string>();
 
             // Avoid Cascade Delete Conflict
             // Logic: One property has only one tenant, one tenant has only one  property
@@ -39,6 +40,12 @@ namespace MyMvcApp.Data
                 .WithOne(p => p.Tenant)
                 .HasForeignKey<Tenant>(t => t.PropertyId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<VisitorPass>()
+                .HasOne(v => v.Tenant)
+                .WithMany(t => t.VisitorPasses)
+                .HasForeignKey(v => v.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
 
         }
     }
