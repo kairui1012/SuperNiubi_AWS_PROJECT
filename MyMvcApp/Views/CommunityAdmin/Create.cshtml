@@ -12,6 +12,13 @@
 
         <div class="card border-0 shadow-sm rounded-4 mb-5">
             <div class="card-body p-4 p-md-5">
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger mb-4 rounded-3 shadow-sm">
+                        <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle me-2"></i> Form Rejected:</h6>
+                        <div asp-validation-summary="All" class="mb-0"></div>
+                    </div>
+                }
                 <form asp-action="Create" method="post" enctype="multipart/form-data">
                     
                     <div class="row g-4 mb-4">
@@ -68,14 +75,16 @@
 </div>
 
 @section Scripts {
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" integrity="sha512-6JR4bbn8rCKvrkdoTji/4c/8k/F1hHof4Z6x6o85+2ZpX626yZqgQk1z/X8S8sXJ12YkK2J8//IaqGZ5B/L11Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
     <script>
       tinymce.init({
         selector: '#rich-text-editor',
         height: 300,
         menubar: false,
+        promotion: false, /* This hides the annoying "Upgrade" button */
         plugins: 'lists link image',
-        toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link',
+        toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link',
         skin: (window.matchMedia("(prefers-color-scheme: dark)").matches ? "oxide-dark" : "oxide"),
         content_css: (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default")
       });
