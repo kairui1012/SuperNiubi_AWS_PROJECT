@@ -31,6 +31,10 @@ namespace MyMvcApp.Models
         [Required]
         public DateTime EndDate { get; set; } // When this should disappear from the landing page
 
+        // --- NEW PROPERTIES ---
+        public DateTime? EventStartDate { get; set; } // Actual start of the event/promo
+        public DateTime? EventEndDate { get; set; }   // Actual end of the event/promo
+
         // Optional fields for the Call-To-Action button (e.g., "RSVP Now", "Claim Code")
         [StringLength(50)]
         public string? CallToActionText { get; set; } 
