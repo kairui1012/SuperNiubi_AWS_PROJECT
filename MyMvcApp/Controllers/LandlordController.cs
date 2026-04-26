@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
@@ -500,6 +501,173 @@ namespace MyMvcApp.Controllers
                 .ToList();
 
             return View(payments);
+        }
+
+        [HttpGet]
+        public IActionResult AssignTenant()
+        {
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                TempData["ErrorMessage"] = "User email not found.";
+                return RedirectToAction("Dashboard");
+            }
+
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return RedirectToAction("Dashboard");
+            }
+
+            var model = new AssignTenantViewModel();
+            LoadAssignTenantDropdowns(model, landlord.Id);
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AssignTenant(AssignTenantViewModel model)
+        {
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                TempData["ErrorMessage"] = "User email not found.";
+                return RedirectToAction("Dashboard");
+            }
+
+            var landlord = _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return RedirectToAction("Dashboard");
+            }
+
+            if (model.UserId <= 0)
+            {
+                ModelState.AddModelError("UserId", "Please select a tenant.");
+            }
+
+            if (model.PropertyId <= 0)
+            {
+                ModelState.AddModelError("PropertyId", "Please select a property.");
+            }
+
+            if (model.LeaseEndDate <= model.LeaseStartDate)
+            {
+                ModelState.AddModelError("LeaseEndDate", "Lease end date must be later than lease start date.");
+            }
+
+            var selectedUser = _dbContext.Users.FirstOrDefault(u =>
+                u.Id == model.UserId &&
+                u.Role == "Tenant" &&
+                u.IsApproved);
+
+            if (selectedUser == null)
+            {
+                ModelState.AddModelError("UserId", "Selected tenant user is invalid or not approved.");
+            }
+
+            var selectedProperty = _dbContext.Properties.FirstOrDefault(p =>
+                p.PropertyId == model.PropertyId &&
+                p.LandlordId == landlord.Id);
+
+            if (selectedProperty == null)
+            {
+                ModelState.AddModelError("PropertyId", "Selected property is invalid.");
+            }
+
+            var tenantAlreadyAssigned = _dbContext.Tenants.Any(t => t.UserId == model.UserId);
+
+            if (tenantAlreadyAssigned)
+            {
+                ModelState.AddModelError("UserId", "This tenant has already been assigned to a property.");
+            }
+
+            var propertyAlreadyAssigned = _dbContext.Tenants.Any(t => t.PropertyId == model.PropertyId);
+
+            if (propertyAlreadyAssigned)
+            {
+                ModelState.AddModelError("PropertyId", "This property already has an assigned tenant.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                LoadAssignTenantDropdowns(model, landlord.Id);
+                return View(model);
+            }
+
+            try
+            {
+                var tenant = new Tenant
+                {
+                    UserId = model.UserId,
+                    PropertyId = model.PropertyId,
+                    LeaseStartDate = DateTime.SpecifyKind(model.LeaseStartDate, DateTimeKind.Utc),
+                    LeaseEndDate = DateTime.SpecifyKind(model.LeaseEndDate, DateTimeKind.Utc),
+                    MonthlyRent = model.MonthlyRent,
+                    DepositPaid = model.DepositPaid,
+                    DepositStatus = model.DepositStatus,
+                    RentDueDay = model.RentDueDay,
+                    LeaseStatus = LeaseStatus.Active,
+                    Notes = model.Notes,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _dbContext.Tenants.Add(tenant);
+                _dbContext.SaveChanges();
+
+                TempData["SuccessMessage"] = "Tenant assigned successfully. New TenantId: " + tenant.TenantId;
+                return RedirectToAction("Tenants");
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError(string.Empty, "Save failed: " + ex.Message);
+
+                if (ex.InnerException != null)
+                {
+                    ModelState.AddModelError(string.Empty, "Details: " + ex.InnerException.Message);
+                }
+
+                LoadAssignTenantDropdowns(model, landlord.Id);
+                return View(model);
+            }
+        }
+
+        private void LoadAssignTenantDropdowns(AssignTenantViewModel model, int landlordId)
+        {
+            model.TenantUsers = _dbContext.Users
+                .Where(u =>
+                    u.Role == "Tenant" &&
+                    u.IsApproved &&
+                    !_dbContext.Tenants.Any(t => t.UserId == u.Id))
+                .Select(u => new SelectListItem
+                {
+                    Value = u.Id.ToString(),
+                    Text = u.Email
+                })
+                .ToList();
+
+            model.Properties = _dbContext.Properties
+                .Where(p =>
+                    p.LandlordId == landlordId &&
+                    !_dbContext.Tenants.Any(t => t.PropertyId == p.PropertyId))
+                .Select(p => new SelectListItem
+                {
+                    Value = p.PropertyId.ToString(),
+                    Text = p.PropertyName
+                })
+                .ToList();
         }
     }
 }
