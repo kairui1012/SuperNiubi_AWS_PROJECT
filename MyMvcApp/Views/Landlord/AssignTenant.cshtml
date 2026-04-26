@@ -1,0 +1,236 @@
+@model MyMvcApp.Models.AssignTenantViewModel
+
+@{
+    ViewData["Title"] = "Assign Tenant";
+}
+
+<div class="landlord-console">
+
+    <aside class="landlord-rail">
+        <div class="landlord-rail-brand">
+            <span class="landlord-rail-logo">
+                <i class="bi bi-buildings"></i>
+            </span>
+
+            <div>
+                <p class="landlord-rail-title">Landlord Console</p>
+                <p class="landlord-rail-sub">Property Operations</p>
+            </div>
+        </div>
+
+        <nav class="landlord-rail-nav">
+            <a href="/Landlord/Dashboard" class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </a>
+
+            <a href="/Landlord/MyProperties" class="landlord-rail-link">
+                <i class="bi bi-houses-fill"></i>
+                Properties
+            </a>
+
+            <a href="/Landlord/Tenants" class="landlord-rail-link">
+                <i class="bi bi-people-fill"></i>
+                Tenants
+            </a>
+
+            <a href="/Landlord/AssignTenant" class="landlord-rail-link active">
+                <i class="bi bi-person-plus-fill"></i>
+                Assign Tenant
+            </a>
+
+            <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link">
+                <i class="bi bi-tools"></i>
+                Maintenance
+            </a>
+
+            <a href="/Landlord/Documents" class="landlord-rail-link">
+                <i class="bi bi-file-earmark-text-fill"></i>
+                Documents
+            </a>
+
+            <a href="/Landlord/Payments" class="landlord-rail-link">
+                <i class="bi bi-wallet2"></i>
+                Payments
+            </a>
+        </nav>
+    </aside>
+
+    <section class="landlord-workspace">
+
+        <div class="landlord-toolbar">
+            <div>
+                <p class="landlord-kicker">TENANT ASSIGNMENT</p>
+
+                <h1 class="landlord-heading">
+                    Assign Tenant to Property
+                </h1>
+
+                <p class="landlord-sub">
+                    Select an approved tenant user and assign them to one of your properties.
+                </p>
+            </div>
+        </div>
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <article class="landlord-panel mb-3">
+                <p class="landlord-error mb-0">@TempData["ErrorMessage"]</p>
+            </article>
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <article class="landlord-panel mb-3">
+                <p class="landlord-success mb-0">@TempData["SuccessMessage"]</p>
+            </article>
+        }
+
+        <article class="landlord-panel">
+
+            <div asp-validation-summary="All" class="landlord-error mb-3"></div>
+
+            @if (Model.TenantUsers == null || !Model.TenantUsers.Any())
+            {
+                <div class="landlord-list-item mb-3">
+                    <strong>No available tenant users</strong>
+                    <span>Please make sure the tenant is approved and not assigned yet.</span>
+                </div>
+            }
+
+            @if (Model.Properties == null || !Model.Properties.Any())
+            {
+                <div class="landlord-list-item mb-3">
+                    <strong>No properties available</strong>
+                    <span>Please add a property before assigning a tenant.</span>
+                </div>
+            }
+
+            <form asp-action="AssignTenant" asp-controller="Landlord" method="post">
+                @Html.AntiForgeryToken()
+
+                <h4 class="mb-3">Tenant and Property</h4>
+
+                <label asp-for="UserId" class="landlord-label">
+                    Tenant User
+                </label>
+
+                <select asp-for="UserId"
+                        asp-items="Model.TenantUsers"
+                        class="landlord-select">
+                    <option value="0">Select tenant user</option>
+                </select>
+
+                <span asp-validation-for="UserId" class="landlord-error"></span>
+
+                <label asp-for="PropertyId" class="landlord-label">
+                    Property
+                </label>
+
+                <select asp-for="PropertyId"
+                        asp-items="Model.Properties"
+                        class="landlord-select">
+                    <option value="0">Select property</option>
+                </select>
+
+                <span asp-validation-for="PropertyId" class="landlord-error"></span>
+
+                <h4 class="mt-4 mb-3">Lease Details</h4>
+
+                <label asp-for="LeaseStartDate" class="landlord-label">
+                    Lease Start Date
+                </label>
+
+                <input asp-for="LeaseStartDate"
+                       type="date"
+                       class="landlord-input" />
+
+                <span asp-validation-for="LeaseStartDate" class="landlord-error"></span>
+
+                <label asp-for="LeaseEndDate" class="landlord-label">
+                    Lease End Date
+                </label>
+
+                <input asp-for="LeaseEndDate"
+                       type="date"
+                       class="landlord-input" />
+
+                <span asp-validation-for="LeaseEndDate" class="landlord-error"></span>
+
+                <label asp-for="MonthlyRent" class="landlord-label">
+                    Monthly Rent
+                </label>
+
+                <input asp-for="MonthlyRent"
+                       type="number"
+                       step="0.01"
+                       class="landlord-input" />
+
+                <span asp-validation-for="MonthlyRent" class="landlord-error"></span>
+
+                <label asp-for="DepositPaid" class="landlord-label">
+                    Deposit Paid
+                </label>
+
+                <input asp-for="DepositPaid"
+                       type="number"
+                       step="0.01"
+                       class="landlord-input" />
+
+                <span asp-validation-for="DepositPaid" class="landlord-error"></span>
+
+                <label asp-for="DepositStatus" class="landlord-label">
+                    Deposit Status
+                </label>
+
+                <select asp-for="DepositStatus"
+                        asp-items="Html.GetEnumSelectList<MyMvcApp.Models.DepositStatus>()"
+                        class="landlord-select">
+                </select>
+
+                <span asp-validation-for="DepositStatus" class="landlord-error"></span>
+
+                <label asp-for="RentDueDay" class="landlord-label">
+                    Rent Due Day
+                </label>
+
+                <input asp-for="RentDueDay"
+                       type="number"
+                       min="1"
+                       max="31"
+                       class="landlord-input" />
+
+                <span asp-validation-for="RentDueDay" class="landlord-error"></span>
+
+                <label asp-for="Notes" class="landlord-label">
+                    Notes
+                </label>
+
+                <textarea asp-for="Notes"
+                          class="landlord-textarea"></textarea>
+
+                <span asp-validation-for="Notes" class="landlord-error"></span>
+
+                <div class="landlord-actions mt-4">
+                    <button type="submit"
+                            class="landlord-btn landlord-btn-primary">
+                        Assign Tenant
+                    </button>
+
+                    <a href="/Landlord/Tenants"
+                       class="landlord-btn landlord-btn-outline">
+                        Back to Tenants
+                    </a>
+                </div>
+            </form>
+
+        </article>
+
+    </section>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
