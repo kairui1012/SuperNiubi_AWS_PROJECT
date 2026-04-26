@@ -68,7 +68,7 @@
                             <div class="card-body p-4 d-flex flex-column">
                                 <div class="d-flex justify-content-between mb-4">
                                     <div class="notice-icon badge-soft-success"><i class="bi bi-cup-hot"></i></div>
-                                    <small class="text-muted">Posted: @evt.CreatedAt.ToString("MMM dd")</small>
+                                    <small class="text-muted">Posted: @evt.CreatedAt.AddHours(8).ToString("MMM dd")</small>
                                 </div>
                                 <h4 class="fw-bold mb-3">@evt.Title</h4>
                                 <p class="text-muted flex-grow-1 text-truncate-2">
