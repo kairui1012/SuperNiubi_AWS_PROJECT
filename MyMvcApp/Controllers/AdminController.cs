@@ -188,6 +188,18 @@ namespace MyMvcApp.Controllers
                         Status = p.Status,
                         CreatedAt = p.CreatedAt
                     })
+                    .ToListAsync(),
+                PasswordResetRequests = await _dbContext.PasswordResetRequests.AsNoTracking()
+                    .Where(r => r.Status == PasswordResetRequestStatus.Pending)
+                    .OrderByDescending(r => r.RequestedAt)
+                    .Take(10)
+                    .Select(r => new AdminPasswordResetRequestViewModel
+                    {
+                        PasswordResetRequestId = r.PasswordResetRequestId,
+                        Email = r.Email,
+                        Status = r.Status,
+                        RequestedAt = r.RequestedAt
+                    })
                     .ToListAsync()
             };
 
@@ -231,6 +243,63 @@ namespace MyMvcApp.Controllers
                     TempData["SuccessMessage"] = "User approved, but the notification email failed to send.";
                 }
             }
+            return RedirectToAction(nameof(Admin));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApprovePasswordResetRequest(int id)
+        {
+            var request = await _dbContext.PasswordResetRequests.FindAsync(id);
+
+            if (request == null || request.Status != PasswordResetRequestStatus.Pending)
+            {
+                TempData["ErrorMessage"] = "Password reset request is no longer available.";
+                return RedirectToAction(nameof(Admin));
+            }
+
+            try
+            {
+                var userPoolId = _config["AWS:UserPoolId"];
+                await _cognitoClient.AdminResetUserPasswordAsync(new AdminResetUserPasswordRequest
+                {
+                    UserPoolId = userPoolId,
+                    Username = request.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Failed to send reset email through Cognito: {ex.Message}";
+                return RedirectToAction(nameof(Admin));
+            }
+
+            request.Status = PasswordResetRequestStatus.Approved;
+            request.ReviewedAt = DateTime.UtcNow;
+            request.ReviewedByEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Password reset approved. Cognito has sent the reset email.";
+            return RedirectToAction(nameof(Admin));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectPasswordResetRequest(int id)
+        {
+            var request = await _dbContext.PasswordResetRequests.FindAsync(id);
+
+            if (request == null || request.Status != PasswordResetRequestStatus.Pending)
+            {
+                TempData["ErrorMessage"] = "Password reset request is no longer available.";
+                return RedirectToAction(nameof(Admin));
+            }
+
+            request.Status = PasswordResetRequestStatus.Rejected;
+            request.ReviewedAt = DateTime.UtcNow;
+            request.ReviewedByEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Password reset request rejected.";
             return RedirectToAction(nameof(Admin));
         }
 

@@ -18,6 +18,7 @@ namespace MyMvcApp.Models.Admin
         public List<AdminLatestUserViewModel> LatestUsers { get; set; } = new();
         public List<AdminRecentMaintenanceViewModel> RecentMaintenanceRequests { get; set; } = new();
         public List<AdminRecentPaymentViewModel> RecentPayments { get; set; } = new();
+        public List<AdminPasswordResetRequestViewModel> PasswordResetRequests { get; set; } = new();
     }
 
     public class AdminOverviewViewModel
@@ -102,5 +103,13 @@ namespace MyMvcApp.Models.Admin
         public decimal Amount { get; set; }
         public PaymentStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class AdminPasswordResetRequestViewModel
+    {
+        public int PasswordResetRequestId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public PasswordResetRequestStatus Status { get; set; }
+        public DateTime RequestedAt { get; set; }
     }
 }
