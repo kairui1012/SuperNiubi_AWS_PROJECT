@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyMvcApp.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyMvcApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260426155940_AddEventDatesToCommunityUpdate")]
+    partial class AddEventDatesToCommunityUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -287,41 +290,6 @@ namespace MyMvcApp.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Payments");
-                });
-
-            modelBuilder.Entity("MyMvcApp.Models.PasswordResetRequest", b =>
-                {
-                    b.Property<int>("PasswordResetRequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PasswordResetRequestId"));
-
-                    b.Property<int?>("AppUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("RequestedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReviewedByEmail")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("PasswordResetRequestId");
-
-                    b.HasIndex("AppUserId");
-
-                    b.ToTable("PasswordResetRequests");
                 });
 
             modelBuilder.Entity("MyMvcApp.Models.Property", b =>
@@ -608,16 +576,6 @@ namespace MyMvcApp.Migrations
                     b.Navigation("Property");
 
                     b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("MyMvcApp.Models.PasswordResetRequest", b =>
-                {
-                    b.HasOne("MyMvcApp.Models.AppUser", "AppUser")
-                        .WithMany()
-                        .HasForeignKey("AppUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("AppUser");
                 });
 
             modelBuilder.Entity("MyMvcApp.Models.Property", b =>

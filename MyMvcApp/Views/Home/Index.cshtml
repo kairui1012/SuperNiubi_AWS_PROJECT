@@ -35,6 +35,10 @@
             {
                 var isExpired = item.EndDate < DateTime.UtcNow;
                 var plainDescription = System.Text.RegularExpressions.Regex.Replace(item.Description ?? string.Empty, "<.*?>", string.Empty);
+                
+                // Smart Date: Uses the actual event date if it exists, otherwise falls back to the end date
+                var calendarDate = item.EventStartDate ?? item.EndDate;
+
                 var typeClass = item.Type == MyMvcApp.Models.UpdateType.Event
                     ? "badge-soft-success"
                     : item.Type == MyMvcApp.Models.UpdateType.Promotion
@@ -62,9 +66,9 @@
 
                     <div class="community-card-body">
                         <div class="community-card-topline">
-                            <div class="community-date" aria-label="End date @item.EndDate.ToString("MMM dd, yyyy")">
-                                <span>@item.EndDate.ToString("MMM")</span>
-                                <strong>@item.EndDate.ToString("dd")</strong>
+                            <div class="community-date" aria-label="Date @calendarDate.ToString("MMM dd, yyyy")">
+                                <span>@calendarDate.ToString("MMM")</span>
+                                <strong>@calendarDate.ToString("dd")</strong>
                             </div>
                             <div class="community-badges">
                                 <span class="community-badge @typeClass">
@@ -80,7 +84,7 @@
                         <p class="community-description">@plainDescription</p>
 
                         <div class="community-card-footer">
-                            <span>Posted @item.CreatedAt.ToString("MMM dd, yyyy")</span>
+                            <span>Posted @item.CreatedAt.AddHours(8).ToString("MMM dd, yyyy")</span>
                             <a asp-action="UpdateDetails" asp-route-id="@item.Id" class="community-link">
                                 Details <i class="bi bi-arrow-right"></i>
                             </a>
