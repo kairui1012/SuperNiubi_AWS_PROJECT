@@ -48,7 +48,8 @@
   --tenant-shadow-2: 0 30px 80px rgba(0, 0, 0, 0.42);
 }
 
-body {
+body,
+body.tenant-cloud-skin {
   background: #eef4fb !important;
 }
 
@@ -732,7 +733,8 @@ body {
   animation: tenantRiseIn 260ms ease;
 }
 
-[data-bs-theme="dark"] body {
+[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] body.tenant-cloud-skin {
   background: var(--tenant-bg) !important;
 }
 
@@ -768,7 +770,8 @@ body {
   background: #0f1117;
 }
 
-[data-bs-theme="dark"] body {
+[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] body.tenant-cloud-skin {
   background: #0f1117 !important;
 }
 
@@ -806,7 +809,12 @@ body {
 }
 
 [data-bs-theme="dark"] .tenant-stat-value,
-[data-bs-theme="dark"] .tenant-panel-title {
+[data-bs-theme="dark"] .tenant-panel-title,
+[data-bs-theme="dark"] .tenant-heading,
+[data-bs-theme="dark"] .tenant-overview-title,
+[data-bs-theme="dark"] .tenant-overview-metrics strong,
+[data-bs-theme="dark"] .tenant-section-head h2,
+[data-bs-theme="dark"] .tenant-plain-row strong {
   color: #e8edf7;
 }
 

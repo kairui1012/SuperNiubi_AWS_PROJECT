@@ -257,6 +257,18 @@ body.landlord-cloud-skin {
     background: #f8fbff;
 }
 
+.landlord-link {
+    color: #2563eb;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.landlord-link:hover,
+.landlord-link:focus-visible {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
 .landlord-btn-danger {
     background: #ef4444;
     color: white;
@@ -423,6 +435,15 @@ body.landlord-cloud-skin {
     border-color: #60a5fa;
     color: #93c5fd;
     background: #111827;
+}
+
+[data-bs-theme="dark"] .landlord-link {
+    color: #93c5fd;
+}
+
+[data-bs-theme="dark"] .landlord-link:hover,
+[data-bs-theme="dark"] .landlord-link:focus-visible {
+    color: #bfdbfe;
 }
 
 [data-bs-theme="dark"] .landlord-input,

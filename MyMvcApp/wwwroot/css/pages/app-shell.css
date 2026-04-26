@@ -8,6 +8,21 @@
   flex: 1 0 auto;
 }
 
+.app-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  line-height: 1;
+}
+
+.app-brand-logo {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  display: block;
+}
+
 .app-topbar-shell {
   min-height: 56px;
   gap: 0.75rem;

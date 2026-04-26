@@ -55,6 +55,20 @@
             _ => "badge-soft-secondary"
         };
     }
+
+    private static string GetAuditActionBadgeClass(string action)
+    {
+        return action switch
+        {
+            "ApproveUser" or "EnableUser" or "ApprovePasswordReset" => "badge-soft-success",
+            "DisableUser" or "RejectPasswordReset" => "badge-soft-danger",
+            "ChangeRole" => "badge-soft-info",
+            "CreateAnnouncement" => "badge-soft-primary",
+            "EditAnnouncement" => "badge-soft-warning",
+            "DeleteAnnouncement" => "badge-soft-danger",
+            _ => "badge-soft-secondary"
+        };
+    }
 }
 
 @{
@@ -78,7 +92,7 @@
     <link rel="stylesheet" href="~/css/pages/admin.css" asp-append-version="true" />
 }
 
-<div class="landlord-console admin-console" data-admin-page data-admin-default="users">
+<div class="landlord-console admin-console" data-admin-page data-admin-default="@Model.ActivePane">
     <aside class="landlord-rail">
         <div class="landlord-rail-brand">
             <span class="landlord-rail-logo">
@@ -93,14 +107,27 @@
         <nav class="landlord-rail-nav" aria-label="Admin sections">
             <button type="button"
                     class="landlord-rail-link admin-rail-switch active"
-                    data-admin-switch="users"
+                    data-admin-switch="dashboard"
+                    data-admin-kicker="Dashboard"
+                    data-admin-title="Analytics"
                     aria-pressed="true">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </button>
+            <button type="button"
+                    class="landlord-rail-link admin-rail-switch"
+                    data-admin-switch="users"
+                    data-admin-kicker="Users"
+                    data-admin-title="User Management"
+                    aria-pressed="false">
                 <i class="bi bi-people-fill"></i>
                 User Management
             </button>
             <button type="button"
                     class="landlord-rail-link admin-rail-switch"
                     data-admin-switch="properties"
+                    data-admin-kicker="Properties"
+                    data-admin-title="Property Overview"
                     aria-pressed="false">
                 <i class="bi bi-houses-fill"></i>
                 Property Overview
@@ -108,6 +135,8 @@
             <button type="button"
                     class="landlord-rail-link admin-rail-switch"
                     data-admin-switch="maintenance"
+                    data-admin-kicker="Maintenance"
+                    data-admin-title="Maintenance Queue"
                     aria-pressed="false">
                 <i class="bi bi-tools"></i>
                 Maintenance Queue
@@ -115,9 +144,29 @@
             <button type="button"
                     class="landlord-rail-link admin-rail-switch"
                     data-admin-switch="payments"
+                    data-admin-kicker="Payments"
+                    data-admin-title="Payment Center"
                     aria-pressed="false">
                 <i class="bi bi-wallet2"></i>
                 Payment Center
+            </button>
+            <button type="button"
+                    class="landlord-rail-link admin-rail-switch"
+                    data-admin-switch="audit"
+                    data-admin-kicker="Audit"
+                    data-admin-title="Audit Trail"
+                    aria-pressed="false">
+                <i class="bi bi-clock-history"></i>
+                Audit Trail
+            </button>
+            <button type="button"
+                    class="landlord-rail-link admin-rail-switch"
+                    data-admin-switch="announcements"
+                    data-admin-kicker="Announcements"
+                    data-admin-title="System Announcements"
+                    aria-pressed="false">
+                <i class="bi bi-megaphone-fill"></i>
+                Announcements
             </button>
         </nav>
     </aside>
@@ -127,33 +176,11 @@
     <section class="admin-hero">
         <div class="admin-page-titlebar">
             <div>
-                <div class="admin-kicker">Admin</div>
-                <h1 class="admin-title">Operations</h1>
+                <div class="admin-kicker" data-admin-heading-kicker>Dashboard</div>
+                <h1 class="admin-title" data-admin-heading-title>Analytics</h1>
             </div>
         </div>
 
-        <div class="admin-ops-summary" aria-label="Admin overview">
-            <div class="admin-ops-item">
-                <span>Total Users</span>
-                <strong>@Model.Overview.TotalUsers</strong>
-            </div>
-            <div class="admin-ops-item">
-                <span>Pending Approval</span>
-                <strong>@Model.Overview.PendingUsers</strong>
-            </div>
-            <div class="admin-ops-item">
-                <span>Occupancy</span>
-                <strong>@occupancyRate%</strong>
-            </div>
-            <div class="admin-ops-item">
-                <span>Open Maintenance</span>
-                <strong>@Model.Overview.OpenMaintenanceRequests</strong>
-            </div>
-            <div class="admin-ops-item">
-                <span>Overdue Payments</span>
-                <strong>@Model.Overview.OverduePayments</strong>
-            </div>
-        </div>
     </section>
 
     @if (TempData["SuccessMessage"] is string successMessage)
@@ -166,86 +193,145 @@
         <div class="alert alert-danger admin-alert">@errorMessage</div>
     }
 
-    <section class="admin-pane" data-admin-pane="users">
-        <div class="row g-4">
-            <div class="col-xl-4">
-                <div class="panel-card mb-4">
-                    <div class="panel-heading">
-                        <h2 class="panel-title">Password reset requests</h2>
-                        <span class="badge admin-count-badge">@Model.PasswordResetRequests.Count pending</span>
-                    </div>
-                    @if (Model.PasswordResetRequests.Count == 0)
-                    {
-                        <div class="empty-state">No password reset requests.</div>
-                    }
-                    else
-                    {
-                        <div class="activity-list">
-                            @foreach (var resetRequest in Model.PasswordResetRequests)
-                            {
-                                <div class="activity-item">
-                                    <div class="activity-title">@resetRequest.Email</div>
-                                    <div class="activity-meta">
-                                        Requested @resetRequest.RequestedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
-                                    </div>
-                                    <div class="table-actions mt-3">
-                                        <form asp-action="ApprovePasswordResetRequest" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
-                                            <button type="submit"
-                                                    class="btn btn-success btn-sm"
-                                                    onclick="return confirm('Approve this password reset request and send a Cognito reset email?');">
-                                                Approve
-                                            </button>
-                                        </form>
-                                        <form asp-action="RejectPasswordResetRequest" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
-                                            <button type="submit"
-                                                    class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('Reject this password reset request?');">
-                                                Reject
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
+    <section class="admin-pane" data-admin-pane="dashboard">
+        <div class="admin-ops-summary mb-4" aria-label="Admin dashboard overview">
+            <div class="admin-ops-item">
+                <span>Total Users</span>
+                <strong>@Model.Overview.TotalUsers</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Total Properties</span>
+                <strong>@Model.Overview.TotalProperties</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Total Payments</span>
+                <strong>@Model.Overview.TotalPayments</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Pending Landlords</span>
+                <strong>@Model.Overview.PendingLandlordApprovals</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Open Maintenance</span>
+                <strong>@Model.Overview.OpenMaintenanceRequests</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Occupancy</span>
+                <strong>@occupancyRate%</strong>
+            </div>
+        </div>
 
-                <div class="panel-card h-100">
+        <div class="row g-4 admin-chart-grid">
+            <div class="col-xl-6">
+                <div class="panel-card admin-chart-card h-100">
                     <div class="panel-heading">
-                        <h2 class="panel-title">Latest user records</h2>
-                        <span class="panel-meta">Newest DB entries</span>
-                    </div>
-                    @if (Model.LatestUsers.Count == 0)
-                    {
-                        <div class="empty-state">No users available yet.</div>
-                    }
-                    else
-                    {
-                        <div class="activity-list">
-                            @foreach (var user in Model.LatestUsers)
-                            {
-                                <div class="activity-item">
-                                    <div class="activity-title">@user.Email</div>
-                                    <div class="activity-meta">
-                                        User #@user.Id • @user.Role •
-                                        <span class="badge @GetUserStatusBadgeClass(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })">
-                                            @GetUserStatusLabel(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })
-                                        </span>
-                                    </div>
-                                </div>
-                            }
+                        <div>
+                            <h2 class="panel-title">Collection trend</h2>
+                            <span class="panel-meta">6-month verified payments with demand signals</span>
                         </div>
-                    }
+                    </div>
+                    <div class="admin-chart-frame admin-chart-frame-wide">
+                        <canvas id="adminCollectionTrendChart" aria-label="6-month collection trend chart"></canvas>
+                    </div>
                 </div>
             </div>
-
-            <div class="col-xl-8">
-                <div class="panel-card admin-users-card">
+            <div class="col-md-6 col-xl-3">
+                <div class="panel-card admin-chart-card h-100">
                     <div class="panel-heading">
+                        <div>
+                            <h2 class="panel-title">Maintenance status</h2>
+                            <span class="panel-meta">Current queue split</span>
+                        </div>
+                    </div>
+                    <div class="admin-chart-frame">
+                        <canvas id="adminMaintenanceStatusChart" aria-label="Maintenance status doughnut chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="panel-card admin-chart-card h-100">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 class="panel-title">User roles</h2>
+                            <span class="panel-meta">Account composition</span>
+                        </div>
+                    </div>
+                    <div class="admin-chart-frame">
+                        <canvas id="adminUserRoleChart" aria-label="User role composition pie chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">User analytics</h2>
+                        <span class="panel-meta">Accounts</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Approved users</span>
+                        <span class="metric-value">@Model.Overview.ApprovedUsers</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Pending users</span>
+                        <span class="metric-value">@Model.Overview.PendingUsers</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Disabled users</span>
+                        <span class="metric-value">@Model.Overview.DisabledUsers</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Property analytics</h2>
+                        <span class="panel-meta">Portfolio</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Occupied properties</span>
+                        <span class="metric-value">@Model.Overview.OccupiedProperties</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Vacant properties</span>
+                        <span class="metric-value">@Model.Overview.VacantProperties</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Active tenancies</span>
+                        <span class="metric-value">@Model.Overview.ActiveTenancies</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Operations analytics</h2>
+                        <span class="panel-meta">Workload</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Open maintenance</span>
+                        <span class="metric-value">@Model.Overview.OpenMaintenanceRequests</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Overdue payments</span>
+                        <span class="metric-value">@Model.Overview.OverduePayments</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Documents</span>
+                        <span class="metric-value">@Model.Overview.TotalDocuments</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-pane d-none" data-admin-pane="users">
+        <div class="row g-4 admin-user-stack">
+            <div class="col-12 admin-user-main">
+                <div class="panel-card admin-users-card">
+                    <div class="panel-heading user-panel-heading">
                         <div>
                             <h2 class="panel-title">Manage users</h2>
                             <div class="panel-meta">Approval, role assignment, and disable/enable controls stay in one place.</div>
@@ -253,39 +339,44 @@
                         <span class="badge admin-count-badge">@Model.Users.Count result(s)</span>
                     </div>
 
-                    <form asp-action="Admin" method="get" class="row g-3 mb-4 admin-filter-bar">
-                        <div class="col-md-5">
+                    <form asp-action="Dashboard" method="get" class="admin-filter-bar admin-user-filter">
+                        <input type="hidden" name="activePane" value="users" />
+                        <div class="admin-user-field admin-user-search">
+                            <label class="admin-filter-label" for="searchEmail">Search</label>
                             <input type="text"
+                                   id="searchEmail"
                                    name="searchEmail"
                                    class="form-control filter-input"
                                    placeholder="Search by email"
                                    value="@Model.SearchEmail" />
                         </div>
-                        <div class="col-md-3">
-                            <select name="roleFilter" class="form-select filter-select">
+                        <div class="admin-user-field">
+                            <label class="admin-filter-label" for="roleFilter">Role</label>
+                            <select id="roleFilter" name="roleFilter" class="form-select filter-select">
                                 <option value="">All roles</option>
                                 <option value="Tenant" selected="@(Model.RoleFilter == "Tenant" ? "selected" : null)">Tenant</option>
                                 <option value="Landlord" selected="@(Model.RoleFilter == "Landlord" ? "selected" : null)">Landlord</option>
                                 <option value="Admin" selected="@(Model.RoleFilter == "Admin" ? "selected" : null)">Admin</option>
                             </select>
                         </div>
-                        <div class="col-md-2">
-                            <select name="statusFilter" class="form-select filter-select">
+                        <div class="admin-user-field">
+                            <label class="admin-filter-label" for="statusFilter">Status</label>
+                            <select id="statusFilter" name="statusFilter" class="form-select filter-select">
                                 <option value="">All status</option>
                                 <option value="Pending" selected="@(Model.StatusFilter == "Pending" ? "selected" : null)">Pending</option>
                                 <option value="Approved" selected="@(Model.StatusFilter == "Approved" ? "selected" : null)">Approved</option>
                                 <option value="Disabled" selected="@(Model.StatusFilter == "Disabled" ? "selected" : null)">Disabled</option>
                             </select>
                         </div>
-                        <div class="col-md-2 d-grid">
+                        <div class="admin-user-submit">
                             <button type="submit" class="btn admin-btn-primary">Apply</button>
                         </div>
-                        <div class="col-12 admin-filter-actions">
-                            <a asp-action="Admin" class="btn admin-btn-secondary btn-sm">Reset filters</a>
+                        <div class="admin-filter-actions admin-user-actions">
+                            <a asp-action="Dashboard" asp-route-activePane="users" class="btn admin-btn-secondary btn-sm">Reset filters</a>
                         </div>
                     </form>
 
-                    <div class="table-responsive">
+                    <div class="table-responsive admin-users-scroll">
                         <table class="table admin-table">
                             <thead>
                                 <tr>
@@ -372,6 +463,83 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="panel-card admin-user-section admin-user-password">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Password reset requests</h2>
+                        <span class="badge admin-count-badge">@Model.PasswordResetRequests.Count pending</span>
+                    </div>
+                    @if (Model.PasswordResetRequests.Count == 0)
+                    {
+                        <div class="empty-state">No password reset requests.</div>
+                    }
+                    else
+                    {
+                        <div class="activity-list">
+                            @foreach (var resetRequest in Model.PasswordResetRequests)
+                            {
+                                <div class="activity-item">
+                                    <div class="activity-title">@resetRequest.Email</div>
+                                    <div class="activity-meta">
+                                        Requested @resetRequest.RequestedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                    </div>
+                                    <div class="table-actions mt-3">
+                                        <form asp-action="ApprovePasswordResetRequest" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
+                                            <button type="submit"
+                                                    class="btn btn-success btn-sm"
+                                                    onclick="return confirm('Approve this password reset request and send a Cognito reset email?');">
+                                                Approve
+                                            </button>
+                                        </form>
+                                        <form asp-action="RejectPasswordResetRequest" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Reject this password reset request?');">
+                                                Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="panel-card admin-user-section admin-user-latest">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Latest user records</h2>
+                        <span class="panel-meta">Newest DB entries</span>
+                    </div>
+                    @if (Model.LatestUsers.Count == 0)
+                    {
+                        <div class="empty-state">No users available yet.</div>
+                    }
+                    else
+                    {
+                        <div class="activity-list">
+                            @foreach (var user in Model.LatestUsers)
+                            {
+                                <div class="activity-item">
+                                    <div class="activity-title">@user.Email</div>
+                                    <div class="activity-meta">
+                                        User #@user.Id • @user.Role •
+                                        <span class="badge @GetUserStatusBadgeClass(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })">
+                                            @GetUserStatusLabel(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -565,18 +733,533 @@
             </div>
         </div>
     </section>
+
+    <section class="admin-pane d-none" data-admin-pane="audit">
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="panel-card audit-summary-card">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Audit summary</h2>
+                        <span class="panel-meta">Admin actions</span>
+                    </div>
+                    <div class="audit-summary-grid">
+                        <div class="audit-summary-item">
+                            <span>Total events</span>
+                            <strong>@Model.AuditSummary.TotalEvents</strong>
+                        </div>
+                        <div class="audit-summary-item">
+                            <span>Last 24 hours</span>
+                            <strong>@Model.AuditSummary.EventsLast24Hours</strong>
+                        </div>
+                        <div class="audit-summary-item">
+                            <span>User management</span>
+                            <strong>@Model.AuditSummary.UserManagementEvents</strong>
+                        </div>
+                        <div class="audit-summary-item">
+                            <span>Password reset</span>
+                            <strong>@Model.AuditSummary.PasswordResetEvents</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="panel-card admin-users-card">
+                    <div class="panel-heading audit-panel-heading">
+                        <div>
+                            <h2 class="panel-title">Audit trail</h2>
+                            <div class="panel-meta">Search by actor, target, details, action, or date range.</div>
+                        </div>
+                        <span class="badge admin-count-badge">@Model.AuditLogs.Count of @Model.AuditTotalMatches shown</span>
+                    </div>
+
+                    <form asp-action="Dashboard" method="get" class="admin-filter-bar admin-audit-filter">
+                        <input type="hidden" name="activePane" value="audit" />
+                        <div class="admin-audit-field admin-audit-search">
+                            <label class="admin-filter-label" for="auditSearch">Search</label>
+                            <input type="text"
+                                   id="auditSearch"
+                                   name="auditSearch"
+                                   class="form-control filter-input"
+                                   placeholder="Search actor, target, details"
+                                   value="@Model.AuditSearch" />
+                        </div>
+                        <div class="admin-audit-field">
+                            <label class="admin-filter-label" for="auditActionFilter">Action</label>
+                            <select id="auditActionFilter" name="auditActionFilter" class="form-select filter-select">
+                                <option value="">All actions</option>
+                                @foreach (var action in Model.AuditActions)
+                                {
+                                    <option value="@action" selected="@(Model.AuditActionFilter == action ? "selected" : null)">@action</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="admin-audit-field">
+                            <label class="admin-filter-label" for="auditFromDate">From</label>
+                            <input type="date"
+                                   id="auditFromDate"
+                                   name="auditFromDate"
+                                   class="form-control filter-input"
+                                   value="@(Model.AuditFromDate?.ToString("yyyy-MM-dd"))"
+                                   aria-label="Audit from date" />
+                        </div>
+                        <div class="admin-audit-field">
+                            <label class="admin-filter-label" for="auditToDate">To</label>
+                            <input type="date"
+                                   id="auditToDate"
+                                   name="auditToDate"
+                                   class="form-control filter-input"
+                                   value="@(Model.AuditToDate?.ToString("yyyy-MM-dd"))"
+                                   aria-label="Audit to date" />
+                        </div>
+                        <div class="admin-audit-submit">
+                            <button type="submit" class="btn admin-btn-primary">Apply</button>
+                        </div>
+                        <div class="admin-filter-actions admin-audit-actions">
+                            <a asp-action="Dashboard" asp-route-activePane="audit" class="btn admin-btn-secondary btn-sm">Reset audit filters</a>
+                            @if (Model.AuditTotalMatches > Model.AuditLogs.Count)
+                            {
+                                <span class="panel-meta">Showing newest @Model.AuditLogs.Count matching events. Narrow the filters for older records.</span>
+                            }
+                        </div>
+                    </form>
+
+                    @if (Model.AuditLogs.Count == 0)
+                    {
+                        <div class="empty-state">No audit events matched the current filters.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table admin-table audit-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Action</th>
+                                        <th>Actor</th>
+                                        <th>Target</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.AuditLogs)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</div>
+                                                <div class="panel-meta">@item.CreatedAt.ToLocalTime().ToString("HH:mm")</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetAuditActionBadgeClass(item.Action)">@item.Action</span>
+                                            </td>
+                                            <td>
+                                                <div class="audit-email">@item.ActorEmail</div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">@item.TargetType</div>
+                                                <div class="panel-meta">
+                                                    @if (item.TargetId.HasValue)
+                                                    {
+                                                        <span>#@item.TargetId</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(item.TargetEmail))
+                                                    {
+                                                        <span>@item.TargetEmail</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="audit-details">@item.Details</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-pane d-none" data-admin-pane="announcements">
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="panel-card">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Create announcement</h2>
+                        <span class="panel-meta">Visible to selected user roles</span>
+                    </div>
+                    <form asp-action="CreateAnnouncement" method="post" class="admin-announce-form">
+                        @Html.AntiForgeryToken()
+                        <div class="admin-announce-fields">
+                            <div class="admin-announce-field-title">
+                                <label class="admin-filter-label" for="newTitle">Title</label>
+                                <input type="text" id="newTitle" name="Title" maxlength="200"
+                                       class="form-control filter-input" placeholder="Announcement title" required />
+                            </div>
+                            <div class="admin-announce-field-visible">
+                                <label class="admin-filter-label" for="newVisibleTo">Visible to</label>
+                                <select id="newVisibleTo" name="VisibleTo" class="form-select filter-select">
+                                    <option value="All">All users</option>
+                                    <option value="Tenant">Tenants only</option>
+                                    <option value="Landlord">Landlords only</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label class="admin-filter-label" for="newBody">Message</label>
+                            <textarea id="newBody" name="Body" maxlength="2000" rows="3"
+                                      class="form-control filter-input" placeholder="Write your announcement here..." required></textarea>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn admin-btn-primary">
+                                <i class="bi bi-megaphone"></i> Publish Announcement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="panel-card admin-users-card">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Active announcements</h2>
+                        <span class="badge admin-count-badge">@Model.Announcements.Count total</span>
+                    </div>
+
+                    @if (Model.Announcements.Count == 0)
+                    {
+                        <div class="empty-state">No announcements yet. Create one above.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Title &amp; Message</th>
+                                        <th>Visible to</th>
+                                        <th>Created by</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var ann in Model.Announcements)
+                                    {
+                                        var visibleBadge = ann.VisibleTo switch
+                                        {
+                                            "Tenant" => "badge-soft-info",
+                                            "Landlord" => "badge-soft-warning",
+                                            _ => "badge-soft-success"
+                                        };
+                                        var visibleLabel = ann.VisibleTo switch
+                                        {
+                                            "Tenant" => "Tenants",
+                                            "Landlord" => "Landlords",
+                                            _ => "All users"
+                                        };
+
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@ann.Title</div>
+                                                <div class="panel-meta announce-body-preview">@ann.Body</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge @visibleBadge">@visibleLabel</span>
+                                            </td>
+                                            <td>
+                                                <div class="audit-email">@ann.CreatedByEmail</div>
+                                                @if (ann.UpdatedAt.HasValue)
+                                                {
+                                                    <div class="panel-meta">Edited @ann.UpdatedAt.Value.ToLocalTime().ToString("dd MMM yyyy")</div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">@ann.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</div>
+                                                <div class="panel-meta">@ann.CreatedAt.ToLocalTime().ToString("HH:mm")</div>
+                                            </td>
+                                            <td>
+                                                <div class="table-actions">
+                                                    <button type="button"
+                                                            class="btn admin-btn-secondary btn-sm"
+                                                            onclick="toggleEditRow(@ann.SystemAnnouncementId)">
+                                                        Edit
+                                                    </button>
+                                                    <form asp-action="DeleteAnnouncement" method="post" class="d-inline"
+                                                          onsubmit="return confirm('Delete this announcement?')">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@ann.SystemAnnouncementId" />
+                                                        <button type="submit" class="btn admin-btn-danger btn-sm">Delete</button>
+                                                    </form>
+                                                </div>
+                                                <div id="edit-row-@ann.SystemAnnouncementId" class="announce-edit-form d-none mt-2">
+                                                    <form asp-action="EditAnnouncement" method="post">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="SystemAnnouncementId" value="@ann.SystemAnnouncementId" />
+                                                        <div class="mb-2">
+                                                            <input type="text" name="Title" value="@ann.Title" maxlength="200"
+                                                                   class="form-control form-control-sm filter-input" required />
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <textarea name="Body" maxlength="2000" rows="2"
+                                                                      class="form-control form-control-sm filter-input" required>@ann.Body</textarea>
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <select name="VisibleTo" class="form-select form-select-sm filter-select">
+                                                                <option value="All" selected="@(ann.VisibleTo == "All" ? "selected" : null)">All users</option>
+                                                                <option value="Tenant" selected="@(ann.VisibleTo == "Tenant" ? "selected" : null)">Tenants only</option>
+                                                                <option value="Landlord" selected="@(ann.VisibleTo == "Landlord" ? "selected" : null)">Landlords only</option>
+                                                            </select>
+                                                        </div>
+                                                        <button type="submit" class="btn admin-btn-primary btn-sm">Save</button>
+                                                        <button type="button" class="btn admin-btn-secondary btn-sm"
+                                                                onclick="toggleEditRow(@ann.SystemAnnouncementId)">Cancel</button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+
         </div>
     </section>
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script>
         (() => {
             const page = document.querySelector('[data-admin-page]');
             const tabs = document.querySelectorAll('[data-admin-switch]');
             const panes = document.querySelectorAll('[data-admin-pane]');
+            const headingKicker = document.querySelector('[data-admin-heading-kicker]');
+            const headingTitle = document.querySelector('[data-admin-heading-title]');
+            let chartsInitialized = false;
+
+            const analyticsData = {
+                labels: @Json.Serialize(Model.MonthlyAnalytics.Select(item => item.MonthLabel)),
+                collectedAmounts: @Json.Serialize(Model.MonthlyAnalytics.Select(item => item.CollectedAmount)),
+                newUsers: @Json.Serialize(Model.MonthlyAnalytics.Select(item => item.NewUsers)),
+                maintenanceRequests: @Json.Serialize(Model.MonthlyAnalytics.Select(item => item.MaintenanceRequests)),
+                maintenanceStatusLabels: @Json.Serialize(new[] { "Pending", "Approved", "In progress", "Completed", "Rejected" }),
+                maintenanceStatusCounts: @Json.Serialize(new[]
+                {
+                    Model.MaintenanceReport.PendingCount,
+                    Model.MaintenanceReport.ApprovedCount,
+                    Model.MaintenanceReport.InProgressCount,
+                    Model.MaintenanceReport.CompletedCount,
+                    Model.MaintenanceReport.RejectedCount
+                }),
+                userRoleLabels: @Json.Serialize(new[] { "Admin", "Landlord", "Tenant" }),
+                userRoleCounts: @Json.Serialize(new[]
+                {
+                    Model.UserReport.AdminCount,
+                    Model.UserReport.LandlordCount,
+                    Model.UserReport.TenantCount
+                })
+            };
+
+            const currencyFormatter = new Intl.NumberFormat(undefined, {
+                style: 'currency',
+                currency: 'MYR',
+                maximumFractionDigits: 0
+            });
+
+            const doughnutData = (labels, values) => {
+                const hasData = values.some((value) => Number(value) > 0);
+
+                return hasData
+                    ? { labels, values, fallback: false }
+                    : { labels: ['No data'], values: [1], fallback: true };
+            };
+
+            const initCharts = () => {
+                if (chartsInitialized || !window.Chart) {
+                    return;
+                }
+
+                const collectionCanvas = document.getElementById('adminCollectionTrendChart');
+                const maintenanceCanvas = document.getElementById('adminMaintenanceStatusChart');
+                const roleCanvas = document.getElementById('adminUserRoleChart');
+
+                if (!collectionCanvas || !maintenanceCanvas || !roleCanvas) {
+                    return;
+                }
+
+                const gridColor = 'rgba(148, 163, 184, 0.22)';
+                const tickColor = '#64748b';
+                const titleColor = '#0f172a';
+
+                new Chart(collectionCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: analyticsData.labels,
+                        datasets: [
+                            {
+                                type: 'line',
+                                label: 'Verified collection',
+                                data: analyticsData.collectedAmounts,
+                                yAxisID: 'amount',
+                                borderColor: '#2563eb',
+                                backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                                pointBackgroundColor: '#2563eb',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                tension: 0.35,
+                                fill: true
+                            },
+                            {
+                                label: 'New users',
+                                data: analyticsData.newUsers,
+                                yAxisID: 'count',
+                                backgroundColor: 'rgba(16, 185, 129, 0.72)',
+                                borderRadius: 6,
+                                maxBarThickness: 26
+                            },
+                            {
+                                label: 'Maintenance requests',
+                                data: analyticsData.maintenanceRequests,
+                                yAxisID: 'count',
+                                backgroundColor: 'rgba(245, 158, 11, 0.72)',
+                                borderRadius: 6,
+                                maxBarThickness: 26
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    boxHeight: 12,
+                                    color: titleColor,
+                                    font: { weight: '700' }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        const label = context.dataset.label || '';
+                                        const value = Number(context.parsed.y || 0);
+                                        return context.dataset.yAxisID === 'amount'
+                                            ? `${label}: ${currencyFormatter.format(value)}`
+                                            : `${label}: ${value}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            amount: {
+                                beginAtZero: true,
+                                position: 'left',
+                                grid: { color: gridColor },
+                                ticks: {
+                                    color: tickColor,
+                                    callback: (value) => currencyFormatter.format(value)
+                                }
+                            },
+                            count: {
+                                beginAtZero: true,
+                                position: 'right',
+                                grid: { drawOnChartArea: false },
+                                ticks: {
+                                    color: tickColor,
+                                    precision: 0
+                                }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: tickColor }
+                            }
+                        }
+                    }
+                });
+
+                const maintenanceData = doughnutData(analyticsData.maintenanceStatusLabels, analyticsData.maintenanceStatusCounts);
+                new Chart(maintenanceCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: maintenanceData.labels,
+                        datasets: [{
+                            data: maintenanceData.values,
+                            backgroundColor: maintenanceData.fallback
+                                ? ['rgba(148, 163, 184, 0.28)']
+                                : ['#f59e0b', '#0ea5e9', '#2563eb', '#10b981', '#ef4444'],
+                            borderColor: '#ffffff',
+                            borderWidth: 3,
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '62%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    boxHeight: 12,
+                                    color: titleColor,
+                                    font: { weight: '700' }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                const roleData = doughnutData(analyticsData.userRoleLabels, analyticsData.userRoleCounts);
+                new Chart(roleCanvas, {
+                    type: 'pie',
+                    data: {
+                        labels: roleData.labels,
+                        datasets: [{
+                            data: roleData.values,
+                            backgroundColor: roleData.fallback
+                                ? ['rgba(148, 163, 184, 0.28)']
+                                : ['#7c3aed', '#06b6d4', '#22c55e'],
+                            borderColor: '#ffffff',
+                            borderWidth: 3,
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    boxHeight: 12,
+                                    color: titleColor,
+                                    font: { weight: '700' }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                chartsInitialized = true;
+            };
 
             const setPane = (paneName) => {
+                const selectedTab = document.querySelector(`[data-admin-switch="${paneName}"]`);
+
                 panes.forEach((pane) => {
                     pane.classList.toggle('d-none', pane.dataset.adminPane !== paneName);
                 });
@@ -587,6 +1270,18 @@
                     tab.classList.toggle('active', active);
                     tab.setAttribute('aria-pressed', active ? 'true' : 'false');
                 });
+
+                if (headingKicker && selectedTab?.dataset.adminKicker) {
+                    headingKicker.textContent = selectedTab.dataset.adminKicker;
+                }
+
+                if (headingTitle && selectedTab?.dataset.adminTitle) {
+                    headingTitle.textContent = selectedTab.dataset.adminTitle;
+                }
+
+                if (paneName === 'dashboard') {
+                    requestAnimationFrame(initCharts);
+                }
             };
 
             tabs.forEach((tab) => {
@@ -598,5 +1293,10 @@
 
             setPane(page?.dataset.adminDefault || 'users');
         })();
+
+        function toggleEditRow(id) {
+            const row = document.getElementById('edit-row-' + id);
+            if (row) row.classList.toggle('d-none');
+        }
     </script>
 }
