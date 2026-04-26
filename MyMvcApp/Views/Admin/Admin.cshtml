@@ -74,68 +74,85 @@
 }
 
 @section Styles {
+    <link rel="stylesheet" href="~/css/pages/landlord.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/admin.css" asp-append-version="true" />
 }
 
-<div class="admin-shell" data-admin-page data-admin-default="users">
+<div class="landlord-console admin-console" data-admin-page data-admin-default="users">
+    <aside class="landlord-rail">
+        <div class="landlord-rail-brand">
+            <span class="landlord-rail-logo">
+                <i class="bi bi-shield-lock"></i>
+            </span>
+            <div>
+                <p class="landlord-rail-title">Admin Console</p>
+                <p class="landlord-rail-sub">System Operations</p>
+            </div>
+        </div>
+
+        <nav class="landlord-rail-nav" aria-label="Admin sections">
+            <button type="button"
+                    class="landlord-rail-link admin-rail-switch active"
+                    data-admin-switch="users"
+                    aria-pressed="true">
+                <i class="bi bi-people-fill"></i>
+                User Management
+            </button>
+            <button type="button"
+                    class="landlord-rail-link admin-rail-switch"
+                    data-admin-switch="properties"
+                    aria-pressed="false">
+                <i class="bi bi-houses-fill"></i>
+                Property Overview
+            </button>
+            <button type="button"
+                    class="landlord-rail-link admin-rail-switch"
+                    data-admin-switch="maintenance"
+                    aria-pressed="false">
+                <i class="bi bi-tools"></i>
+                Maintenance Queue
+            </button>
+            <button type="button"
+                    class="landlord-rail-link admin-rail-switch"
+                    data-admin-switch="payments"
+                    aria-pressed="false">
+                <i class="bi bi-wallet2"></i>
+                Payment Center
+            </button>
+        </nav>
+    </aside>
+
+    <section class="landlord-workspace admin-workspace">
+        <div class="admin-shell">
     <section class="admin-hero">
-        <div class="row g-4 align-items-center">
-            <div class="col-lg-8">
-                <div class="admin-kicker">System Administrator Workspace</div>
-                <h1 class="admin-title">Cloud control center</h1>
-                <p class="admin-subtitle mb-0">
-                    A cleaner admin workspace for managing users, properties, maintenance, and payments in one cloud-based view.
-                </p>
-            </div>
-            <div class="col-lg-4">
-                <div class="panel-card h-100 admin-quick-card">
-                    <div class="panel-heading">
-                        <h2 class="panel-title">System pulse</h2>
-                        <span class="badge badge-soft-primary">Live overview</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Total users</span>
-                        <span class="metric-value">@Model.Overview.TotalUsers</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Occupied properties</span>
-                        <span class="metric-value">@Model.Overview.OccupiedProperties</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Open maintenance</span>
-                        <span class="metric-value">@Model.Overview.OpenMaintenanceRequests</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Overdue payments</span>
-                        <span class="metric-value">@Model.Overview.OverduePayments</span>
-                    </div>
-                </div>
+        <div class="admin-page-titlebar">
+            <div>
+                <div class="admin-kicker">Admin</div>
+                <h1 class="admin-title">Operations</h1>
             </div>
         </div>
 
-        <div class="admin-feature-grid">
-            <article class="admin-feature-card">
-                <div class="admin-feature-icon"><i class="bi bi-cloud-check"></i></div>
-                <h2>Cloud-ready workflow</h2>
-                <p>Keep operations centralized with AWS-style visibility across users, properties, and requests.</p>
-            </article>
-            <article class="admin-feature-card">
-                <div class="admin-feature-icon"><i class="bi bi-funnel"></i></div>
-                <h2>Fast filters</h2>
-                <p>Search by email, role, and status without leaving the management surface.</p>
-            </article>
-            <article class="admin-feature-card">
-                <div class="admin-feature-icon"><i class="bi bi-broadcast"></i></div>
-                <h2>Live activity view</h2>
-                <p>Recent users, maintenance, and payment events stay visible for quick review.</p>
-            </article>
-        </div>
-
-        <div class="admin-mode-switch" role="tablist" aria-label="Admin sections">
-            <button type="button" class="admin-mode-tab is-active" data-admin-switch="users" aria-pressed="true">User Management</button>
-            <button type="button" class="admin-mode-tab" data-admin-switch="properties" aria-pressed="false">Property Overview</button>
-            <button type="button" class="admin-mode-tab" data-admin-switch="maintenance" aria-pressed="false">Maintenance Queue</button>
-            <button type="button" class="admin-mode-tab" data-admin-switch="payments" aria-pressed="false">Payment Center</button>
+        <div class="admin-ops-summary" aria-label="Admin overview">
+            <div class="admin-ops-item">
+                <span>Total Users</span>
+                <strong>@Model.Overview.TotalUsers</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Pending Approval</span>
+                <strong>@Model.Overview.PendingUsers</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Occupancy</span>
+                <strong>@occupancyRate%</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Open Maintenance</span>
+                <strong>@Model.Overview.OpenMaintenanceRequests</strong>
+            </div>
+            <div class="admin-ops-item">
+                <span>Overdue Payments</span>
+                <strong>@Model.Overview.OverduePayments</strong>
+            </div>
         </div>
     </section>
 
@@ -152,6 +169,51 @@
     <section class="admin-pane" data-admin-pane="users">
         <div class="row g-4">
             <div class="col-xl-4">
+                <div class="panel-card mb-4">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Password reset requests</h2>
+                        <span class="badge admin-count-badge">@Model.PasswordResetRequests.Count pending</span>
+                    </div>
+                    @if (Model.PasswordResetRequests.Count == 0)
+                    {
+                        <div class="empty-state">No password reset requests.</div>
+                    }
+                    else
+                    {
+                        <div class="activity-list">
+                            @foreach (var resetRequest in Model.PasswordResetRequests)
+                            {
+                                <div class="activity-item">
+                                    <div class="activity-title">@resetRequest.Email</div>
+                                    <div class="activity-meta">
+                                        Requested @resetRequest.RequestedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                    </div>
+                                    <div class="table-actions mt-3">
+                                        <form asp-action="ApprovePasswordResetRequest" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
+                                            <button type="submit"
+                                                    class="btn btn-success btn-sm"
+                                                    onclick="return confirm('Approve this password reset request and send a Cognito reset email?');">
+                                                Approve
+                                            </button>
+                                        </form>
+                                        <form asp-action="RejectPasswordResetRequest" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Reject this password reset request?');">
+                                                Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
                 <div class="panel-card h-100">
                     <div class="panel-heading">
                         <h2 class="panel-title">Latest user records</h2>
@@ -503,6 +565,8 @@
             </div>
         </div>
     </section>
+        </div>
+    </section>
 </div>
 
 @section Scripts {
@@ -520,6 +584,7 @@
                 tabs.forEach((tab) => {
                     const active = tab.dataset.adminSwitch === paneName;
                     tab.classList.toggle('is-active', active);
+                    tab.classList.toggle('active', active);
                     tab.setAttribute('aria-pressed', active ? 'true' : 'false');
                 });
             };

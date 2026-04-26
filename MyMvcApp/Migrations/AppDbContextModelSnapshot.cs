@@ -289,6 +289,41 @@ namespace MyMvcApp.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("MyMvcApp.Models.PasswordResetRequest", b =>
+                {
+                    b.Property<int>("PasswordResetRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PasswordResetRequestId"));
+
+                    b.Property<int?>("AppUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewedByEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("PasswordResetRequestId");
+
+                    b.HasIndex("AppUserId");
+
+                    b.ToTable("PasswordResetRequests");
+                });
+
             modelBuilder.Entity("MyMvcApp.Models.Property", b =>
                 {
                     b.Property<int>("PropertyId")
@@ -573,6 +608,16 @@ namespace MyMvcApp.Migrations
                     b.Navigation("Property");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyMvcApp.Models.PasswordResetRequest", b =>
+                {
+                    b.HasOne("MyMvcApp.Models.AppUser", "AppUser")
+                        .WithMany()
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AppUser");
                 });
 
             modelBuilder.Entity("MyMvcApp.Models.Property", b =>

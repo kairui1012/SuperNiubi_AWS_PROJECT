@@ -2,6 +2,7 @@ using Amazon.AspNetCore.Identity.Cognito;
 using Amazon.Extensions.CognitoAuthentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Models;
 using MyMvcApp.Data; // ADD THIS
 
@@ -84,6 +85,42 @@ namespace MyMvcApp.Controllers
         public IActionResult AccessDenied()
         {
             return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestPasswordReset(string? email)
+        {
+            var normalizedEmail = email?.Trim().ToLowerInvariant() ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(normalizedEmail))
+            {
+                var appUser = await _dbContext.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+
+                if (appUser != null && !appUser.IsDisabled)
+                {
+                    var hasPendingRequest = await _dbContext.PasswordResetRequests
+                        .AnyAsync(r => r.Email.ToLower() == normalizedEmail
+                            && r.Status == PasswordResetRequestStatus.Pending);
+
+                    if (!hasPendingRequest)
+                    {
+                        _dbContext.PasswordResetRequests.Add(new PasswordResetRequest
+                        {
+                            Email = appUser.Email,
+                            AppUserId = appUser.Id,
+                            Status = PasswordResetRequestStatus.Pending,
+                            RequestedAt = DateTime.UtcNow
+                        });
+
+                        await _dbContext.SaveChangesAsync();
+                    }
+                }
+            }
+
+            TempData["SuccessMessage"] = "If the email is registered, your password reset request has been sent to the administrator.";
+            return RedirectToAction(nameof(Login));
         }
 
         // --- REGISTER ---

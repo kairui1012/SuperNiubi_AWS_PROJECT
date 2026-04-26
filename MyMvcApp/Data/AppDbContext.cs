@@ -17,6 +17,7 @@ namespace MyMvcApp.Data
         public DbSet<Document> Documents { get; set; }
         public DbSet<CommunityUpdate> CommunityUpdates { get; set; }
         public DbSet<VisitorPass> VisitorPasses { get; set; }
+        public DbSet<PasswordResetRequest> PasswordResetRequests { get; set; }
 
 
         // Setting rules to store the data
@@ -34,6 +35,7 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<Payment>().Property(p => p.Status).HasConversion<string>();
             modelBuilder.Entity<Document>().Property(d => d.DocumentType).HasConversion<string>();
             modelBuilder.Entity<VisitorPass>().Property(v => v.Status).HasConversion<string>();
+            modelBuilder.Entity<PasswordResetRequest>().Property(p => p.Status).HasConversion<string>();
 
             // Avoid Cascade Delete Conflict
             // Logic: One property has only one tenant, one tenant has only one  property
@@ -49,7 +51,12 @@ namespace MyMvcApp.Data
                 .HasForeignKey(v => v.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<PasswordResetRequest>()
+                .HasOne(p => p.AppUser)
+                .WithMany()
+                .HasForeignKey(p => p.AppUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
         }
     }
 }
-

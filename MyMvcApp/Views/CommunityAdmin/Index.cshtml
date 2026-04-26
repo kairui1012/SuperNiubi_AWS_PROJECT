@@ -1,79 +1,131 @@
 @model IEnumerable<MyMvcApp.Models.CommunityUpdate>
 @{
-    ViewData["Title"] = "Manage Community Hub";
+    ViewData["Title"] = "Community Events";
+    var updates = Model?.ToList() ?? new List<MyMvcApp.Models.CommunityUpdate>();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4 pt-4">
-    <h2 class="fw-bold">Manage Community Hub</h2>
-    <a asp-action="Create" class="btn btn-primary rounded-pill px-4">
-        <i class="bi bi-plus-lg me-2"></i> Create New Update
+<section class="app-page-header">
+    <div>
+        <p class="app-page-kicker">Community Hub</p>
+        <h1 class="app-page-title">Community Events</h1>
+        <p class="app-page-subtitle">Stay updated with property announcements, community activities, and important notices.</p>
+    </div>
+    <a asp-action="Create" class="app-btn app-btn-primary">
+        <i class="bi bi-plus-lg"></i>
+        <span>Create New Update</span>
     </a>
-</div>
+</section>
 
 @if (TempData["SuccessMessage"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <div class="alert alert-success alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
         <i class="bi bi-check-circle me-2"></i> @TempData["SuccessMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
 
-<div class="card border-0 shadow-sm rounded-4">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">Type</th>
-                        <th>Title</th>
-                        <th>Created At (MYT)</th>
-                        <th>End Date</th>
-                        <th>Image</th>
-                        <th class="text-end pe-4">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
-                        <tr>
-                            <td class="ps-4">
-                                @if (item.Type == MyMvcApp.Models.UpdateType.Event) { <span class="badge bg-success">Event</span> }
-                                else if (item.Type == MyMvcApp.Models.UpdateType.Promotion) { <span class="badge bg-primary">Promotion</span> }
-                                else { <span class="badge bg-danger">Notice</span> }
-                            </td>
-                            <td class="fw-medium">@item.Title</td>
-                            <td class="text-muted">@item.CreatedAt.AddHours(8).ToString("dd MMM yyyy, hh:mm tt")</td>
-                            <td>
-                                @if(item.EndDate < DateTime.UtcNow) { <span class="text-danger">Expired</span> } 
-                                else { <span>@item.EndDate.ToString("MMM dd, yyyy")</span> }
-                            </td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(item.ImageUrl))
-                                {
-                                    <a href="@item.ImageUrl" target="_blank" class="text-decoration-none">View Image</a>
-                                }
-                                else { <span class="text-muted">No Image</span> }
-                            </td>
-                            <td class="text-end pe-4 d-flex justify-content-end gap-1">
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary rounded-circle p-2" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Are you sure you want to delete this update?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle p-2" title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                    @if (!Model.Any())
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">No community updates found. Click "Create New Update" to add one.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+<div class="app-event-toolbar">
+    <div class="app-event-count">
+        @updates.Count @(updates.Count == 1 ? "community update" : "community updates")
     </div>
 </div>
+
+@if (updates.Any())
+{
+    <div class="app-event-grid">
+        @foreach (var item in updates)
+        {
+            var isExpired = item.EndDate < DateTime.UtcNow;
+            var plainDescription = System.Text.RegularExpressions.Regex.Replace(item.Description ?? string.Empty, "<.*?>", string.Empty);
+            var typeClass = item.Type == MyMvcApp.Models.UpdateType.Event
+                ? "badge-soft-success"
+                : item.Type == MyMvcApp.Models.UpdateType.Promotion
+                    ? "badge-soft-primary"
+                    : "badge-soft-danger";
+            var typeIcon = item.Type == MyMvcApp.Models.UpdateType.Event
+                ? "bi-calendar-event"
+                : item.Type == MyMvcApp.Models.UpdateType.Promotion
+                    ? "bi-tags"
+                    : "bi-megaphone";
+
+            <article class="app-event-card">
+                <div class="app-event-media">
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl" alt="@item.Title" />
+                    }
+                    else
+                    {
+                        <div class="app-event-media-placeholder">
+                            <i class="bi @typeIcon"></i>
+                        </div>
+                    }
+                </div>
+
+                <div class="app-event-body">
+                    <div class="app-event-meta">
+                        <div class="app-event-date" aria-label="End date @item.EndDate.ToString("MMM dd, yyyy")">
+                            <span>@item.EndDate.ToString("MMM")</span>
+                            <strong>@item.EndDate.ToString("dd")</strong>
+                        </div>
+                        <div class="app-event-badges">
+                            <span class="app-event-badge @typeClass">
+                                <i class="bi @typeIcon me-1"></i>@item.Type
+                            </span>
+                            @if (isExpired)
+                            {
+                                <span class="app-event-badge badge-soft-danger">Expired</span>
+                            }
+                            else
+                            {
+                                <span class="app-event-badge badge-soft-success">Active</span>
+                            }
+                        </div>
+                    </div>
+
+                    <h2 class="app-event-title">@item.Title</h2>
+                    <p class="app-event-description">@plainDescription</p>
+                    <div class="app-event-footnote text-muted">
+                        Posted @item.CreatedAt.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") · Ends @item.EndDate.ToString("MMM dd, yyyy")
+                    </div>
+
+                    <div class="app-event-actions d-flex gap-2 mt-3">
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="app-btn app-btn-outline app-btn-sm" style="color: var(--bs-primary); border-color: var(--bs-primary);">
+                            <i class="bi bi-pencil"></i>
+                            <span>Edit</span>
+                        </a>
+
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <a href="@item.ImageUrl" target="_blank" class="app-btn app-btn-outline app-btn-sm">
+                                <i class="bi bi-image"></i>
+                                <span>View Image</span>
+                            </a>
+                        }
+
+                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="ms-auto" onsubmit="return confirm('Are you sure you want to delete this update?');">
+                            <button type="submit" class="app-btn app-btn-danger app-btn-sm">
+                                <i class="bi bi-trash"></i>
+                                <span>Delete</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+}
+else
+{
+    <section class="app-empty-state">
+        <div class="app-empty-state-icon">
+            <i class="bi bi-calendar2-event"></i>
+        </div>
+        <h2>No community events yet.</h2>
+        <p>New announcements and property updates will appear here.</p>
+        <a asp-action="Create" class="app-btn app-btn-primary">
+            <i class="bi bi-plus-lg"></i>
+            <span>Create New Update</span>
+        </a>
+    </section>
+}

@@ -5,9 +5,9 @@
     var propertyAddress = Model.PropertyAddress ?? "Unit 12A, Sunrise Residences, Jalan Utama 3";
     var leaseStart = Model.LeaseStartDate.ToString("dd MMM yyyy");
     var leaseEnd = Model.LeaseEndDate.ToString("dd MMM yyyy");
-    var pendingMaintenance = Model.MaintenanceRequest.Count;
+    var maintenanceCount = Model.MaintenanceRequest.Count;
     var totalPayments = Model.PaymentRecord;
-    var pendingDocuments = Model.DocumentQuantity;
+    var documentCount = Model.DocumentQuantity;
 }
 
 <link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
@@ -31,12 +31,12 @@
         </nav>
     </aside>
 
-    <section class="tenant-workspace">
-        <div class="tenant-toolbar">
+    <section class="tenant-workspace tenant-dashboard-simple">
+        <div class="tenant-dashboard-header">
             <div>
-                <p class="tenant-kicker">Tenant Workspace</p>
-                <h1 class="tenant-heading">Welcome, @tenantName.Split('@')[0]</h1>
-                <p class="tenant-sub">Centralized command center for property, maintenance, payment, and document workflows.</p>
+                <p class="tenant-kicker">Tenant Dashboard</p>
+                <h1 class="tenant-heading">@tenantName.Split('@')[0]</h1>
+                <p class="tenant-sub">@propertyAddress</p>
             </div>
             <div class="tenant-time">
                 <strong id="currentDate"></strong>
@@ -44,95 +44,83 @@
             </div>
         </div>
 
-        <div class="tenant-hero">
-            <div>
-                <h2>@propertyAddress</h2>
-                <p>Lease Window: @leaseStart to @leaseEnd</p>
-            </div>
-            <div>
+        <section class="tenant-overview-panel">
+            <div class="tenant-overview-top">
+                <div>
+                    <div class="tenant-overview-label">Lease period</div>
+                    <div class="tenant-overview-title">@leaseStart - @leaseEnd</div>
+                </div>
                 <span class="tenant-badge badge-success">@Model.LeaseStatus</span>
             </div>
-        </div>
 
-        <div class="tenant-grid-4">
-            <div class="tenant-stat">
-                <div class="tenant-stat-label">Assigned Property</div>
-                <div class="tenant-stat-value">1</div>
-                <span class="tenant-badge badge-success">Active</span>
+            <div class="tenant-lease-track" role="progressbar" aria-label="Lease timeline">
+                <div id="leaseBar" class="tenant-lease-fill" style="width:0%"></div>
             </div>
-            <div class="tenant-stat">
-                <div class="tenant-stat-label">Maintenance Requests</div>
-                <div class="tenant-stat-value">@pendingMaintenance</div>
-                <span class="tenant-badge badge-warning">Open Items</span>
-            </div>
-            <div class="tenant-stat">
-                <div class="tenant-stat-label">Payment Records</div>
-                <div class="tenant-stat-value">@totalPayments</div>
-                <span class="tenant-badge badge-primary">Logged</span>
-            </div>
-            <div class="tenant-stat">
-                <div class="tenant-stat-label">Document Library</div>
-                <div class="tenant-stat-value">@pendingDocuments</div>
-                <span class="tenant-badge badge-primary">Stored</span>
-            </div>
-            <div class="tenant-stat">
-                <div class="tenant-stat-label">Visitor Passes</div>
-                <div class="tenant-stat-value">@Model.VisitorPassCount</div>
-                <span class="tenant-badge badge-primary">Generated</span>
-            </div>
-        </div>
+            <div id="leaseBarSub" class="tenant-sub mt-2">Calculating lease timeline...</div>
 
-        <div class="tenant-layout-2">
-            <article class="tenant-panel">
-                <div class="tenant-panel-head">
-                    <h3 class="tenant-panel-title">Recent Maintenance Timeline</h3>
-                    <a asp-action="MaintenanceRequest" class="tenant-link">Open Queue</a>
+            <div class="tenant-overview-metrics">
+                <div>
+                    <span>Monthly Rent</span>
+                    <strong>RM @Model.MonthlyRent</strong>
                 </div>
-                <div class="tenant-panel-body">
-                    @if (Model.MaintenanceRequest.Count <= 0)
-                    {
-                        <div class="tenant-empty"><i class="bi bi-inbox d-block mb-2"></i>No recent maintenance requests.</div>
-                    }
-                    else
-                    {
-                        <div class="tenant-list">
-                            @foreach (var request in Model.MaintenanceRequest.Take(5))
-                            {
-                                var statusClass = request.Status.ToString() == "Completed" ? "badge-success" : "badge-warning";
-                                <div class="tenant-list-item">
-                                    <div>
-                                        <div class="fw-semibold">@request.Title</div>
-                                        <div class="tenant-sub">Submitted @request.CreatedAt.ToString("dd MMM yyyy")</div>
-                                    </div>
-                                    <span class="tenant-badge @statusClass">@request.Status</span>
+                <div>
+                    <span>Maintenance</span>
+                    <strong>@maintenanceCount</strong>
+                </div>
+                <div>
+                    <span>Payments</span>
+                    <strong>@totalPayments</strong>
+                </div>
+                <div>
+                    <span>Documents</span>
+                    <strong>@documentCount</strong>
+                </div>
+                <div>
+                    <span>Visitors</span>
+                    <strong>@Model.VisitorPassCount</strong>
+                </div>
+            </div>
+        </section>
+
+        <div class="tenant-dashboard-content">
+            <article class="tenant-overview-panel">
+                <div class="tenant-section-head">
+                    <h2>Recent Maintenance</h2>
+                    <a asp-action="MaintenanceRequest" class="tenant-link">View all</a>
+                </div>
+
+                @if (Model.MaintenanceRequest.Count <= 0)
+                {
+                    <div class="tenant-empty compact">No recent maintenance requests.</div>
+                }
+                else
+                {
+                    <div class="tenant-plain-list">
+                        @foreach (var request in Model.MaintenanceRequest.Take(5))
+                        {
+                            var statusClass = request.Status.ToString() == "Completed" ? "badge-success" : "badge-warning";
+                            <div class="tenant-plain-row">
+                                <div>
+                                    <strong>@request.Title</strong>
+                                    <span>Submitted @request.CreatedAt.ToString("dd MMM yyyy")</span>
                                 </div>
-                            }
-                        </div>
-                    }
-                </div>
+                                <span class="tenant-badge @statusClass">@request.Status</span>
+                            </div>
+                        }
+                    </div>
+                }
             </article>
 
-            <article class="tenant-panel">
-                <div class="tenant-panel-head">
-                    <h3 class="tenant-panel-title">Quick Actions</h3>
+            <article class="tenant-overview-panel">
+                <div class="tenant-section-head">
+                    <h2>Actions</h2>
                 </div>
-                <div class="tenant-panel-body">
-                    <div class="tenant-actions mb-3">
-                        <a asp-action="MyProperty" class="btn tenant-btn tenant-btn-outline">View Property</a>
-                        <a asp-action="MaintenanceRequest" class="btn tenant-btn tenant-btn-outline">Create Request</a>
-                        <a asp-action="Payments" class="btn tenant-btn tenant-btn-outline">Make Payment</a>
-                        <a asp-action="Visitors" class="btn tenant-btn tenant-btn-outline">Register Visitor</a>
-                        <a asp-action="Documents" class="btn tenant-btn tenant-btn-outline">Upload Document</a>
-                    </div>
-                    <div class="tenant-list">
-                        <div class="tenant-list-item"><span class="tenant-sub">Lease Start</span><strong>@leaseStart</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Lease End</span><strong>@leaseEnd</strong></div>
-                        <div class="tenant-list-item"><span class="tenant-sub">Monthly Rent</span><strong>RM @Model.MonthlyRent</strong></div>
-                    </div>
-                    <div class="progress mt-3" role="progressbar">
-                        <div id="leaseBar" class="progress-bar bg-primary" style="width:0%"></div>
-                    </div>
-                    <div id="leaseBarSub" class="tenant-sub mt-2">Calculating lease timeline...</div>
+                <div class="tenant-action-list">
+                    <a asp-action="MyProperty"><i class="bi bi-house-door"></i> Property</a>
+                    <a asp-action="MaintenanceRequest"><i class="bi bi-tools"></i> New Request</a>
+                    <a asp-action="Payments"><i class="bi bi-wallet2"></i> Payment</a>
+                    <a asp-action="Visitors"><i class="bi bi-qr-code-scan"></i> Visitor</a>
+                    <a asp-action="Documents"><i class="bi bi-file-earmark-text"></i> Document</a>
                 </div>
             </article>
         </div>
