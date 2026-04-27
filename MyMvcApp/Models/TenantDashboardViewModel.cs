@@ -17,5 +17,9 @@
         public DateTime NextPaymentDue { get; set; }
         public string MaintenanceStatusSummary { get; set; } = string.Empty;
         public int OpenMaintenanceCount { get; set; }
+        public List<TenantNotificationItem> Notifications { get; set; } = new();
+        public List<string> PaymentChartLabels { get; set; } = new();
+        public List<decimal> PaymentChartAmounts { get; set; } = new();
+        public List<int> MaintenanceStatusCounts { get; set; } = new();
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyMvcApp.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyMvcApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260427064202_TenantOpsEnhancements")]
+    partial class TenantOpsEnhancements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -375,22 +378,6 @@ namespace MyMvcApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("StripeEventId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("StripePaymentIntentId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("StripeReceiptUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("StripeSessionId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
@@ -400,12 +387,6 @@ namespace MyMvcApp.Migrations
                     b.HasKey("PaymentId");
 
                     b.HasIndex("PropertyId");
-
-                    b.HasIndex("StripeEventId");
-
-                    b.HasIndex("StripePaymentIntentId");
-
-                    b.HasIndex("StripeSessionId");
 
                     b.HasIndex("TenantId");
 
