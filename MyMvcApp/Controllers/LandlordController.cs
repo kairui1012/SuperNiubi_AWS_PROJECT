@@ -5,12 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
 using System.Linq;
+using System.Security.Claims;
 
 namespace MyMvcApp.Controllers
 {
     [Authorize]
     public class LandlordController : Controller
     {
+        private static readonly string[] AllowedAnnouncementAudiences = { "All", "Tenant", "Landlord" };
         private readonly AppDbContext _dbContext;
 
         public LandlordController(AppDbContext dbContext)
@@ -405,17 +407,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult TenantDetails(int id)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
-
-            if (string.IsNullOrEmpty(userEmail))
-            {
-                TempData["ErrorMessage"] = "User email not found.";
-                return RedirectToAction("Tenants");
-            }
-
-            var landlord = _dbContext.Users.FirstOrDefault(u =>
-                u.Email.ToLower() == userEmail.ToLower() &&
-                u.Role == "Landlord");
+            var landlord = GetCurrentLandlord();
 
             if (landlord == null)
             {
@@ -434,7 +426,191 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction("Tenants");
             }
 
+            LoadAvailablePropertyOptions(landlord.Id, tenant.PropertyId);
+            LoadLeaseHistory(tenant.TenantId);
+
             return View(tenant);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RenewLease(RenewLeaseViewModel model)
+        {
+            var result = GetManagedTenant(model.TenantId);
+            if (result.Tenant == null)
+            {
+                TempData["ErrorMessage"] = result.ErrorMessage;
+                return RedirectToAction("Tenants");
+            }
+
+            if (model.LeaseEndDate <= model.LeaseStartDate)
+            {
+                TempData["ErrorMessage"] = "Lease end date must be later than lease start date.";
+                return RedirectToAction("TenantDetails", new { id = model.TenantId });
+            }
+
+            var oldValue = $"Start: {result.Tenant.LeaseStartDate:yyyy-MM-dd}; End: {result.Tenant.LeaseEndDate:yyyy-MM-dd}; Status: {result.Tenant.LeaseStatus}";
+            var newStart = DateTime.SpecifyKind(model.LeaseStartDate, DateTimeKind.Utc);
+            var newEnd = DateTime.SpecifyKind(model.LeaseEndDate, DateTimeKind.Utc);
+
+            result.Tenant.LeaseStartDate = newStart;
+            result.Tenant.LeaseEndDate = newEnd;
+            result.Tenant.LeaseStatus = LeaseStatus.Active;
+            result.Tenant.Notes = model.Notes;
+            result.Tenant.UpdatedAt = DateTime.UtcNow;
+            AddLeaseHistory(
+                result.Tenant,
+                "Renew lease",
+                oldValue,
+                $"Start: {newStart:yyyy-MM-dd}; End: {newEnd:yyyy-MM-dd}; Status: {LeaseStatus.Active}",
+                model.Notes);
+
+            _dbContext.SaveChanges();
+
+            TempData["SuccessMessage"] = "Lease renewed successfully.";
+            return RedirectToAction("TenantDetails", new { id = model.TenantId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult TerminateLease(TerminateLeaseViewModel model)
+        {
+            var result = GetManagedTenant(model.TenantId);
+            if (result.Tenant == null)
+            {
+                TempData["ErrorMessage"] = result.ErrorMessage;
+                return RedirectToAction("Tenants");
+            }
+
+            var oldValue = $"End: {result.Tenant.LeaseEndDate:yyyy-MM-dd}; Status: {result.Tenant.LeaseStatus}";
+            var terminatedAt = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+
+            result.Tenant.LeaseStatus = LeaseStatus.Terminated;
+            result.Tenant.LeaseEndDate = terminatedAt;
+            result.Tenant.Notes = model.Notes;
+            result.Tenant.UpdatedAt = DateTime.UtcNow;
+            AddLeaseHistory(
+                result.Tenant,
+                "Terminate lease",
+                oldValue,
+                $"End: {terminatedAt:yyyy-MM-dd}; Status: {LeaseStatus.Terminated}",
+                model.Notes);
+
+            _dbContext.SaveChanges();
+
+            TempData["SuccessMessage"] = "Lease terminated successfully.";
+            return RedirectToAction("TenantDetails", new { id = model.TenantId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AdjustRent(AdjustRentViewModel model)
+        {
+            var result = GetManagedTenant(model.TenantId);
+            if (result.Tenant == null)
+            {
+                TempData["ErrorMessage"] = result.ErrorMessage;
+                return RedirectToAction("Tenants");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "Please enter a valid rent amount and rent due day.";
+                return RedirectToAction("TenantDetails", new { id = model.TenantId });
+            }
+
+            var oldValue = $"Monthly rent: RM {result.Tenant.MonthlyRent:N2}; Due day: {result.Tenant.RentDueDay}";
+
+            result.Tenant.MonthlyRent = model.MonthlyRent;
+            result.Tenant.RentDueDay = model.RentDueDay;
+            result.Tenant.UpdatedAt = DateTime.UtcNow;
+            AddLeaseHistory(
+                result.Tenant,
+                "Adjust rent",
+                oldValue,
+                $"Monthly rent: RM {model.MonthlyRent:N2}; Due day: {model.RentDueDay}",
+                null);
+
+            _dbContext.SaveChanges();
+
+            TempData["SuccessMessage"] = "Rent details updated successfully.";
+            return RedirectToAction("TenantDetails", new { id = model.TenantId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ChangeTenantProperty(ChangeTenantPropertyViewModel model)
+        {
+            var result = GetManagedTenant(model.TenantId);
+            if (result.Tenant == null || result.Landlord == null)
+            {
+                TempData["ErrorMessage"] = result.ErrorMessage;
+                return RedirectToAction("Tenants");
+            }
+
+            var property = _dbContext.Properties.FirstOrDefault(p =>
+                p.PropertyId == model.PropertyId &&
+                p.LandlordId == result.Landlord.Id);
+
+            if (property == null)
+            {
+                TempData["ErrorMessage"] = "Selected property is invalid.";
+                return RedirectToAction("TenantDetails", new { id = model.TenantId });
+            }
+
+            var propertyOccupied = _dbContext.Tenants.Any(t =>
+                t.PropertyId == model.PropertyId &&
+                t.TenantId != model.TenantId);
+
+            if (propertyOccupied)
+            {
+                TempData["ErrorMessage"] = "Selected property already has an assigned tenant.";
+                return RedirectToAction("TenantDetails", new { id = model.TenantId });
+            }
+
+            var oldValue = $"Property: {result.Tenant.Property.PropertyName}";
+
+            result.Tenant.PropertyId = model.PropertyId;
+            result.Tenant.UpdatedAt = DateTime.UtcNow;
+            AddLeaseHistory(
+                result.Tenant,
+                "Move property",
+                oldValue,
+                $"Property: {property.PropertyName}",
+                null);
+
+            _dbContext.SaveChanges();
+
+            TempData["SuccessMessage"] = "Tenant property changed successfully.";
+            return RedirectToAction("TenantDetails", new { id = model.TenantId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ChangeDepositStatus(ChangeDepositStatusViewModel model)
+        {
+            var result = GetManagedTenant(model.TenantId);
+            if (result.Tenant == null)
+            {
+                TempData["ErrorMessage"] = result.ErrorMessage;
+                return RedirectToAction("Tenants");
+            }
+
+            var oldValue = $"Deposit status: {result.Tenant.DepositStatus}";
+            result.Tenant.DepositStatus = model.DepositStatus;
+            result.Tenant.Notes = model.Notes;
+            result.Tenant.UpdatedAt = DateTime.UtcNow;
+            AddLeaseHistory(
+                result.Tenant,
+                "Change deposit status",
+                oldValue,
+                $"Deposit status: {model.DepositStatus}",
+                model.Notes);
+
+            _dbContext.SaveChanges();
+
+            TempData["SuccessMessage"] = "Deposit status updated successfully.";
+            return RedirectToAction("TenantDetails", new { id = model.TenantId });
         }
 
         public IActionResult MaintenanceRequests()
@@ -595,13 +771,65 @@ namespace MyMvcApp.Controllers
         [Authorize(Roles = "Landlord")]
         public async Task<IActionResult> Announcements()
         {
+            var currentUserEmail = GetCurrentUserEmail();
+
             var announcements = await _dbContext.SystemAnnouncements
                 .AsNoTracking()
-                .Where(a => a.VisibleTo == "All" || a.VisibleTo == "Landlord")
+                .Where(a => a.VisibleTo == "All"
+                    || a.VisibleTo == "Landlord"
+                    || a.CreatedByEmail.ToLower() == currentUserEmail.ToLower())
                 .OrderByDescending(a => a.CreatedAt)
                 .ToListAsync();
 
             return View(announcements);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Landlord")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAnnouncement(CreateLandlordAnnouncementViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "Please fill in the title and message before publishing.";
+                return RedirectToAction(nameof(Announcements));
+            }
+
+            var currentUserEmail = GetCurrentUserEmail();
+            var landlordExists = await _dbContext.Users.AnyAsync(u =>
+                u.Email.ToLower() == currentUserEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (!landlordExists)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return RedirectToAction(nameof(Announcements));
+            }
+
+            var visibleTo = NormalizeAnnouncementAudience(model.VisibleTo);
+            var announcement = new SystemAnnouncement
+            {
+                Title = model.Title.Trim(),
+                Body = model.Body.Trim(),
+                VisibleTo = visibleTo,
+                CreatedAt = DateTime.UtcNow,
+                CreatedByEmail = currentUserEmail
+            };
+
+            _dbContext.SystemAnnouncements.Add(announcement);
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                Action = "LandlordCreateAnnouncement",
+                ActorEmail = currentUserEmail,
+                TargetType = "SystemAnnouncement",
+                Details = $"Landlord created announcement '{announcement.Title}' visible to {announcement.VisibleTo}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Announcement published successfully.";
+            return RedirectToAction(nameof(Announcements));
         }
 
         [HttpGet]
@@ -726,6 +954,12 @@ namespace MyMvcApp.Controllers
                 };
 
                 _dbContext.Tenants.Add(tenant);
+                AddLeaseHistory(
+                    tenant,
+                    "Create lease",
+                    null,
+                    $"Property: {selectedProperty?.PropertyName}; Start: {tenant.LeaseStartDate:yyyy-MM-dd}; End: {tenant.LeaseEndDate:yyyy-MM-dd}; Monthly rent: RM {tenant.MonthlyRent:N2}; Deposit: {tenant.DepositStatus}",
+                    tenant.Notes);
                 _dbContext.SaveChanges();
 
                 TempData["SuccessMessage"] = "Tenant assigned successfully. New TenantId: " + tenant.TenantId;
@@ -769,6 +1003,100 @@ namespace MyMvcApp.Controllers
                     Text = p.PropertyName
                 })
                 .ToList();
+        }
+
+        private static string NormalizeAnnouncementAudience(string? visibleTo)
+        {
+            if (string.IsNullOrWhiteSpace(visibleTo))
+            {
+                return "All";
+            }
+
+            return AllowedAnnouncementAudiences.FirstOrDefault(audience =>
+                string.Equals(audience, visibleTo.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "All";
+        }
+
+        private AppUser? GetCurrentLandlord()
+        {
+            var userEmail = GetCurrentUserEmail();
+
+            if (string.IsNullOrWhiteSpace(userEmail))
+            {
+                return null;
+            }
+
+            return _dbContext.Users.FirstOrDefault(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+        }
+
+        private (Tenant? Tenant, AppUser? Landlord, string ErrorMessage) GetManagedTenant(int tenantId)
+        {
+            var landlord = GetCurrentLandlord();
+
+            if (landlord == null)
+            {
+                return (null, null, "Landlord account not found.");
+            }
+
+            var tenant = _dbContext.Tenants
+                .Include(t => t.Property)
+                .Include(t => t.User)
+                .FirstOrDefault(t =>
+                    t.TenantId == tenantId &&
+                    t.Property.LandlordId == landlord.Id);
+
+            return tenant == null
+                ? (null, landlord, "Tenant not found.")
+                : (tenant, landlord, string.Empty);
+        }
+
+        private void LoadAvailablePropertyOptions(int landlordId, int currentPropertyId)
+        {
+            ViewBag.AvailableProperties = _dbContext.Properties
+                .Where(p =>
+                    p.LandlordId == landlordId &&
+                    (p.PropertyId == currentPropertyId ||
+                        !_dbContext.Tenants.Any(t => t.PropertyId == p.PropertyId)))
+                .OrderBy(p => p.PropertyName)
+                .Select(p => new SelectListItem
+                {
+                    Value = p.PropertyId.ToString(),
+                    Text = p.PropertyName
+                })
+                .ToList();
+        }
+
+        private void LoadLeaseHistory(int tenantId)
+        {
+            ViewBag.LeaseHistory = _dbContext.LeaseHistories
+                .AsNoTracking()
+                .Where(h => h.TenantId == tenantId)
+                .OrderByDescending(h => h.CreatedAt)
+                .ToList();
+        }
+
+        private void AddLeaseHistory(Tenant tenant, string action, string? oldValue, string? newValue, string? notes)
+        {
+            _dbContext.LeaseHistories.Add(new LeaseHistory
+            {
+                Tenant = tenant,
+                TenantId = tenant.TenantId,
+                Action = action,
+                OldValue = oldValue,
+                NewValue = newValue,
+                Notes = notes,
+                ChangedByEmail = GetCurrentUserEmail(),
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        private string GetCurrentUserEmail()
+        {
+            return User.Claims.FirstOrDefault(c => c.Type == "email")?.Value
+                ?? User.FindFirstValue(ClaimTypes.Email)
+                ?? User.Identity?.Name
+                ?? string.Empty;
         }
     }
 }

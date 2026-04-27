@@ -218,6 +218,53 @@ namespace MyMvcApp.Migrations
                     b.ToTable("Documents");
                 });
 
+            modelBuilder.Entity("MyMvcApp.Models.LeaseHistory", b =>
+                {
+                    b.Property<int>("LeaseHistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LeaseHistoryId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ChangedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("OldValue")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("LeaseHistoryId");
+
+                    b.HasIndex("Action");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("LeaseHistories");
+                });
+
             modelBuilder.Entity("MyMvcApp.Models.MaintenanceRequest", b =>
                 {
                     b.Property<int>("RequestId")
@@ -721,6 +768,17 @@ namespace MyMvcApp.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("MyMvcApp.Models.LeaseHistory", b =>
+                {
+                    b.HasOne("MyMvcApp.Models.Tenant", "Tenant")
+                        .WithMany("LeaseHistories")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("MyMvcApp.Models.PasswordResetRequest", b =>
                 {
                     b.HasOne("MyMvcApp.Models.AppUser", "AppUser")
@@ -818,6 +876,8 @@ namespace MyMvcApp.Migrations
             modelBuilder.Entity("MyMvcApp.Models.Tenant", b =>
                 {
                     b.Navigation("Documents");
+
+                    b.Navigation("LeaseHistories");
 
                     b.Navigation("MaintenanceRequests");
 
