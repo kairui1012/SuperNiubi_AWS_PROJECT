@@ -29,6 +29,10 @@
         {
             <div class="alert alert-success">@successMessage</div>
         }
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
 
         <div class="tenant-toolbar">
             <div>
@@ -36,7 +40,7 @@
                 <h1 class="tenant-heading">Rent Payment Portal</h1>
                 <p class="tenant-sub">Pay your rent instantly, keep a clean payment history, and avoid manual receipt uploads.</p>
             </div>
-            <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ Pay Now</button>
+            <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">Pay Rent</button>
         </div>
 
         <div class="tenant-grid-4">
@@ -49,7 +53,7 @@
         <div class="tenant-panel" id="uploadForm" style="display:none;">
             <div class="tenant-panel-head"><h3 class="tenant-panel-title">Payment Checkout</h3></div>
             <div class="tenant-panel-body tenant-form">
-                <form asp-action="UploadPayment" method="post" id="paymentForm">
+                <form asp-action="CreateCheckoutSession" method="post" id="paymentForm">
                     @Html.AntiForgeryToken()
                     <div class="tenant-form-grid">
                         <div>
@@ -80,20 +84,10 @@
                             <input type="hidden" asp-for="NewPayment.PaymentDate" />
                             <span asp-validation-for="NewPayment.PaymentDate" class="text-danger"></span>
                         </div>
-                        <div>
-                            <label>Payment Method</label>
-                            <select class="form-select" asp-for="NewPayment.PaymentMethod">
-                                <option value="OnlineTransfer">Online Transfer</option>
-                                <option value="Cash">Cash</option>
-                                <option value="Cheque">Cheque</option>
-                                <option value="DuitNow">DuitNow / QR</option>
-                                <option value="Others">Others</option>
-                            </select>
-                        </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
                         <button type="button" class="btn tenant-btn tenant-btn-outline" onclick="toggleForm()">Cancel</button>
-                        <button type="submit" class="btn tenant-btn tenant-btn-primary" id="confirmPaymentBtn">Confirm Payment</button>
+                        <button type="submit" class="btn tenant-btn tenant-btn-primary" id="confirmPaymentBtn">Continue to Stripe</button>
                     </div>
                 </form>
             </div>
@@ -104,8 +98,8 @@
                 <div class="modal-content">
                     <div class="modal-body text-center py-4">
                         <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
-                        <h5 class="mb-1">Processing payment</h5>
-                        <p class="text-muted mb-0">We are processing your payment. Please wait...</p>
+                        <h5 class="mb-1">Opening Stripe</h5>
+                        <p class="text-muted mb-0">You will be redirected to Stripe Checkout.</p>
                     </div>
                 </div>
             </div>
@@ -153,13 +147,17 @@
                                         <td><span class="tenant-badge @badgeClass">@payment.Status</span></td>
                                         <td>@(string.IsNullOrWhiteSpace(payment.LandlordRemarks) ? "-" : payment.LandlordRemarks)</td>
                                         <td>
-                                            @if (string.IsNullOrWhiteSpace(payment.ReceiptFileKey))
+                                            @if (!string.IsNullOrWhiteSpace(payment.StripeReceiptUrl))
                                             {
-                                                <span>-</span>
+                                                <a class="tenant-link" href="@payment.StripeReceiptUrl" target="_blank" rel="noopener noreferrer">Stripe Receipt</a>
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(payment.ReceiptFileKey))
+                                            {
+                                                <a class="tenant-link" href="@($"/{payment.ReceiptFileKey}")" target="_blank" rel="noopener noreferrer">View PDF</a>
                                             }
                                             else
                                             {
-                                                <a class="tenant-link" href="@($"/{payment.ReceiptFileKey}")" target="_blank" rel="noopener noreferrer">View PDF</a>
+                                                <span>-</span>
                                             }
                                         </td>
                                     </tr>

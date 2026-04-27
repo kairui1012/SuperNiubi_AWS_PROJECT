@@ -40,6 +40,18 @@ namespace MyMvcApp.Models
         [MaxLength(500)]
         public string? ReceiptFileKey { get; set; }
 
+        [MaxLength(200)]
+        public string? StripeSessionId { get; set; }
+
+        [MaxLength(200)]
+        public string? StripePaymentIntentId { get; set; }
+
+        [MaxLength(500)]
+        public string? StripeReceiptUrl { get; set; }
+
+        [MaxLength(200)]
+        public string? StripeEventId { get; set; }
+
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
         public string? LandlordRemarks { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

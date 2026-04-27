@@ -1,0 +1,146 @@
+@model AdminDashboardViewModel
+
+<section class="admin-pane d-none" data-admin-pane="audit">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="panel-card audit-summary-card">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Audit summary</h2>
+                    <span class="panel-meta">Admin actions</span>
+                </div>
+                <div class="audit-summary-grid">
+                    <div class="audit-summary-item">
+                        <span>Total events</span>
+                        <strong>@Model.AuditSummary.TotalEvents</strong>
+                    </div>
+                    <div class="audit-summary-item">
+                        <span>Last 24 hours</span>
+                        <strong>@Model.AuditSummary.EventsLast24Hours</strong>
+                    </div>
+                    <div class="audit-summary-item">
+                        <span>User management</span>
+                        <strong>@Model.AuditSummary.UserManagementEvents</strong>
+                    </div>
+                    <div class="audit-summary-item">
+                        <span>Password reset</span>
+                        <strong>@Model.AuditSummary.PasswordResetEvents</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="panel-card admin-users-card">
+                <div class="panel-heading audit-panel-heading">
+                    <div>
+                        <h2 class="panel-title">Audit trail</h2>
+                        <div class="panel-meta">Search by actor, target, details, action, or date range.</div>
+                    </div>
+                    <span class="badge admin-count-badge">@Model.AuditLogs.Count of @Model.AuditTotalMatches shown</span>
+                </div>
+
+                <form asp-action="Dashboard" method="get" class="admin-filter-bar admin-audit-filter">
+                    <input type="hidden" name="activePane" value="audit" />
+                    <div class="admin-audit-field admin-audit-search">
+                        <label class="admin-filter-label" for="auditSearch">Search</label>
+                        <input type="text"
+                               id="auditSearch"
+                               name="auditSearch"
+                               class="form-control filter-input"
+                               placeholder="Search actor, target, details"
+                               value="@Model.AuditSearch" />
+                    </div>
+                    <div class="admin-audit-field">
+                        <label class="admin-filter-label" for="auditActionFilter">Action</label>
+                        <select id="auditActionFilter" name="auditActionFilter" class="form-select filter-select">
+                            <option value="">All actions</option>
+                            @foreach (var action in Model.AuditActions)
+                            {
+                                <option value="@action" selected="@(Model.AuditActionFilter == action ? "selected" : null)">@action</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="admin-audit-field">
+                        <label class="admin-filter-label" for="auditFromDate">From</label>
+                        <input type="date"
+                               id="auditFromDate"
+                               name="auditFromDate"
+                               class="form-control filter-input"
+                               value="@(Model.AuditFromDate?.ToString("yyyy-MM-dd"))"
+                               aria-label="Audit from date" />
+                    </div>
+                    <div class="admin-audit-field">
+                        <label class="admin-filter-label" for="auditToDate">To</label>
+                        <input type="date"
+                               id="auditToDate"
+                               name="auditToDate"
+                               class="form-control filter-input"
+                               value="@(Model.AuditToDate?.ToString("yyyy-MM-dd"))"
+                               aria-label="Audit to date" />
+                    </div>
+                    <div class="admin-audit-submit">
+                        <button type="submit" class="btn admin-btn-primary">Apply</button>
+                    </div>
+                    <div class="admin-filter-actions admin-audit-actions">
+                        <a asp-action="Dashboard" asp-route-activePane="audit" class="btn admin-btn-secondary btn-sm">Reset audit filters</a>
+                        @if (Model.AuditTotalMatches > Model.AuditLogs.Count)
+                        {
+                            <span class="panel-meta">Showing newest @Model.AuditLogs.Count matching events. Narrow the filters for older records.</span>
+                        }
+                    </div>
+                </form>
+
+                @if (Model.AuditLogs.Count == 0)
+                {
+                    <div class="empty-state">No audit events matched the current filters.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table admin-table audit-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                    <th>Actor</th>
+                                    <th>Target</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.AuditLogs)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</div>
+                                            <div class="panel-meta">@item.CreatedAt.ToLocalTime().ToString("HH:mm")</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @AdminDashboardUi.GetAuditActionBadgeClass(item.Action)">@item.Action</span>
+                                        </td>
+                                        <td>
+                                            <div class="audit-email">@item.ActorEmail</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">@item.TargetType</div>
+                                            <div class="panel-meta">
+                                                @if (item.TargetId.HasValue)
+                                                {
+                                                    <span>#@item.TargetId</span>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(item.TargetEmail))
+                                                {
+                                                    <span>@item.TargetEmail</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="audit-details">@item.Details</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

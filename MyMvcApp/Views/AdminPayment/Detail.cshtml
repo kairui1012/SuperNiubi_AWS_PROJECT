@@ -155,6 +155,27 @@
                                 <span class="metric-value" style="word-break: break-all;">@Model.ReferenceNo</span>
                             </div>
                         }
+                        @if (!string.IsNullOrWhiteSpace(Model.StripeSessionId))
+                        {
+                            <div class="metric-row">
+                                <span>Stripe checkout session</span>
+                                <span class="metric-value" style="word-break: break-all;">@Model.StripeSessionId</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.StripePaymentIntentId))
+                        {
+                            <div class="metric-row">
+                                <span>Stripe payment intent</span>
+                                <span class="metric-value" style="word-break: break-all;">@Model.StripePaymentIntentId</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.StripeEventId))
+                        {
+                            <div class="metric-row">
+                                <span>Last Stripe event</span>
+                                <span class="metric-value" style="word-break: break-all;">@Model.StripeEventId</span>
+                            </div>
+                        }
                         @if (!string.IsNullOrWhiteSpace(Model.LandlordRemarks))
                         {
                             <div class="metric-row">
@@ -213,7 +234,7 @@
                                    rel="noopener noreferrer"
                                    class="btn admin-btn-secondary">
                                     <i class="bi bi-file-earmark-pdf me-1"></i>
-                                    View receipt document
+                                    @(string.IsNullOrWhiteSpace(Model.StripeReceiptUrl) ? "View receipt document" : "View Stripe receipt")
                                 </a>
                             </div>
                         </div>
@@ -239,6 +260,13 @@
                             <div class="empty-state" style="padding: 1rem 0;">
                                 <i class="bi bi-x-circle-fill text-danger fs-4 d-block mb-1"></i>
                                 This payment has been rejected.
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(Model.StripeSessionId))
+                        {
+                            <div class="empty-state" style="padding: 1rem 0;">
+                                <i class="bi bi-hourglass-split text-info fs-4 d-block mb-1"></i>
+                                Waiting for Stripe confirmation from Amazon EventBridge.
                             </div>
                         }
                         else

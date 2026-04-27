@@ -323,7 +323,7 @@
                                                 : "—")
                                         </td>
                                         <td class="panel-meta" style="max-width: 130px; word-break: break-all;">
-                                            @(item.ReferenceNo ?? "—")
+                                            @(item.StripePaymentIntentId ?? item.StripeSessionId ?? item.ReferenceNo ?? "—")
                                         </td>
                                         <td>
                                             @{

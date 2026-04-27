@@ -35,6 +35,9 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<MaintenanceRequest>().Property(m => m.Status).HasConversion<string>();
             modelBuilder.Entity<Payment>().Property(p => p.PaymentMethod).HasConversion<string>();
             modelBuilder.Entity<Payment>().Property(p => p.Status).HasConversion<string>();
+            modelBuilder.Entity<Payment>().HasIndex(p => p.StripeSessionId);
+            modelBuilder.Entity<Payment>().HasIndex(p => p.StripePaymentIntentId);
+            modelBuilder.Entity<Payment>().HasIndex(p => p.StripeEventId);
             modelBuilder.Entity<Document>().Property(d => d.DocumentType).HasConversion<string>();
             modelBuilder.Entity<VisitorPass>().Property(v => v.Status).HasConversion<string>();
             modelBuilder.Entity<PasswordResetRequest>().Property(p => p.Status).HasConversion<string>();

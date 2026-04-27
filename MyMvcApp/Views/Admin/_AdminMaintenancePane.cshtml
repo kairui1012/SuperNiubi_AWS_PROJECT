@@ -1,0 +1,63 @@
+@model AdminDashboardViewModel
+
+<section class="admin-pane d-none" data-admin-pane="maintenance">
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Maintenance queue</h2>
+                    <span class="panel-meta">Request pipeline</span>
+                </div>
+                <div class="metric-row">
+                    <span>Pending</span>
+                    <span class="metric-value">@Model.MaintenanceReport.PendingCount</span>
+                </div>
+                <div class="metric-row">
+                    <span>Approved</span>
+                    <span class="metric-value">@Model.MaintenanceReport.ApprovedCount</span>
+                </div>
+                <div class="metric-row">
+                    <span>In progress</span>
+                    <span class="metric-value">@Model.MaintenanceReport.InProgressCount</span>
+                </div>
+                <div class="metric-row">
+                    <span>Completed</span>
+                    <span class="metric-value">@Model.MaintenanceReport.CompletedCount</span>
+                </div>
+                <div class="metric-row">
+                    <span>High priority open</span>
+                    <span class="metric-value">@Model.MaintenanceReport.HighPriorityOpenCount</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Recent maintenance</h2>
+                    <span class="panel-meta">Latest requests submitted</span>
+                </div>
+                @if (Model.RecentMaintenanceRequests.Count == 0)
+                {
+                    <div class="empty-state">No maintenance requests found.</div>
+                }
+                else
+                {
+                    <div class="activity-list">
+                        @foreach (var item in Model.RecentMaintenanceRequests)
+                        {
+                            <div class="activity-item">
+                                <div class="activity-title">@item.Title</div>
+                                <div class="activity-meta">@item.PropertyName • @item.TenantEmail</div>
+                                <div class="activity-meta mt-2">
+                                    <span class="badge @AdminDashboardUi.GetMaintenanceBadgeClass(item.Status)">@item.Status</span>
+                                    <span class="badge @AdminDashboardUi.GetPriorityBadgeClass(item.Priority)">@item.Priority priority</span>
+                                    <span>@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

@@ -6,6 +6,7 @@ using MyMvcApp.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using Stripe.Checkout;
 using System.Globalization;
 using System.Security.Claims;
 using QRCoder;
@@ -18,11 +19,13 @@ namespace MyMvcApp.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IConfiguration _configuration;
 
-        public TenantController(AppDbContext context, IWebHostEnvironment environment)
+        public TenantController(AppDbContext context, IWebHostEnvironment environment, IConfiguration configuration)
         {
             _context = context;
             _environment = environment;
+            _configuration = configuration;
         }
 
         private string? GetCurrentEmail()
@@ -530,7 +533,7 @@ namespace MyMvcApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UploadPayment(TenantPaymentsViewModel model)
+        public async Task<IActionResult> CreateCheckoutSession()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
             if (string.IsNullOrWhiteSpace(email))
@@ -548,56 +551,137 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction(nameof(PendingAssignment));
             }
 
+            var stripeSecretKey = _configuration["Stripe:SecretKey"];
+            if (string.IsNullOrWhiteSpace(stripeSecretKey) || stripeSecretKey.StartsWith("REPLACE_", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "Stripe secret key is not configured.";
+                return RedirectToAction(nameof(Payments));
+            }
+
+            Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
+
             var existingPayments = await _context.Payments
                 .Where(p => p.TenantId == tenant.TenantId)
                 .OrderByDescending(p => p.PaymentYear)
                 .ThenByDescending(p => p.PaymentDate)
                 .ToListAsync();
 
-            if (!ModelState.IsValid)
-            {
-                var rebuiltModel = BuildPaymentsViewModel(tenant, existingPayments);
-                rebuiltModel.NewPayment.PaymentMethod = model.NewPayment.PaymentMethod ?? rebuiltModel.NewPayment.PaymentMethod;
-                return View(nameof(Payments), rebuiltModel);
-            }
-
             var now = DateTime.UtcNow;
             var nextDueDate = GetNextDueDateUtc(tenant.RentDueDay, existingPayments, now);
             var month = nextDueDate.Month;
             var year = nextDueDate.Year;
             var monthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month);
-            var dueDay = Math.Clamp(tenant.RentDueDay, 1, DateTime.DaysInMonth(year, month));
-            var dueDate = new DateTime(year, month, dueDay, 0, 0, 0, DateTimeKind.Utc);
-            var paymentDate = now;
-            var mockReference = $"Ref-{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+            var propertyName = tenant.Property?.PropertyName ?? "Rental Property";
+            var unitAmount = (long)Math.Round(tenant.MonthlyRent * 100m, MidpointRounding.AwayFromZero);
+            var payment = existingPayments.FirstOrDefault(p =>
+                p.Status == PaymentStatus.Pending &&
+                p.PaymentYear == year &&
+                ParseMonthNumber(p.PaymentMonth) == month);
 
-            var payment = new Payment
+            if (payment is null)
             {
-                TenantId = tenant.TenantId,
-                PropertyId = tenant.PropertyId,
-                PaymentMonth = monthName,
-                PaymentYear = year,
-                Amount = tenant.MonthlyRent,
-                PaymentDate = paymentDate,
-                DueDate = dueDate,
-                PaymentMethod = model.NewPayment.PaymentMethod ?? PaymentMethod.OnlineTransfer,
-                ReferenceNo = mockReference,
-                ReceiptFileKey = null,
-                Status = PaymentStatus.Verified,
-                LandlordRemarks = null,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                payment = new Payment
+                {
+                    TenantId = tenant.TenantId,
+                    PropertyId = tenant.PropertyId,
+                    PaymentMonth = monthName,
+                    PaymentYear = year,
+                    Amount = tenant.MonthlyRent,
+                    DueDate = nextDueDate,
+                    PaymentMethod = PaymentMethod.OnlineTransfer,
+                    Status = PaymentStatus.Pending,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                _context.Payments.Add(payment);
+                await _context.SaveChangesAsync();
+            }
+
+            var successPath = Url.Action(nameof(PaymentSuccess), "Tenant");
+            var cancelPath = Url.Action(nameof(PaymentCancel), "Tenant");
+            var successUrl = $"{Request.Scheme}://{Request.Host}{successPath}?session_id={{CHECKOUT_SESSION_ID}}";
+            var cancelUrl = $"{Request.Scheme}://{Request.Host}{cancelPath}?session_id={{CHECKOUT_SESSION_ID}}";
+            var stripeMetadata = new Dictionary<string, string>
+            {
+                ["paymentId"] = payment.PaymentId.ToString(CultureInfo.InvariantCulture),
+                ["tenantId"] = tenant.TenantId.ToString(CultureInfo.InvariantCulture),
+                ["propertyId"] = tenant.PropertyId.ToString(CultureInfo.InvariantCulture),
+                ["paymentMonth"] = monthName,
+                ["paymentYear"] = year.ToString(CultureInfo.InvariantCulture)
             };
 
-            _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
+            var options = new SessionCreateOptions
+            {
+                Mode = "payment",
+                CustomerEmail = tenant.User.Email,
+                ClientReferenceId = payment.PaymentId.ToString(CultureInfo.InvariantCulture),
+                SuccessUrl = successUrl,
+                CancelUrl = cancelUrl,
+                PaymentMethodTypes = new List<string> { "card" },
+                PaymentIntentData = new SessionPaymentIntentDataOptions
+                {
+                    Metadata = stripeMetadata,
+                    ReceiptEmail = tenant.User.Email
+                },
+                LineItems = new List<SessionLineItemOptions>
+                {
+                    new()
+                    {
+                        Quantity = 1,
+                        PriceData = new SessionLineItemPriceDataOptions
+                        {
+                            Currency = "myr",
+                            UnitAmount = unitAmount,
+                            ProductData = new SessionLineItemPriceDataProductDataOptions
+                            {
+                                Name = $"Rent - {propertyName}",
+                                Description = $"{monthName} {year} rent payment"
+                            }
+                        }
+                    }
+                },
+                Metadata = stripeMetadata
+            };
 
-            payment.ReceiptFileKey = await GenerateMockPaymentReceiptPdfAsync(tenant, payment);
+            var service = new SessionService();
+            var session = await service.CreateAsync(options);
+
+            payment.StripeSessionId = session.Id;
+            payment.ReferenceNo = session.Id;
+            payment.LandlordRemarks = "Awaiting Stripe confirmation from Amazon EventBridge.";
             payment.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Mock payment completed and marked as verified.";
-            return RedirectToAction(nameof(Payments));
+            return Redirect(session.Url);
+        }
+
+        [HttpGet]
+        public IActionResult PaymentSuccess(string? session_id)
+        {
+            ViewBag.StripeSessionId = session_id;
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PaymentCancel(string? session_id)
+        {
+            if (!string.IsNullOrWhiteSpace(session_id))
+            {
+                var payment = await _context.Payments.FirstOrDefaultAsync(p =>
+                    p.StripeSessionId == session_id &&
+                    p.Status == PaymentStatus.Pending);
+
+                if (payment is not null)
+                {
+                    payment.Status = PaymentStatus.Rejected;
+                    payment.LandlordRemarks = "Stripe Checkout was cancelled before payment was completed.";
+                    payment.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return View();
         }
 
         public async Task<IActionResult> Visitors(int? passId)

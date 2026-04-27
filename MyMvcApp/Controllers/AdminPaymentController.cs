@@ -38,6 +38,8 @@ namespace MyMvcApp.Controllers
                     p.Tenant.User.Email.Contains(s) ||
                     p.Property.PropertyName.Contains(s) ||
                     (p.ReferenceNo != null && p.ReferenceNo.Contains(s)) ||
+                    (p.StripeSessionId != null && p.StripeSessionId.Contains(s)) ||
+                    (p.StripePaymentIntentId != null && p.StripePaymentIntentId.Contains(s)) ||
                     (p.Property.Landlord != null && p.Property.Landlord.Email.Contains(s)));
             }
 
@@ -107,6 +109,8 @@ namespace MyMvcApp.Controllers
                     VerifiedDate = p.Status == PaymentStatus.Verified ? p.UpdatedAt : (DateTime?)null,
                     PaymentMethod = p.PaymentMethod,
                     ReferenceNo = p.ReferenceNo,
+                    StripeSessionId = p.StripeSessionId,
+                    StripePaymentIntentId = p.StripePaymentIntentId,
                     PaymentPeriod = p.PaymentMonth + " " + p.PaymentYear
                 })
                 .ToListAsync();
@@ -167,9 +171,15 @@ namespace MyMvcApp.Controllers
                 VerifiedDate = payment.Status == PaymentStatus.Verified ? payment.UpdatedAt : null,
                 PaymentMethod = payment.PaymentMethod,
                 ReferenceNo = payment.ReferenceNo,
-                ReceiptFileUrl = !string.IsNullOrWhiteSpace(payment.ReceiptFileKey)
+                ReceiptFileUrl = !string.IsNullOrWhiteSpace(payment.StripeReceiptUrl)
+                    ? payment.StripeReceiptUrl
+                    : !string.IsNullOrWhiteSpace(payment.ReceiptFileKey)
                     ? "/" + payment.ReceiptFileKey.TrimStart('/')
                     : null,
+                StripeSessionId = payment.StripeSessionId,
+                StripePaymentIntentId = payment.StripePaymentIntentId,
+                StripeReceiptUrl = payment.StripeReceiptUrl,
+                StripeEventId = payment.StripeEventId,
                 LandlordRemarks = payment.LandlordRemarks,
                 PaymentPeriod = payment.PaymentMonth + " " + payment.PaymentYear,
                 ReturnUrl = returnUrl
@@ -190,6 +200,12 @@ namespace MyMvcApp.Controllers
             if (payment.Status == PaymentStatus.Verified)
             {
                 TempData["ErrorMessage"] = "This payment is already verified.";
+                return RedirectToAction(nameof(Detail), new { id, returnUrl });
+            }
+
+            if (!string.IsNullOrWhiteSpace(payment.StripeSessionId))
+            {
+                TempData["ErrorMessage"] = "Stripe payments are verified by Amazon EventBridge. Wait for the Stripe event instead of verifying manually.";
                 return RedirectToAction(nameof(Detail), new { id, returnUrl });
             }
 
@@ -257,6 +273,8 @@ namespace MyMvcApp.Controllers
                     p.Tenant.User.Email.Contains(s) ||
                     p.Property.PropertyName.Contains(s) ||
                     (p.ReferenceNo != null && p.ReferenceNo.Contains(s)) ||
+                    (p.StripeSessionId != null && p.StripeSessionId.Contains(s)) ||
+                    (p.StripePaymentIntentId != null && p.StripePaymentIntentId.Contains(s)) ||
                     (p.Property.Landlord != null && p.Property.Landlord.Email.Contains(s)));
             }
 
