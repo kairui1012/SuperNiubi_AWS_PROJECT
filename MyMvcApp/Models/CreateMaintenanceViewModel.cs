@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace MyMvcApp.Models
 {
@@ -22,5 +23,7 @@ namespace MyMvcApp.Models
 
         [Required(ErrorMessage = "Please describe actual problem")]
         public string Description { get; set; } = string.Empty;
+
+        public IFormFile? IssueImage { get; set; }
     }
 }

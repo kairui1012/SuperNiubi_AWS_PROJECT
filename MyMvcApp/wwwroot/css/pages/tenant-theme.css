@@ -141,6 +141,7 @@ body.tenant-cloud-skin {
   display: grid;
   gap: 1rem;
   background: #eef4fb;
+  grid-auto-rows: max-content;
 }
 
 .tenant-toolbar {
@@ -222,6 +223,28 @@ body.tenant-cloud-skin {
   border-radius: 8px;
   padding: 18px;
   color: #111827;
+}
+
+.tenant-notification-list {
+  display: grid;
+  gap: 12px;
+}
+
+.tenant-notification-item {
+  border: 1px solid #e5edf8;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.tenant-chart-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+}
+
+.tenant-chart-wrap-sm {
+  min-height: 220px;
 }
 
 .tenant-overview-top,
@@ -857,6 +880,11 @@ body.tenant-cloud-skin {
 
 [data-bs-theme="dark"] .tenant-action-list a {
   color: #d6def0;
+}
+
+[data-bs-theme="dark"] .tenant-notification-item {
+  background: #151925;
+  border-color: #283044;
 }
 
 [data-bs-theme="dark"] .tenant-btn-primary {

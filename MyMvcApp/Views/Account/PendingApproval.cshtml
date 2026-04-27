@@ -1,0 +1,219 @@
+@{
+    ViewData["Title"] = "Pending Approval";
+    ViewData["IsAuthPage"] = true;
+}
+@section Styles {
+    <style>
+        .pending-shell {
+            min-height: calc(100dvh - 88px);
+            width: 100vw;
+            margin-inline: calc(50% - 50vw);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(1rem, 4vh, 2.5rem) clamp(1rem, 3vw, 2rem);
+            background: #f8fafc;
+        }
+
+        body:has(.pending-shell) {
+            background: #f8fafc !important;
+        }
+
+        body:has(.pending-shell) .navbar {
+            margin-bottom: 0 !important;
+            background: #f8fafc !important;
+        }
+
+        body:has(.pending-shell) main[role="main"] {
+            padding-bottom: 0 !important;
+        }
+
+        .pending-card {
+            width: min(460px, 100%);
+            padding: clamp(2rem, 5vw, 3rem);
+            border: 1px solid #e2e8f0;
+            border-radius: 28px;
+            background: #ffffff;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .pending-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            text-decoration: none;
+        }
+
+        .pending-brand-mark {
+            width: 3rem;
+            height: 3rem;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow:
+                0 12px 22px rgba(37, 99, 235, 0.16),
+                inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+            overflow: hidden;
+        }
+
+        .pending-brand-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .pending-brand-name {
+            color: #182549;
+            font-size: 1.3rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .pending-brand-accent {
+            color: #168f9f;
+        }
+
+        .pending-icon-wrap {
+            width: 5rem;
+            height: 5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, 0.07);
+            color: #2563eb;
+            font-size: 2.2rem;
+        }
+
+        .pending-title {
+            margin: 0;
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.15;
+        }
+
+        .pending-body {
+            margin: 0;
+            color: #64748b;
+            font-size: 0.96rem;
+            line-height: 1.72;
+        }
+
+        .pending-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 1.1rem;
+            border-radius: 999px;
+            background: rgba(37, 99, 235, 0.07);
+            color: #2563eb;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .pending-divider {
+            width: 100%;
+            border: 0;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .pending-back {
+            color: #64748b;
+            font-size: 0.88rem;
+            margin: 0;
+        }
+
+        .pending-back a {
+            color: #2563eb;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .pending-back a:hover {
+            text-decoration: underline;
+        }
+
+        [data-bs-theme="dark"] .pending-shell,
+        [data-bs-theme="dark"] body:has(.pending-shell),
+        [data-bs-theme="dark"] body:has(.pending-shell) .navbar {
+            background: #0f172a !important;
+        }
+
+        [data-bs-theme="dark"] .pending-card {
+            background: #111827;
+            border-color: #334155;
+        }
+
+        [data-bs-theme="dark"] .pending-title {
+            color: #f8fafc;
+        }
+
+        [data-bs-theme="dark"] .pending-brand-name {
+            color: #f8fafc;
+        }
+
+        [data-bs-theme="dark"] .pending-brand-accent {
+            color: #67e8f9;
+        }
+
+        [data-bs-theme="dark"] .pending-divider {
+            border-color: #334155;
+        }
+
+        [data-bs-theme="dark"] .pending-brand-mark {
+            background: #1e293b;
+            box-shadow:
+                0 12px 22px rgba(37, 99, 235, 0.2),
+                inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+        }
+    </style>
+}
+
+<div class="pending-shell">
+    <div class="pending-card">
+
+        <a asp-controller="Account" asp-action="Login" class="pending-brand">
+            <span class="pending-brand-mark">
+                <img src="~/images/propease_logo_header.svg" alt="PropEase logo" />
+            </span>
+            <span class="pending-brand-name">Prop<span class="pending-brand-accent">Ease</span></span>
+        </a>
+
+        <div class="pending-icon-wrap">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+
+        <h1 class="pending-title">Account Under Review</h1>
+
+        <p class="pending-body">
+            Thank you for registering! Your account is currently being reviewed
+            by our admin team. You will be able to log in once your account
+            has been approved.
+            <br /><br />
+            Please check back later — we appreciate your patience.
+        </p>
+
+        <span class="pending-badge">
+            <i class="bi bi-clock"></i>
+            Approval pending
+        </span>
+
+        <hr class="pending-divider" />
+
+        <p class="pending-back">
+            Already approved? <a asp-controller="Account" asp-action="Login">Back to Login</a>
+        </p>
+
+    </div>
+</div>

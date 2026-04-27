@@ -42,4 +42,10 @@ jobs:
           docker rm mymvcapp || true
           docker system prune -f || true
           docker pull ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
-          docker run -d -p 80:8080 --restart always --name mymvcapp -e AWS__UserPoolClientSecret="${{ secrets.AWS_USER_POOL_CLIENT_SECRET }}" ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
+          docker run -d -p 80:8080 --restart always --name mymvcapp \
+            -e AWS__UserPoolClientSecret="${{ secrets.AWS_USER_POOL_CLIENT_SECRET }}" \
+            -e Stripe__SecretKey="${{ secrets.STRIPE_SECRET_KEY }}" \
+            -e Stripe__PublishableKey="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
+            -e Authentication__Google__ClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
+            -e Authentication__Google__ClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest

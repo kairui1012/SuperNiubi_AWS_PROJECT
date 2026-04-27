@@ -3,6 +3,8 @@
     ViewData["Title"] = "Documents";
 }
 
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+
 <div class="tenant-console">
     <aside class="tenant-rail">
         <div class="tenant-rail-brand">
@@ -29,6 +31,11 @@
             <div class="alert alert-success">@successMessage</div>
         }
 
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
         <div class="tenant-toolbar">
             <div>
                 <p class="tenant-kicker">Document Vault</p>
@@ -38,10 +45,10 @@
             <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ Upload Document</button>
         </div>
 
-        <div class="tenant-panel" id="uploadForm" style="display:none;">
+        <div class="tenant-panel" id="uploadForm" style="display:none; margin-bottom: 20px;">
             <div class="tenant-panel-head"><h3 class="tenant-panel-title">Upload New Document</h3></div>
             <div class="tenant-panel-body tenant-form">
-                <form asp-action="UploadDocument" method="post" enctype="multipart/form-data">
+                <form id="docForm" asp-action="UploadDocument" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     <div class="tenant-form-grid">
                         <div>
@@ -67,13 +74,13 @@
                             <span asp-validation-for="NewDocument.Notes" class="text-danger"></span>
                         </div>
                         <div class="full">
-                            <label>File</label>
+                            <label>File (Required)</label>
                             <div class="drop-zone" id="dropZone">
-                                <input type="file" id="docFile" asp-for="NewDocument.File" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                                <input type="file" id="docFile" name="NewDocument.File" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,.xlsx,.xls" />
                                 <div class="dz-content">
                                     <div class="fs-3"><i class="bi bi-cloud-arrow-up"></i></div>
                                     <div class="tenant-sub"><strong>Click to upload</strong> or drag and drop</div>
-                                    <div class="tenant-sub">PDF, JPG, PNG, DOCX - max 10MB</div>
+                                    <div class="tenant-sub">PDF, JPG, JPEG, PNG, DOC, DOCX, TXT, XLS, XLSX - max 10MB</div>
                                 </div>
                                 <div id="dz-file" class="fs-4 mt-2" style="display:none;"><i class="bi bi-file-earmark-text"></i></div>
                                 <div class="tenant-sub mt-2" id="fileNameDisplay"></div>
@@ -83,7 +90,7 @@
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
                         <button type="button" class="btn tenant-btn tenant-btn-outline" onclick="toggleForm()">Cancel</button>
-                        <button type="submit" class="btn tenant-btn tenant-btn-primary">Upload to S3</button>
+                        <button type="submit" class="btn tenant-btn tenant-btn-primary">Upload Document</button>
                     </div>
                 </form>
             </div>
@@ -106,7 +113,6 @@
                     {
                         @foreach (var document in Model.Documents)
                         {
-                            var fileUrl = "/" + document.FileKey;
                             var fileSizeText = document.FileSize.HasValue
                                 ? $"{Math.Round(document.FileSize.Value / 1024d, 1)} KB"
                                 : "Unknown size";
@@ -115,15 +121,20 @@
                                 <div class="fw-semibold">@document.DocumentName</div>
                                 <div class="tenant-sub small mb-2">Uploaded @document.CreatedAt.ToLocalTime().ToString("dd MMM yyyy") - @fileSizeText</div>
                                 <span class="tenant-badge badge-primary mb-2">@document.DocumentType</span>
-                                <div class="d-flex gap-2">
-                                    <a href="@fileUrl" target="_blank" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
-                                    <a href="@fileUrl" download class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" target="_blank" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
+                                    <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                                    <form asp-action="DeleteDocument" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@document.DocumentId" />
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Archive this document?')">Archive</button>
+                                    </form>
                                 </div>
                             </div>
                         }
                     }
                 </div>
-                <div class="tenant-sub mt-3">Uploaded files are linked to your tenant account and kept in one place for easy access.</div>
+                <div class="tenant-sub mt-3">Uploaded files are protected by ownership checks. Archiving keeps an audit trail with soft delete.</div>
             </div>
         </div>
     </section>
@@ -132,14 +143,19 @@
 <script>
     function toggleForm() {
         const form = document.getElementById('uploadForm');
-        form.classList.toggle('console-open');
-        if (form.classList.contains('console-open')) {
+        if (form.style.display === 'none') {
+            form.style.display = 'block';
             form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Clear form when opening
+            document.getElementById('docForm').reset();
+        } else {
+            form.style.display = 'none';
         }
     }
 
+    // Show form if there are validation errors
     if (document.querySelector('.text-danger:not(:empty)')) {
-        toggleForm();
+        document.getElementById('uploadForm').style.display = 'block';
     }
 
     const fileInput = document.getElementById('docFile');
@@ -148,12 +164,12 @@
 
     fileInput.addEventListener('change', function () {
         const icon = document.getElementById('dz-file');
-        const content = document.getElementsByClassName('dz-content')[0];
+        const content = document.querySelector('.dz-content');
 
         if (this.files.length > 0) {
             icon.style.display = 'block';
             content.style.display = 'none';
-            fileNameDisplay.textContent = this.files[0].name;
+            fileNameDisplay.textContent = this.files[0].name + ' (' + (this.files[0].size / 1024 / 1024).toFixed(2) + ' MB)';
         } else {
             icon.style.display = 'none';
             content.style.display = 'block';
@@ -176,6 +192,12 @@
         if (e.dataTransfer.files.length) {
             fileInput.files = e.dataTransfer.files;
             fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    dropZone.addEventListener('click', function (e) {
+        if (e.target !== fileInput) {
+            fileInput.click();
         }
     });
 

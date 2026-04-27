@@ -9,6 +9,8 @@
     var documentCount = Model.DocumentQuantity;
 }
 
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+
 
 <div class="tenant-console">
     <aside class="tenant-rail">
@@ -81,6 +83,30 @@
             </div>
         </section>
 
+        <div class="tenant-layout-2">
+            <article class="tenant-panel">
+                <div class="tenant-panel-head">
+                    <h3 class="tenant-panel-title">Payment Trend (6 Months)</h3>
+                </div>
+                <div class="tenant-panel-body">
+                    <div class="tenant-chart-wrap">
+                        <canvas id="tenantPaymentTrendChart" aria-label="Tenant payment trend chart"></canvas>
+                    </div>
+                </div>
+            </article>
+
+            <article class="tenant-panel">
+                <div class="tenant-panel-head">
+                    <h3 class="tenant-panel-title">Maintenance Split</h3>
+                </div>
+                <div class="tenant-panel-body">
+                    <div class="tenant-chart-wrap tenant-chart-wrap-sm">
+                        <canvas id="tenantMaintenanceStatusChart" aria-label="Tenant maintenance status chart"></canvas>
+                    </div>
+                </div>
+            </article>
+        </div>
+
         <div class="tenant-dashboard-content">
             <article class="tenant-overview-panel">
                 <div class="tenant-section-head">
@@ -112,20 +138,39 @@
 
             <article class="tenant-overview-panel">
                 <div class="tenant-section-head">
-                    <h2>Actions</h2>
+                    <h2>Notifications</h2>
                 </div>
-                <div class="tenant-action-list">
-                    <a asp-action="MyProperty"><i class="bi bi-house-door"></i> Property</a>
-                    <a asp-action="MaintenanceRequest"><i class="bi bi-tools"></i> New Request</a>
-                    <a asp-action="Payments"><i class="bi bi-wallet2"></i> Payment</a>
-                    <a asp-action="Visitors"><i class="bi bi-qr-code-scan"></i> Visitor</a>
-                    <a asp-action="Documents"><i class="bi bi-file-earmark-text"></i> Document</a>
-                </div>
+
+                @if (Model.Notifications.Count == 0)
+                {
+                    <div class="tenant-empty compact">No alerts right now.</div>
+                }
+                else
+                {
+                    <div class="tenant-notification-list">
+                        @foreach (var item in Model.Notifications)
+                        {
+                            <div class="tenant-notification-item">
+                                <p class="tenant-kicker mb-1">@item.Category</p>
+                                <strong>@item.Title</strong>
+                                <p class="tenant-sub mt-1">@item.Message</p>
+                                <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
+                                    <span class="tenant-sub">@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                                    @if (!string.IsNullOrWhiteSpace(item.ActionUrl) && !string.IsNullOrWhiteSpace(item.ActionText))
+                                    {
+                                        <a class="tenant-link" href="@item.ActionUrl">@item.ActionText</a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </article>
         </div>
     </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
     function updateDateTime() {
         const now = new Date();
@@ -152,5 +197,88 @@
         document.getElementById('leaseBar').style.width = pct + '%';
         document.getElementById('leaseBarSub').textContent =
             pct + '% elapsed | ' + (remaining > 0 ? remaining + ' days remaining' : 'Lease ended');
+
+        const paymentLabels = @Json.Serialize(Model.PaymentChartLabels);
+        const paymentAmounts = @Json.Serialize(Model.PaymentChartAmounts);
+        const maintenanceCounts = @Json.Serialize(Model.MaintenanceStatusCounts);
+
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const gridColor = isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.24)';
+        const tickColor = isDark ? '#94a3b8' : '#64748b';
+        const borderColor = isDark ? '#1e293b' : '#ffffff';
+
+        const paymentCanvas = document.getElementById('tenantPaymentTrendChart');
+        if (paymentCanvas && window.Chart) {
+            new Chart(paymentCanvas, {
+                type: 'line',
+                data: {
+                    labels: paymentLabels,
+                    datasets: [{
+                        label: 'Verified rent',
+                        data: paymentAmounts,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        pointBackgroundColor: '#1d4ed8',
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: gridColor },
+                            ticks: {
+                                color: tickColor,
+                                callback: (value) => `RM ${Number(value).toLocaleString()}`
+                            }
+                        },
+                        x: {
+                            grid: { color: gridColor },
+                            ticks: { color: tickColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        const maintenanceCanvas = document.getElementById('tenantMaintenanceStatusChart');
+        if (maintenanceCanvas && window.Chart) {
+            const hasData = maintenanceCounts.some((value) => Number(value) > 0);
+            new Chart(maintenanceCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: hasData
+                        ? ['Pending', 'Approved', 'In Progress', 'Completed', 'Rejected']
+                        : ['No data'],
+                    datasets: [{
+                        data: hasData ? maintenanceCounts : [1],
+                        backgroundColor: hasData
+                            ? ['#f59e0b', '#0ea5e9', '#2563eb', '#10b981', '#ef4444']
+                            : ['#cbd5e1'],
+                        borderColor: borderColor,
+                        borderWidth: 3,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: tickColor, boxWidth: 12, padding: 12 }
+                        }
+                    }
+                }
+            });
+        }
     });
 </script>

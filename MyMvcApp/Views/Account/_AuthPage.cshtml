@@ -66,15 +66,7 @@
                     </div>
                 </form>
 
-                <form asp-action="ExternalLogin" method="post" class="auth-external-form @(isLogin ? "" : "d-none")" data-auth-form="login-external">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="provider" value="Google" />
-                    <input type="hidden" name="mode" value="login" />
-                    <button type="submit" class="auth-google-button">
-                        <i class="bi bi-google" aria-hidden="true"></i>
-                        <span>Continue with Google</span>
-                    </button>
-                </form>
+                <partial name="_GoogleLoginForm" model="@(new GoogleLoginFormViewModel { Mode = "login", ButtonText = "Continue with Google", DataAuthForm = "login-external", IsVisible = isLogin })" />
 
                 <form asp-action="RequestPasswordReset" method="post" class="auth-forgot-form @(isLogin ? "" : "d-none")" data-auth-form="forgot">
                     @Html.AntiForgeryToken()
@@ -105,15 +97,7 @@
                     </div>
                 </form>
 
-                <form asp-action="ExternalLogin" method="post" class="auth-external-form @(!isLogin ? "" : "d-none")" data-auth-form="register-external">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="provider" value="Google" />
-                    <input type="hidden" name="mode" value="register" />
-                    <button type="submit" class="auth-google-button">
-                        <i class="bi bi-google" aria-hidden="true"></i>
-                        <span>Sign up with Google</span>
-                    </button>
-                </form>
+                <partial name="_GoogleLoginForm" model="@(new GoogleLoginFormViewModel { Mode = "register", ButtonText = "Sign up with Google", DataAuthForm = "register-external", IsVisible = !isLogin })" />
             </div>
         </section>
 

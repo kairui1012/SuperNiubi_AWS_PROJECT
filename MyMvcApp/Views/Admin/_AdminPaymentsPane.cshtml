@@ -1,0 +1,132 @@
+@model AdminDashboardViewModel
+
+<section class="admin-pane d-none" data-admin-pane="payments">
+    @* Summary stat cards *@
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="panel-card text-center py-3">
+                <div class="panel-meta mb-1">Pending</div>
+                <div class="fw-bold fs-4">@Model.PaymentReport.PendingCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="panel-card text-center py-3">
+                <div class="panel-meta mb-1">Submitted</div>
+                <div class="fw-bold fs-4" style="color: var(--bs-info)">@Model.PaymentReport.SubmittedCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="panel-card text-center py-3">
+                <div class="panel-meta mb-1">Verified</div>
+                <div class="fw-bold fs-4" style="color: var(--bs-success)">@Model.PaymentReport.VerifiedCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="panel-card text-center py-3">
+                <div class="panel-meta mb-1">Overdue</div>
+                <div class="fw-bold fs-4" style="color: var(--bs-danger)">@Model.PaymentReport.OverdueCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="panel-card text-center py-3">
+                <div class="panel-meta mb-1">Rejected</div>
+                <div class="fw-bold fs-4">@Model.PaymentReport.RejectedCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="panel-card text-center py-3">
+                <div class="panel-meta mb-1">Total Verified</div>
+                <div class="fw-bold" style="font-size: 1rem; color: var(--bs-success)">
+                    @Model.PaymentReport.TotalVerifiedAmount.ToString("C")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Recent payments</h2>
+                    <span class="panel-meta">Latest 5 payment activities</span>
+                </div>
+                @if (Model.RecentPayments.Count == 0)
+                {
+                    <div class="empty-state">No payments found.</div>
+                }
+                else
+                {
+                    <div class="activity-list">
+                        @foreach (var item in Model.RecentPayments)
+                        {
+                            <div class="activity-item">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="activity-title" style="word-break: break-all;">@item.TenantEmail</div>
+                                        <div class="activity-meta">@item.PropertyName &bull; @item.PaymentMonth @item.PaymentYear</div>
+                                    </div>
+                                    <a asp-controller="AdminPayment" asp-action="Detail"
+                                       asp-route-id="@item.PaymentId"
+                                       class="btn admin-btn-secondary btn-sm flex-shrink-0">
+                                        View
+                                    </a>
+                                </div>
+                                <div class="activity-meta mt-2">
+                                    <span class="badge @AdminDashboardUi.GetPaymentBadgeClass(item.Status)">@item.Status</span>
+                                    <span>@item.Amount.ToString("C")</span>
+                                    <span>@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Payment management</h2>
+                    <span class="panel-meta">Full list &amp; actions</span>
+                </div>
+                <div class="metric-row">
+                    <span>This month verified</span>
+                    <span class="metric-value">@Model.PaymentReport.CurrentMonthVerifiedAmount.ToString("C")</span>
+                </div>
+                <div class="metric-row">
+                    <span>Needs attention (submitted)</span>
+                    <span class="metric-value">
+                        <span class="badge badge-soft-info">@Model.PaymentReport.SubmittedCount</span>
+                    </span>
+                </div>
+                <div class="metric-row">
+                    <span>Overdue (stored)</span>
+                    <span class="metric-value">
+                        <span class="badge badge-soft-danger">@Model.PaymentReport.OverdueCount</span>
+                    </span>
+                </div>
+                <div class="mt-4 d-flex flex-column gap-2">
+                    <a asp-controller="AdminPayment" asp-action="Index"
+                       class="btn admin-btn-primary w-100">
+                        <i class="bi bi-table me-1"></i>
+                        Manage all payments
+                    </a>
+                    <a asp-controller="AdminPayment" asp-action="Index" asp-route-status="Submitted"
+                       class="btn admin-btn-secondary w-100">
+                        <i class="bi bi-clock me-1"></i>
+                        Review submitted
+                    </a>
+                    <a asp-controller="AdminPayment" asp-action="Index" asp-route-status="Overdue"
+                       class="btn admin-btn-secondary w-100">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        View overdue
+                    </a>
+                    <a asp-controller="AdminPayment" asp-action="ExportCsv"
+                       class="btn admin-btn-secondary w-100">
+                        <i class="bi bi-download me-1"></i>
+                        Export all CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

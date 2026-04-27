@@ -1,10 +1,12 @@
 @model MaintenanceRequestViewModel
 @{
     ViewData["Title"] = "Maintenance Requests";
-    var pendingCount = Model.Requests.Count(r => r.Status.ToString() == "Pending");
-    var approvedCount = Model.Requests.Count(r => r.Status.ToString() == "Approved");
-    var completedCount = Model.Requests.Count(r => r.Status.ToString() == "Completed");
+    var pendingCount = Model.Requests.Count(r => r.Status == MaintenanceStatus.Pending);
+    var approvedCount = Model.Requests.Count(r => r.Status == MaintenanceStatus.Approved);
+    var completedCount = Model.Requests.Count(r => r.Status == MaintenanceStatus.Completed);
 }
+
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
 
 
 <div class="tenant-console">
@@ -28,6 +30,16 @@
     </aside>
 
     <section class="tenant-workspace">
+        @if (TempData["SuccessMessage"] is string successMessage)
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
         <div class="tenant-toolbar">
             <div>
                 <p class="tenant-kicker">Maintenance Desk</p>
@@ -44,12 +56,23 @@
             <div class="tenant-stat"><div class="tenant-stat-label">Completed</div><div class="tenant-stat-value">@completedCount</div><span class="tenant-badge badge-success">Closed</span></div>
         </div>
 
+        <div class="tenant-panel">
+            <div class="tenant-panel-head">
+                <h3 class="tenant-panel-title">Maintenance Analytics</h3>
+            </div>
+            <div class="tenant-panel-body">
+                <div class="tenant-chart-wrap tenant-chart-wrap-sm">
+                    <canvas id="tenantMaintenanceQueueChart" aria-label="Maintenance queue chart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <div class="tenant-panel" id="createForm" style="display:none;">
             <div class="tenant-panel-head">
                 <h3 class="tenant-panel-title">Create Maintenance Ticket</h3>
             </div>
             <div class="tenant-panel-body tenant-form">
-                <form asp-action="CreateMaintenance" method="post">
+                <form asp-action="CreateMaintenance" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     <div class="tenant-form-grid">
                         <div>
@@ -89,6 +112,11 @@
                             <textarea id="description" class="form-control" name="NewRequest.Description" placeholder="Please describe the issue in detail..."></textarea>
                             <span asp-validation-for="NewRequest.Description" class="text-danger"></span>
                         </div>
+                        <div class="full">
+                            <label for="issueImage">Issue Image (optional)</label>
+                            <input id="issueImage" class="form-control" type="file" asp-for="NewRequest.IssueImage" accept=".jpg,.jpeg,.png,.webp" />
+                            <span asp-validation-for="NewRequest.IssueImage" class="text-danger"></span>
+                        </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
                         <button type="button" class="btn tenant-btn tenant-btn-outline" onclick="toggleForm()">Cancel</button>
@@ -124,21 +152,77 @@
                                     <th>Priority</th>
                                     <th>Submitted</th>
                                     <th>Status</th>
+                                    <th>Timeline / Response</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var req in Model.Requests)
                                 {
-                                    var statusClass = req.Status.ToString() == "Completed" ? "badge-success" : req.Status.ToString() == "Approved" ? "badge-primary" : "badge-warning";
+                                    var statusClass = req.Status == MaintenanceStatus.Completed
+                                        ? "badge-success"
+                                        : req.Status == MaintenanceStatus.Approved || req.Status == MaintenanceStatus.InProgress
+                                            ? "badge-primary"
+                                            : req.Status == MaintenanceStatus.Rejected
+                                                ? "badge-danger"
+                                                : "badge-warning";
                                     <tr data-status="@req.Status">
                                         <td>
                                             <strong>@req.Title</strong>
                                             <div class="tenant-sub">@req.Description</div>
+                                            @if (!string.IsNullOrWhiteSpace(req.IssueImageKey))
+                                            {
+                                                <div class="mt-2">
+                                                    <a class="tenant-link" href="@($"/{req.IssueImageKey}")" target="_blank" rel="noopener noreferrer">View issue image</a>
+                                                </div>
+                                            }
                                         </td>
                                         <td>@req.Category</td>
                                         <td>@req.Priority</td>
                                         <td>@req.CreatedAt.ToString("dd MMM yyyy")</td>
                                         <td><span class="tenant-badge @statusClass">@req.Status</span></td>
+                                        <td>
+                                            <div class="tenant-sub">Updated: @req.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</div>
+                                            @if (req.ResolvedDate.HasValue)
+                                            {
+                                                <div class="tenant-sub">Resolved: @req.ResolvedDate.Value.ToLocalTime().ToString("dd MMM yyyy")</div>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(req.LandlordRemarks))
+                                            {
+                                                <div class="tenant-sub mt-1"><strong>Landlord:</strong> @req.LandlordRemarks</div>
+                                            }
+                                            @if (req.TenantConfirmedAt.HasValue)
+                                            {
+                                                <div class="tenant-sub mt-1">Confirmed by tenant @req.TenantConfirmedAt.Value.ToLocalTime().ToString("dd MMM yyyy")</div>
+                                                @if (req.TenantFeedbackRating.HasValue)
+                                                {
+                                                    <div class="tenant-sub">Rating: @req.TenantFeedbackRating / 5</div>
+                                                }
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (req.Status == MaintenanceStatus.Completed && !req.TenantConfirmedAt.HasValue)
+                                            {
+                                                <form asp-action="ConfirmMaintenanceCompletion" method="post" class="d-grid gap-2">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="requestId" value="@req.RequestId" />
+                                                    <select class="form-select form-select-sm" name="rating">
+                                                        <option value="">Rate service (optional)</option>
+                                                        <option value="5">5 - Excellent</option>
+                                                        <option value="4">4 - Good</option>
+                                                        <option value="3">3 - Fair</option>
+                                                        <option value="2">2 - Poor</option>
+                                                        <option value="1">1 - Very Poor</option>
+                                                    </select>
+                                                    <input class="form-control form-control-sm" name="feedbackComment" placeholder="Feedback (optional)" maxlength="1000" />
+                                                    <button type="submit" class="btn btn-sm tenant-btn tenant-btn-primary">Confirm Completion</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <span class="tenant-sub">No action</span>
+                                            }
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -150,6 +234,7 @@
     </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
     const hasError = @(ViewData.ModelState.IsValid ? "false" : "true");
 
@@ -172,4 +257,42 @@
             row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
         });
     }
+
+    (() => {
+        const chartElement = document.getElementById('tenantMaintenanceQueueChart');
+        if (!chartElement || !window.Chart) {
+            return;
+        }
+
+        const values = [@pendingCount, @approvedCount, @Model.Requests.Count(r => r.Status == MaintenanceStatus.InProgress), @completedCount, @Model.Requests.Count(r => r.Status == MaintenanceStatus.Rejected)];
+        const hasData = values.some((v) => v > 0);
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const tickColor = isDark ? '#94a3b8' : '#64748b';
+        const borderColor = isDark ? '#1e293b' : '#ffffff';
+
+        new Chart(chartElement, {
+            type: 'doughnut',
+            data: {
+                labels: hasData ? ['Pending', 'Approved', 'In Progress', 'Completed', 'Rejected'] : ['No data'],
+                datasets: [{
+                    data: hasData ? values : [1],
+                    backgroundColor: hasData ? ['#f59e0b', '#0ea5e9', '#2563eb', '#10b981', '#ef4444'] : ['#cbd5e1'],
+                    borderColor,
+                    borderWidth: 3,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: tickColor, boxWidth: 12, padding: 12 }
+                    }
+                }
+            }
+        });
+    })();
 </script>

@@ -237,6 +237,10 @@ namespace MyMvcApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("IssueImageKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("LandlordRemarks")
                         .HasColumnType("text");
 
@@ -256,6 +260,16 @@ namespace MyMvcApp.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("TenantConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TenantFeedbackComment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int?>("TenantFeedbackRating")
+                        .HasColumnType("integer");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
@@ -361,6 +375,22 @@ namespace MyMvcApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("StripeEventId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("StripeReceiptUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("StripeSessionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
@@ -370,6 +400,12 @@ namespace MyMvcApp.Migrations
                     b.HasKey("PaymentId");
 
                     b.HasIndex("PropertyId");
+
+                    b.HasIndex("StripeEventId");
+
+                    b.HasIndex("StripePaymentIntentId");
+
+                    b.HasIndex("StripeSessionId");
 
                     b.HasIndex("TenantId");
 
