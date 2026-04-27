@@ -12,6 +12,7 @@
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.35" />
     <PackageReference Include="AWSSDK.S3" Version="4.0.22.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.4" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="4.0.2.26" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
