@@ -673,40 +673,54 @@
     </section>
 
     <section class="admin-pane d-none" data-admin-pane="payments">
-        <div class="row g-4">
-            <div class="col-lg-5">
-                <div class="panel-card h-100">
-                    <div class="panel-heading">
-                        <h2 class="panel-title">Payment center</h2>
-                        <span class="panel-meta">Collection and exceptions</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Pending</span>
-                        <span class="metric-value">@Model.PaymentReport.PendingCount</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Submitted</span>
-                        <span class="metric-value">@Model.PaymentReport.SubmittedCount</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Verified</span>
-                        <span class="metric-value">@Model.PaymentReport.VerifiedCount</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Overdue</span>
-                        <span class="metric-value">@Model.PaymentReport.OverdueCount</span>
-                    </div>
-                    <div class="metric-row">
-                        <span>Total verified amount</span>
-                        <span class="metric-value">@Model.PaymentReport.TotalVerifiedAmount.ToString("C")</span>
+        @* Summary stat cards *@
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="panel-card text-center py-3">
+                    <div class="panel-meta mb-1">Pending</div>
+                    <div class="fw-bold fs-4">@Model.PaymentReport.PendingCount</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="panel-card text-center py-3">
+                    <div class="panel-meta mb-1">Submitted</div>
+                    <div class="fw-bold fs-4" style="color: var(--bs-info)">@Model.PaymentReport.SubmittedCount</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="panel-card text-center py-3">
+                    <div class="panel-meta mb-1">Verified</div>
+                    <div class="fw-bold fs-4" style="color: var(--bs-success)">@Model.PaymentReport.VerifiedCount</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="panel-card text-center py-3">
+                    <div class="panel-meta mb-1">Overdue</div>
+                    <div class="fw-bold fs-4" style="color: var(--bs-danger)">@Model.PaymentReport.OverdueCount</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="panel-card text-center py-3">
+                    <div class="panel-meta mb-1">Rejected</div>
+                    <div class="fw-bold fs-4">@Model.PaymentReport.RejectedCount</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="panel-card text-center py-3">
+                    <div class="panel-meta mb-1">Total Verified</div>
+                    <div class="fw-bold" style="font-size: 1rem; color: var(--bs-success)">
+                        @Model.PaymentReport.TotalVerifiedAmount.ToString("C")
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="row g-4">
             <div class="col-lg-7">
                 <div class="panel-card h-100">
                     <div class="panel-heading">
                         <h2 class="panel-title">Recent payments</h2>
-                        <span class="panel-meta">Latest payment activity</span>
+                        <span class="panel-meta">Latest 5 payment activities</span>
                     </div>
                     @if (Model.RecentPayments.Count == 0)
                     {
@@ -718,8 +732,17 @@
                             @foreach (var item in Model.RecentPayments)
                             {
                                 <div class="activity-item">
-                                    <div class="activity-title">@item.TenantEmail</div>
-                                    <div class="activity-meta">@item.PropertyName • @item.PaymentMonth @item.PaymentYear</div>
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div>
+                                            <div class="activity-title" style="word-break: break-all;">@item.TenantEmail</div>
+                                            <div class="activity-meta">@item.PropertyName &bull; @item.PaymentMonth @item.PaymentYear</div>
+                                        </div>
+                                        <a asp-controller="AdminPayment" asp-action="Detail"
+                                           asp-route-id="@item.PaymentId"
+                                           class="btn admin-btn-secondary btn-sm flex-shrink-0">
+                                            View
+                                        </a>
+                                    </div>
                                     <div class="activity-meta mt-2">
                                         <span class="badge @GetPaymentBadgeClass(item.Status)">@item.Status</span>
                                         <span>@item.Amount.ToString("C")</span>
@@ -729,6 +752,52 @@
                             }
                         </div>
                     }
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="panel-card h-100">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Payment management</h2>
+                        <span class="panel-meta">Full list &amp; actions</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>This month verified</span>
+                        <span class="metric-value">@Model.PaymentReport.CurrentMonthVerifiedAmount.ToString("C")</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Needs attention (submitted)</span>
+                        <span class="metric-value">
+                            <span class="badge badge-soft-info">@Model.PaymentReport.SubmittedCount</span>
+                        </span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Overdue (stored)</span>
+                        <span class="metric-value">
+                            <span class="badge badge-soft-danger">@Model.PaymentReport.OverdueCount</span>
+                        </span>
+                    </div>
+                    <div class="mt-4 d-flex flex-column gap-2">
+                        <a asp-controller="AdminPayment" asp-action="Index"
+                           class="btn admin-btn-primary w-100">
+                            <i class="bi bi-table me-1"></i>
+                            Manage all payments
+                        </a>
+                        <a asp-controller="AdminPayment" asp-action="Index" asp-route-status="Submitted"
+                           class="btn admin-btn-secondary w-100">
+                            <i class="bi bi-clock me-1"></i>
+                            Review submitted
+                        </a>
+                        <a asp-controller="AdminPayment" asp-action="Index" asp-route-status="Overdue"
+                           class="btn admin-btn-secondary w-100">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            View overdue
+                        </a>
+                        <a asp-controller="AdminPayment" asp-action="ExportCsv"
+                           class="btn admin-btn-secondary w-100">
+                            <i class="bi bi-download me-1"></i>
+                            Export all CSV
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1041,6 +1110,7 @@
             const headingKicker = document.querySelector('[data-admin-heading-kicker]');
             const headingTitle = document.querySelector('[data-admin-heading-title]');
             let chartsInitialized = false;
+            let chartInstances = [];
 
             const analyticsData = {
                 labels: @Json.Serialize(Model.MonthlyAnalytics.Select(item => item.MonthLabel)),
@@ -1073,10 +1143,25 @@
 
             const doughnutData = (labels, values) => {
                 const hasData = values.some((value) => Number(value) > 0);
-
                 return hasData
                     ? { labels, values, fallback: false }
                     : { labels: ['No data'], values: [1], fallback: true };
+            };
+
+            const getThemeColors = () => {
+                const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                return {
+                    gridColor: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(148, 163, 184, 0.22)',
+                    tickColor: isDark ? '#94a3b8' : '#64748b',
+                    titleColor: isDark ? '#f8fafc' : '#0f172a',
+                    borderColor: isDark ? '#1e293b' : '#ffffff'
+                };
+            };
+
+            const destroyCharts = () => {
+                chartInstances.forEach((c) => { try { c.destroy(); } catch (_) {} });
+                chartInstances = [];
+                chartsInitialized = false;
             };
 
             const initCharts = () => {
@@ -1092,11 +1177,9 @@
                     return;
                 }
 
-                const gridColor = 'rgba(148, 163, 184, 0.22)';
-                const tickColor = '#64748b';
-                const titleColor = '#0f172a';
+                const { gridColor, tickColor, titleColor, borderColor } = getThemeColors();
 
-                new Chart(collectionCanvas, {
+                chartInstances.push(new Chart(collectionCanvas, {
                     type: 'bar',
                     data: {
                         labels: analyticsData.labels,
@@ -1109,7 +1192,7 @@
                                 borderColor: '#2563eb',
                                 backgroundColor: 'rgba(37, 99, 235, 0.12)',
                                 pointBackgroundColor: '#2563eb',
-                                pointBorderColor: '#ffffff',
+                                pointBorderColor: borderColor,
                                 pointBorderWidth: 2,
                                 pointRadius: 4,
                                 tension: 0.35,
@@ -1187,10 +1270,10 @@
                             }
                         }
                     }
-                });
+                }));
 
                 const maintenanceData = doughnutData(analyticsData.maintenanceStatusLabels, analyticsData.maintenanceStatusCounts);
-                new Chart(maintenanceCanvas, {
+                chartInstances.push(new Chart(maintenanceCanvas, {
                     type: 'doughnut',
                     data: {
                         labels: maintenanceData.labels,
@@ -1199,7 +1282,7 @@
                             backgroundColor: maintenanceData.fallback
                                 ? ['rgba(148, 163, 184, 0.28)']
                                 : ['#f59e0b', '#0ea5e9', '#2563eb', '#10b981', '#ef4444'],
-                            borderColor: '#ffffff',
+                            borderColor: borderColor,
                             borderWidth: 3,
                             hoverOffset: 6
                         }]
@@ -1220,10 +1303,10 @@
                             }
                         }
                     }
-                });
+                }));
 
                 const roleData = doughnutData(analyticsData.userRoleLabels, analyticsData.userRoleCounts);
-                new Chart(roleCanvas, {
+                chartInstances.push(new Chart(roleCanvas, {
                     type: 'pie',
                     data: {
                         labels: roleData.labels,
@@ -1232,7 +1315,7 @@
                             backgroundColor: roleData.fallback
                                 ? ['rgba(148, 163, 184, 0.28)']
                                 : ['#7c3aed', '#06b6d4', '#22c55e'],
-                            borderColor: '#ffffff',
+                            borderColor: borderColor,
                             borderWidth: 3,
                             hoverOffset: 6
                         }]
@@ -1252,10 +1335,24 @@
                             }
                         }
                     }
-                });
+                }));
 
                 chartsInitialized = true;
             };
+
+            // Rebuild charts when the user switches between light / dark theme
+            const themeObserver = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.attributeName === 'data-bs-theme') {
+                        destroyCharts();
+                        const dashPane = document.querySelector('[data-admin-pane="dashboard"]');
+                        if (dashPane && !dashPane.classList.contains('d-none')) {
+                            requestAnimationFrame(initCharts);
+                        }
+                    }
+                }
+            });
+            themeObserver.observe(document.documentElement, { attributes: true });
 
             const setPane = (paneName) => {
                 const selectedTab = document.querySelector(`[data-admin-switch="${paneName}"]`);

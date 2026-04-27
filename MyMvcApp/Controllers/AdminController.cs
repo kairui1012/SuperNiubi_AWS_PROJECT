@@ -29,7 +29,10 @@ namespace MyMvcApp.Controllers
             "RejectPasswordReset",
             "CreateAnnouncement",
             "EditAnnouncement",
-            "DeleteAnnouncement"
+            "DeleteAnnouncement",
+            "VerifyPayment",
+            "RejectPayment",
+            "ExportPaymentReport"
         };
 
         private readonly AppDbContext _dbContext;

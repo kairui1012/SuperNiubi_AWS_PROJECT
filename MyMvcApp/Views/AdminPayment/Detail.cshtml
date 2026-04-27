@@ -1,0 +1,348 @@
+@model MyMvcApp.Models.Admin.PaymentDetailViewModel
+@using MyMvcApp.Models
+
+@functions {
+    private static string PaymentBadgeClass(PaymentStatus status, bool isComputedOverdue)
+    {
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+            return "badge-soft-danger";
+        return status switch
+        {
+            PaymentStatus.Pending => "badge-soft-secondary",
+            PaymentStatus.Submitted => "badge-soft-info",
+            PaymentStatus.Verified => "badge-soft-success",
+            PaymentStatus.Overdue => "badge-soft-danger",
+            PaymentStatus.Rejected => "badge-soft-danger",
+            _ => "badge-soft-secondary"
+        };
+    }
+
+    private static string PaymentStatusLabel(PaymentStatus status, bool isComputedOverdue)
+    {
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+            return "Overdue";
+        return status.ToString();
+    }
+}
+
+@{
+    ViewData["Title"] = $"Payment #{Model.PaymentId}";
+
+    var listUrl = string.IsNullOrWhiteSpace(Model.ReturnUrl)
+        ? Url.Action("Index", "AdminPayment")
+        : Url.Action("Index", "AdminPayment") + Model.ReturnUrl;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/landlord.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/admin.css" asp-append-version="true" />
+}
+
+<div class="landlord-console admin-console" data-admin-page>
+    <aside class="landlord-rail">
+        <div class="landlord-rail-brand">
+            <span class="landlord-rail-logo">
+                <i class="bi bi-receipt"></i>
+            </span>
+            <div>
+                <p class="landlord-rail-title">Payment Detail</p>
+                <p class="landlord-rail-sub">#@Model.PaymentId</p>
+            </div>
+        </div>
+        <nav class="landlord-rail-nav">
+            <a href="@listUrl" class="landlord-rail-link">
+                <i class="bi bi-arrow-left-circle"></i>
+                Back to list
+            </a>
+            <a asp-controller="Admin" asp-action="Dashboard" asp-route-activePane="payments"
+               class="landlord-rail-link">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </a>
+        </nav>
+    </aside>
+
+    <section class="landlord-workspace admin-workspace">
+        <div class="admin-shell">
+            <section class="admin-hero">
+                <div class="admin-page-titlebar">
+                    <div>
+                        <div class="admin-kicker">Payments</div>
+                        <h1 class="admin-title">
+                            Payment #@Model.PaymentId
+                            <span class="badge @PaymentBadgeClass(Model.Status, Model.IsComputedOverdue) ms-2 fs-6">
+                                @PaymentStatusLabel(Model.Status, Model.IsComputedOverdue)
+                            </span>
+                        </h1>
+                    </div>
+                    <a href="@listUrl" class="btn admin-btn-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Back to list
+                    </a>
+                </div>
+            </section>
+
+            @if (TempData["SuccessMessage"] is string successMsg)
+            {
+                <div class="alert alert-success admin-alert">@successMsg</div>
+            }
+            @if (TempData["ErrorMessage"] is string errorMsg)
+            {
+                <div class="alert alert-danger admin-alert">@errorMsg</div>
+            }
+
+            <div class="row g-4">
+                @* Left column: payment + property + tenant + landlord info *@
+                <div class="col-lg-8">
+                    @* Payment information *@
+                    <div class="panel-card mb-4">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Payment information</h2>
+                        </div>
+                        <div class="metric-row">
+                            <span>Payment ID</span>
+                            <span class="metric-value">#@Model.PaymentId</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Period</span>
+                            <span class="metric-value">@Model.PaymentPeriod</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Amount</span>
+                            <span class="metric-value fw-bold">@Model.Amount.ToString("C")</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Status</span>
+                            <span class="metric-value">
+                                <span class="badge @PaymentBadgeClass(Model.Status, Model.IsComputedOverdue)">
+                                    @PaymentStatusLabel(Model.Status, Model.IsComputedOverdue)
+                                </span>
+                            </span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Due date</span>
+                            <span class="metric-value">@Model.DueDate.ToLocalTime().ToString("dd MMM yyyy")</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Submitted date</span>
+                            <span class="metric-value">
+                                @(Model.SubmittedDate.HasValue
+                                    ? Model.SubmittedDate.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                    : "—")
+                            </span>
+                        </div>
+                        @if (Model.Status == PaymentStatus.Verified)
+                        {
+                            <div class="metric-row">
+                                <span>Verified date</span>
+                                <span class="metric-value">
+                                    @(Model.VerifiedDate.HasValue
+                                        ? Model.VerifiedDate.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                        : "—")
+                                </span>
+                            </div>
+                        }
+                        @if (Model.PaymentMethod.HasValue)
+                        {
+                            <div class="metric-row">
+                                <span>Payment method</span>
+                                <span class="metric-value">@Model.PaymentMethod</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.ReferenceNo))
+                        {
+                            <div class="metric-row">
+                                <span>Reference / Transaction ID</span>
+                                <span class="metric-value" style="word-break: break-all;">@Model.ReferenceNo</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.LandlordRemarks))
+                        {
+                            <div class="metric-row">
+                                <span>Remarks</span>
+                                <span class="metric-value text-danger">@Model.LandlordRemarks</span>
+                            </div>
+                        }
+                    </div>
+
+                    @* Tenant information *@
+                    <div class="panel-card mb-4">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Tenant</h2>
+                        </div>
+                        <div class="metric-row">
+                            <span>Email</span>
+                            <span class="metric-value" style="word-break: break-all;">@Model.TenantEmail</span>
+                        </div>
+                    </div>
+
+                    @* Property information *@
+                    <div class="panel-card mb-4">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Property</h2>
+                        </div>
+                        <div class="metric-row">
+                            <span>Property name</span>
+                            <span class="metric-value">@Model.PropertyName</span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.UnitNumber))
+                        {
+                            <div class="metric-row">
+                                <span>Unit / Room</span>
+                                <span class="metric-value">@Model.UnitNumber</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.LandlordEmail))
+                        {
+                            <div class="metric-row">
+                                <span>Landlord</span>
+                                <span class="metric-value" style="word-break: break-all;">@Model.LandlordEmail</span>
+                            </div>
+                        }
+                    </div>
+
+                    @* Receipt / proof of payment *@
+                    @if (!string.IsNullOrWhiteSpace(Model.ReceiptFileUrl))
+                    {
+                        <div class="panel-card mb-4">
+                            <div class="panel-heading">
+                                <h2 class="panel-title">Proof of payment</h2>
+                            </div>
+                            <div class="mt-2">
+                                <a href="@Model.ReceiptFileUrl"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="btn admin-btn-secondary">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i>
+                                    View receipt document
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* Right column: admin actions *@
+                <div class="col-lg-4">
+                    <div class="panel-card mb-4">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Admin actions</h2>
+                        </div>
+
+                        @if (Model.Status == PaymentStatus.Verified)
+                        {
+                            <div class="empty-state" style="padding: 1rem 0;">
+                                <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-1"></i>
+                                This payment has been verified.
+                            </div>
+                        }
+                        else if (Model.Status == PaymentStatus.Rejected)
+                        {
+                            <div class="empty-state" style="padding: 1rem 0;">
+                                <i class="bi bi-x-circle-fill text-danger fs-4 d-block mb-1"></i>
+                                This payment has been rejected.
+                            </div>
+                        }
+                        else
+                        {
+                            @* Verify action *@
+                            <div class="mb-3">
+                                <form asp-controller="AdminPayment" asp-action="Verify"
+                                      asp-route-id="@Model.PaymentId"
+                                      asp-route-returnUrl="@Model.ReturnUrl"
+                                      method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn btn-success w-100"
+                                            onclick="return confirm('Verify payment #@Model.PaymentId?');">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Verify payment
+                                    </button>
+                                </form>
+                            </div>
+
+                            @* Reject action *@
+                            <button type="button"
+                                    class="btn btn-outline-danger w-100"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#rejectForm"
+                                    aria-expanded="false">
+                                <i class="bi bi-x-circle me-1"></i>
+                                Reject payment
+                            </button>
+
+                            <div class="collapse mt-3" id="rejectForm">
+                                <form asp-controller="AdminPayment" asp-action="Reject"
+                                      asp-route-id="@Model.PaymentId"
+                                      asp-route-returnUrl="@Model.ReturnUrl"
+                                      method="post">
+                                    @Html.AntiForgeryToken()
+                                    <div class="mb-3">
+                                        <label class="admin-filter-label" for="remarks">Reason / remarks</label>
+                                        <textarea id="remarks"
+                                                  name="remarks"
+                                                  class="form-control filter-input"
+                                                  rows="3"
+                                                  maxlength="500"
+                                                  placeholder="Reason for rejection (optional)"></textarea>
+                                    </div>
+                                    <button type="submit"
+                                            class="btn btn-danger w-100"
+                                            onclick="return confirm('Reject payment #@Model.PaymentId? This cannot be undone.');">
+                                        Confirm rejection
+                                    </button>
+                                </form>
+                            </div>
+                        }
+                    </div>
+
+                    @* Quick status summary *@
+                    <div class="panel-card">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Status summary</h2>
+                        </div>
+                        <div class="metric-row">
+                            <span>Stored status</span>
+                            <span class="metric-value">
+                                <span class="badge @PaymentBadgeClass(Model.Status, false)">
+                                    @Model.Status
+                                </span>
+                            </span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Computed overdue</span>
+                            <span class="metric-value">
+                                @if (Model.IsComputedOverdue)
+                                {
+                                    <span class="badge badge-soft-danger">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-soft-success">No</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Days until / past due</span>
+                            <span class="metric-value">
+                                @{
+                                    var days = (int)(Model.DueDate.Date - DateTime.UtcNow.Date).TotalDays;
+                                    if (days > 0)
+                                    {
+                                        <span class="badge badge-soft-info">@days days left</span>
+                                    }
+                                    else if (days == 0)
+                                    {
+                                        <span class="badge badge-soft-warning">Due today</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-soft-danger">@Math.Abs(days) days overdue</span>
+                                    }
+                                }
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>

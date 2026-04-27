@@ -398,17 +398,15 @@ body.admin-cloud-skin .alert-danger {
 .admin-chart-frame {
     position: relative;
     width: 100%;
-    min-height: 260px;
+    height: 260px;
 }
 
 .admin-chart-frame-wide {
-    min-height: 320px;
+    height: 320px;
 }
 
 .admin-chart-frame canvas {
     display: block;
-    width: 100% !important;
-    height: 100% !important;
 }
 
 .admin-alert {
@@ -1198,4 +1196,35 @@ body.admin-cloud-skin .alert-danger {
     .admin-ops-summary {
         grid-template-columns: 1fr;
     }
+}
+
+/* ─── Dark mode: header theme-toggle button & brand logo ─────────────── */
+[data-bs-theme="dark"] #theme-toggle {
+    color: #e5eef9;
+    background: transparent;
+}
+
+[data-bs-theme="dark"] #theme-toggle:hover,
+[data-bs-theme="dark"] #theme-toggle:focus-visible {
+    color: #ffffff;
+    background: rgba(148, 163, 184, 0.12);
+    border-radius: 0.5rem;
+}
+
+/* Invert/adapt a dark SVG logo so it stays visible on the dark navbar */
+[data-bs-theme="dark"] body.admin-cloud-skin .app-brand-logo,
+[data-bs-theme="dark"] .app-brand-logo {
+    filter: brightness(0) invert(1);
+}
+
+/* Navbar brand text on dark admin navbar */
+[data-bs-theme="dark"] body.admin-cloud-skin .app-brand-link,
+[data-bs-theme="dark"] body.admin-cloud-skin .app-brand-link .navbar-brand,
+[data-bs-theme="dark"] body.admin-cloud-skin .app-brand-link span {
+    color: #e5eef9;
+}
+
+/* Navbar toggler icon in dark mode */
+[data-bs-theme="dark"] body.admin-cloud-skin .navbar-toggler-icon {
+    filter: brightness(0) invert(1);
 }
