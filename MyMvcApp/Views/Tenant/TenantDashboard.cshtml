@@ -5,12 +5,10 @@
     var propertyAddress = Model.PropertyAddress ?? "Unit 12A, Sunrise Residences, Jalan Utama 3";
     var leaseStart = Model.LeaseStartDate.ToString("dd MMM yyyy");
     var leaseEnd = Model.LeaseEndDate.ToString("dd MMM yyyy");
-    var maintenanceCount = Model.MaintenanceRequest.Count;
     var totalPayments = Model.PaymentRecord;
     var documentCount = Model.DocumentQuantity;
 }
 
-<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
 
 <div class="tenant-console">
     <aside class="tenant-rail">
@@ -22,12 +20,13 @@
             </div>
         </div>
         <nav class="tenant-rail-nav">
-            <a asp-action="TenantDashboard" class="tenant-rail-link active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a asp-action="Dashboard" class="tenant-rail-link active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
             <a asp-action="MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
             <a asp-action="MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
             <a asp-action="Payments" class="tenant-rail-link"><i class="bi bi-wallet2"></i> Payments</a>
             <a asp-action="Visitors" class="tenant-rail-link"><i class="bi bi-qr-code-scan"></i> Visitors</a>
             <a asp-action="Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+            <a asp-action="Announcements" class="tenant-rail-link"><i class="bi bi-megaphone-fill"></i> Announcements</a>
         </nav>
     </aside>
 
@@ -60,12 +59,16 @@
 
             <div class="tenant-overview-metrics">
                 <div>
-                    <span>Monthly Rent</span>
-                    <strong>RM @Model.MonthlyRent</strong>
+                    <span>Current Rent</span>
+                    <strong>RM @Model.MonthlyRent.ToString("N2")</strong>
                 </div>
                 <div>
-                    <span>Maintenance</span>
-                    <strong>@maintenanceCount</strong>
+                    <span>Next Payment Due</span>
+                    <strong>@Model.NextPaymentDue.ToLocalTime().ToString("dd MMM yyyy")</strong>
+                </div>
+                <div>
+                    <span>Maintenance Status</span>
+                    <strong>@Model.MaintenanceStatusSummary</strong>
                 </div>
                 <div>
                     <span>Payments</span>
@@ -74,10 +77,6 @@
                 <div>
                     <span>Documents</span>
                     <strong>@documentCount</strong>
-                </div>
-                <div>
-                    <span>Visitors</span>
-                    <strong>@Model.VisitorPassCount</strong>
                 </div>
             </div>
         </section>
@@ -142,13 +141,13 @@
     setInterval(updateDateTime, 30000);
 
     window.addEventListener('load', () => {
-        const start = new Date('@Model.LeaseStartDate');
-        const end = new Date('@Model.LeaseEndDate');
+        const start = new Date('@Model.LeaseStartDate.ToString("yyyy-MM-dd")T00:00:00');
+        const end = new Date('@Model.LeaseEndDate.ToString("yyyy-MM-dd")T23:59:59');
         const now = new Date();
-        const total = end - start;
-        const elapsed = Math.min(Math.max(now - start, 0), total);
+        const total = end.getTime() - start.getTime();
+        const elapsed = Math.min(Math.max(now.getTime() - start.getTime(), 0), total);
         const pct = total > 0 ? Math.round((elapsed / total) * 100) : 0;
-        const remaining = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+        const remaining = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
         document.getElementById('leaseBar').style.width = pct + '%';
         document.getElementById('leaseBarSub').textContent =

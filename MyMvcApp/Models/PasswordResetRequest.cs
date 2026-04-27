@@ -12,6 +12,7 @@ namespace MyMvcApp.Models
 
     public class PasswordResetRequest
     {
+        [Key]
         public int PasswordResetRequestId { get; set; }
 
         [Required]

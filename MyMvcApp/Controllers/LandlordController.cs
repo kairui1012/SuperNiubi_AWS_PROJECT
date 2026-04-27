@@ -18,9 +18,98 @@ namespace MyMvcApp.Controllers
             _dbContext = dbContext;
         }
 
-        public IActionResult Dashboard()
+        public async Task<IActionResult> Dashboard()
         {
-            return View();
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                TempData["ErrorMessage"] = "User email not found.";
+                return View(new LandlordDashboardViewModel());
+            }
+
+            var landlord = await _dbContext.Users.FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == userEmail.ToLower() &&
+                u.Role == "Landlord");
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return View(new LandlordDashboardViewModel());
+            }
+
+            var utcNow = DateTime.UtcNow;
+            var currentMonthStart = new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var nextMonthStart = currentMonthStart.AddMonths(1);
+
+            var propertiesQuery = _dbContext.Properties
+                .AsNoTracking()
+                .Where(p => p.LandlordId == landlord.Id);
+
+            var tenants = await _dbContext.Tenants
+                .AsNoTracking()
+                .Include(t => t.User)
+                .Include(t => t.Property)
+                .Include(t => t.Payments)
+                .Where(t => t.Property.LandlordId == landlord.Id)
+                .ToListAsync();
+
+            var unpaidTenantsCount = tenants.Count(t =>
+                t.LeaseStatus == LeaseStatus.Active &&
+                !t.Payments.Any(p => p.Status == PaymentStatus.Verified
+                    && p.PaymentDate >= currentMonthStart
+                    && p.PaymentDate < nextMonthStart));
+
+            var activeMaintenanceStatuses = new[]
+            {
+                MaintenanceStatus.Pending,
+                MaintenanceStatus.Approved,
+                MaintenanceStatus.InProgress
+            };
+
+            var model = new LandlordDashboardViewModel
+            {
+                LandlordEmail = landlord.Email,
+                MyPropertiesCount = await propertiesQuery.CountAsync(),
+                TenantCount = tenants.Count,
+                VacantPropertiesCount = await propertiesQuery.CountAsync(p => p.Tenant == null),
+                MonthlyRentalIncome = await _dbContext.Payments
+                    .AsNoTracking()
+                    .Where(p => p.Property.LandlordId == landlord.Id
+                        && p.Status == PaymentStatus.Verified
+                        && p.PaymentDate >= currentMonthStart
+                        && p.PaymentDate < nextMonthStart)
+                    .SumAsync(p => (decimal?)p.Amount) ?? 0m,
+                UnpaidTenantsCount = unpaidTenantsCount,
+                ActiveMaintenanceRequestsCount = await _dbContext.MaintenanceRequests
+                    .AsNoTracking()
+                    .CountAsync(m => m.Property.LandlordId == landlord.Id
+                        && activeMaintenanceStatuses.Contains(m.Status)),
+                RecentProperties = await propertiesQuery
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(4)
+                    .ToListAsync(),
+                RecentPayments = await _dbContext.Payments
+                    .AsNoTracking()
+                    .Include(p => p.Property)
+                    .Include(p => p.Tenant)
+                    .ThenInclude(t => t.User)
+                    .Where(p => p.Property.LandlordId == landlord.Id)
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(4)
+                    .ToListAsync(),
+                RecentMaintenanceRequests = await _dbContext.MaintenanceRequests
+                    .AsNoTracking()
+                    .Include(m => m.Property)
+                    .Include(m => m.Tenant)
+                    .ThenInclude(t => t.User)
+                    .Where(m => m.Property.LandlordId == landlord.Id)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .Take(4)
+                    .ToListAsync()
+            };
+
+            return View(model);
         }
 
         public IActionResult MyProperties()
@@ -501,6 +590,18 @@ namespace MyMvcApp.Controllers
                 .ToList();
 
             return View(payments);
+        }
+
+        [Authorize(Roles = "Landlord")]
+        public async Task<IActionResult> Announcements()
+        {
+            var announcements = await _dbContext.SystemAnnouncements
+                .AsNoTracking()
+                .Where(a => a.VisibleTo == "All" || a.VisibleTo == "Landlord")
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync();
+
+            return View(announcements);
         }
 
         [HttpGet]

@@ -30,6 +30,10 @@
             {
                 <div class="alert alert-success auth-alert">@TempData["SuccessMessage"]</div>
             }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger auth-alert auth-alert-danger">@TempData["ErrorMessage"]</div>
+            }
 
             <div class="auth-form-stack">
                 <form asp-action="Login" method="post" autocomplete="off" class="auth-form @(isLogin ? "" : "d-none")" data-auth-form="login">
@@ -62,6 +66,16 @@
                     </div>
                 </form>
 
+                <form asp-action="ExternalLogin" method="post" class="auth-external-form @(isLogin ? "" : "d-none")" data-auth-form="login-external">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="provider" value="Google" />
+                    <input type="hidden" name="mode" value="login" />
+                    <button type="submit" class="auth-google-button">
+                        <i class="bi bi-google" aria-hidden="true"></i>
+                        <span>Continue with Google</span>
+                    </button>
+                </form>
+
                 <form asp-action="RequestPasswordReset" method="post" class="auth-forgot-form @(isLogin ? "" : "d-none")" data-auth-form="forgot">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="email" data-forgot-email />
@@ -89,6 +103,16 @@
                     <div class="auth-action-row">
                         <button type="submit" class="btn btn-primary auth-submit w-100 auth-submit-register">Create account</button>
                     </div>
+                </form>
+
+                <form asp-action="ExternalLogin" method="post" class="auth-external-form @(!isLogin ? "" : "d-none")" data-auth-form="register-external">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="provider" value="Google" />
+                    <input type="hidden" name="mode" value="register" />
+                    <button type="submit" class="auth-google-button">
+                        <i class="bi bi-google" aria-hidden="true"></i>
+                        <span>Sign up with Google</span>
+                    </button>
                 </form>
             </div>
         </section>
@@ -126,6 +150,8 @@
         const loginForm = document.querySelector('[data-auth-form="login"]');
         const registerForm = document.querySelector('[data-auth-form="register"]');
         const forgotForm = document.querySelector('[data-auth-form="forgot"]');
+        const loginExternalForm = document.querySelector('[data-auth-form="login-external"]');
+        const registerExternalForm = document.querySelector('[data-auth-form="register-external"]');
         const forgotEmail = document.querySelector('[data-forgot-email]');
         const modeTabs = document.querySelectorAll('.auth-mode-tab');
         const loginSubmit = document.querySelector('.auth-submit-login');
@@ -139,6 +165,8 @@
             loginForm?.classList.toggle('d-none', !isLogin);
             registerForm?.classList.toggle('d-none', isLogin);
             forgotForm?.classList.toggle('d-none', !isLogin);
+            loginExternalForm?.classList.toggle('d-none', !isLogin);
+            registerExternalForm?.classList.toggle('d-none', isLogin);
             title.textContent = isLogin ? 'Welcome back' : 'Create your Propease account';
             subtitle.textContent = isLogin ? 'Sign in to manage properties, tenants, payments, and maintenance in one place.' : 'Start managing properties, tenants, requests, and payments from one secure cloud dashboard.';
             loginSubmit && (loginSubmit.textContent = 'Sign in');

@@ -12,7 +12,7 @@ namespace MyMvcApp.Models
         [Key]
         public int TenantId { get; set; }
 
-        [ForeignKey("AppUser")]
+        [ForeignKey("User")]
         public int UserId { get; set; }
 
         [ForeignKey("Property")]
