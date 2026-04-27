@@ -38,16 +38,27 @@
                     </div>
 
                     <div class="row g-4 mb-4">
-                        <div class="col-md-6">
-                            <label asp-for="EndDate" class="form-label fw-semibold">Display Until (End Date) <span class="text-danger">*</span></label>
+                        <div class="col-md-4">
+                            <label asp-for="EventStartDate" class="form-label fw-semibold">Event/Promo Start Date</label>
+                            <input asp-for="EventStartDate" type="date" class="form-control" />
+                            <small class="text-muted">Optional. Actual start date.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EventEndDate" class="form-label fw-semibold">Event/Promo End Date</label>
+                            <input asp-for="EventEndDate" type="date" class="form-control" />
+                            <small class="text-muted">Optional. Actual end date.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EndDate" class="form-label fw-semibold text-danger">Hide Card On *</label>
                             <input asp-for="EndDate" type="date" class="form-control" required />
-                            <small class="text-muted">The card will disappear from the landing page after this date.</small>
+                            <small class="text-muted">When to remove from website.</small>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Cover Image (Uploads to AWS S3)</label>
-                            <input type="file" name="ImageFile" class="form-control" accept="image/*" />
-                            <small class="text-muted">Recommended ratio: 16:9. Max size: 5MB.</small>
-                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Cover Image (Uploads to AWS S3)</label>
+                        <input type="file" name="ImageFile" class="form-control" accept="image/*" />
+                        <small class="text-muted">Recommended ratio: 16:9. Max size: 5MB. Leave blank to keep existing image on edits.</small>
                     </div>
 
                     <hr class="my-4" />

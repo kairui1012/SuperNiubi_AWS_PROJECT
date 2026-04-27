@@ -1,130 +1,107 @@
 ﻿@model IEnumerable<MyMvcApp.Models.CommunityUpdate>
 @{
     ViewData["Title"] = "Community Hub";
-
-    // Split the data into categories for the UI
-    var latestNotice = Model.FirstOrDefault(m => m.Type == MyMvcApp.Models.UpdateType.Notice);
-    var upcomingEvents = Model.Where(m => m.Type == MyMvcApp.Models.UpdateType.Event).ToList();
-    var activePromotions = Model.Where(m => m.Type == MyMvcApp.Models.UpdateType.Promotion).ToList();
+    var updates = Model?.ToList() ?? new List<MyMvcApp.Models.CommunityUpdate>();
+    var activeCount = updates.Count(m => m.EndDate >= DateTime.UtcNow);
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/home.css" asp-append-version="true" />
 }
 
-<div class="home-container">
-    
-    <header class="pt-2 pb-4">
-        <div class="row align-items-end">
-            <div class="col-md-8">
-                <h1 class="display-5 fw-bold mb-3"><span class="text-gradient">Community Hub</span></h1>
-                <p class="text-muted fs-5 mb-4">Welcome to PropEase. Explore your community updates below.</p>
+<div class="community-board">
+    <section class="community-hero">
+        <div>
+            <p class="community-kicker">Propease Community Hub</p>
+            <h1>Community Events</h1>
+            <p class="community-subtitle">Stay updated with property announcements, community activities, and important notices.</p>
+        </div>
+        <div class="community-summary" aria-label="Community update summary">
+            <div>
+                <strong>@updates.Count</strong>
+                <span>Total updates</span>
+            </div>
+            <div>
+                <strong>@activeCount</strong>
+                <span>Active now</span>
             </div>
         </div>
-    </header>
+    </section>
 
-    @if (latestNotice != null)
+    @if (updates.Any())
     {
-        <section class="hub-section pt-0">
-            <div class="section-title-wrapper">
-                <h4 class="fw-bold d-flex align-items-center gap-2">
-                    <i class="bi bi-megaphone text-danger"></i> Important Notice
-                </h4>
-            </div>
-            <div class="card pinned-card border-0 position-relative overflow-hidden">
-                <div class="card-body p-5 d-flex align-items-center gap-4 flex-wrap flex-md-nowrap">
-                    <div class="pinned-icon badge-soft-danger d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width: 80px; height: 80px; font-size: 2rem;">
-                        <i class="bi bi-exclamation-triangle"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <span class="badge badge-soft-danger px-3 py-2 mb-3">Notice</span>
-                        <h3 class="fw-bold mb-2">@latestNotice.Title</h3>
-                        <p class="fs-5 text-muted mb-0">@Html.Raw(latestNotice.Description)</p>
-                    </div>
-                    <a asp-action="UpdateDetails" asp-route-id="@latestNotice.Id" class="btn btn-danger btn-lg rounded-pill px-5">Details</a>
-                </div>
-            </div>
-        </section>
-    }
+        <section class="community-grid" aria-label="Community events and updates">
+            @foreach (var item in updates)
+            {
+                var isExpired = item.EndDate < DateTime.UtcNow;
+                var plainDescription = System.Text.RegularExpressions.Regex.Replace(item.Description ?? string.Empty, "<.*?>", string.Empty);
+                
+                // Smart Date: Uses the actual event date if it exists, otherwise falls back to the end date
+                var calendarDate = item.EventStartDate ?? item.EndDate;
 
-    @if (upcomingEvents.Any())
-    {
-        <section id="events" class="hub-section">
-            <div class="section-title-wrapper">
-                <h4 class="fw-bold d-flex align-items-center gap-2">
-                    <i class="bi bi-calendar-star text-success"></i> Upcoming Events
-                </h4>
-                <p class="text-muted">Don't miss out on these neighborhood gatherings.</p>
-            </div>
-            <div class="row g-5">
-                @foreach (var evt in upcomingEvents)
-                {
-                    <div class="col-12 col-lg-6">
-                        <div class="card notice-card h-100 border-0">
-                            @if (!string.IsNullOrEmpty(evt.ImageUrl))
-                            {
-                                <img src="@evt.ImageUrl" class="card-img-top" alt="Event Cover" style="height: 200px; object-fit: cover;" />
-                            }
-                            <div class="card-body p-4 d-flex flex-column">
-                                <div class="d-flex justify-content-between mb-4">
-                                    <div class="notice-icon badge-soft-success"><i class="bi bi-cup-hot"></i></div>
-                                    <small class="text-muted">Posted: @evt.CreatedAt.ToString("MMM dd")</small>
-                                </div>
-                                <h4 class="fw-bold mb-3">@evt.Title</h4>
-                                <p class="text-muted flex-grow-1 text-truncate-2">
-                                    @(System.Text.RegularExpressions.Regex.Replace(evt.Description, "<.*?>", string.Empty))
-                                </p>
-                                <div class="mt-4 pt-4 border-top d-flex justify-content-between align-items-center">
-                                    <a asp-action="UpdateDetails" asp-route-id="@evt.Id" class="fw-bold notice-link text-decoration-none">
-                                        Read More <i class="bi bi-arrow-right"></i>
-                                    </a>
-                                </div>
+                var typeClass = item.Type == MyMvcApp.Models.UpdateType.Event
+                    ? "badge-soft-success"
+                    : item.Type == MyMvcApp.Models.UpdateType.Promotion
+                        ? "badge-soft-primary"
+                        : "badge-soft-danger";
+                var typeIcon = item.Type == MyMvcApp.Models.UpdateType.Event
+                    ? "bi-calendar-event"
+                    : item.Type == MyMvcApp.Models.UpdateType.Promotion
+                        ? "bi-tags"
+                        : "bi-megaphone";
+
+                <article class="community-card">
+                    <div class="community-card-media">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl" alt="@item.Title" />
+                        }
+                        else
+                        {
+                            <div class="community-card-placeholder">
+                                <i class="bi @typeIcon"></i>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="community-card-body">
+                        <div class="community-card-topline">
+                            <div class="community-date" aria-label="Date @calendarDate.ToString("MMM dd, yyyy")">
+                                <span>@calendarDate.ToString("MMM")</span>
+                                <strong>@calendarDate.ToString("dd")</strong>
+                            </div>
+                            <div class="community-badges">
+                                <span class="community-badge @typeClass">
+                                    <i class="bi @typeIcon me-1"></i>@item.Type
+                                </span>
+                                <span class="community-badge @(isExpired ? "badge-soft-secondary" : "badge-soft-success")">
+                                    @(isExpired ? "Ended" : "Active")
+                                </span>
                             </div>
                         </div>
-                    </div>
-                }
-            </div>
-        </section>
-    }
 
-    @if (activePromotions.Any())
-    {
-        <section id="promotions" class="hub-section">
-            <div class="section-title-wrapper">
-                <h4 class="fw-bold d-flex align-items-center gap-2">
-                    <i class="bi bi-tags text-primary"></i> Exclusive Promotions
-                </h4>
-                <p class="text-muted">Special offers curated for our residents.</p>
-            </div>
-            <div class="row g-5">
-                @foreach (var promo in activePromotions)
-                {
-                    <div class="col-12 col-lg-6">
-                        <div class="card notice-card h-100 border-0">
-                            @if (!string.IsNullOrEmpty(promo.ImageUrl))
-                            {
-                                <img src="@promo.ImageUrl" class="card-img-top" alt="Promo Cover" style="height: 200px; object-fit: cover;" />
-                            }
-                            <div class="card-body p-4 d-flex flex-column">
-                                <div class="d-flex justify-content-between mb-4">
-                                    <div class="notice-icon badge-soft-primary"><i class="bi bi-percent"></i></div>
-                                    <small class="text-muted">Valid till @promo.EndDate.ToString("MMM dd")</small>
-                                </div>
-                                <h4 class="fw-bold mb-3">@promo.Title</h4>
-                                <p class="text-muted flex-grow-1 text-truncate-2">
-                                    @(System.Text.RegularExpressions.Regex.Replace(promo.Description, "<.*?>", string.Empty))
-                                </p>
-                                <div class="mt-4 pt-4 border-top d-flex justify-content-between align-items-center">
-                                    <span class="text-danger fw-bold">Ends soon</span>
-                                    <a asp-action="UpdateDetails" asp-route-id="@promo.Id" class="fw-bold notice-link text-decoration-none">
-                                        View Offer <i class="bi bi-arrow-right"></i>
-                                    </a>
-                                </div>
-                            </div>
+                        <h2>@item.Title</h2>
+                        <p class="community-description">@plainDescription</p>
+
+                        <div class="community-card-footer">
+                            <span>Posted @item.CreatedAt.AddHours(8).ToString("MMM dd, yyyy")</span>
+                            <a asp-action="UpdateDetails" asp-route-id="@item.Id" class="community-link">
+                                Details <i class="bi bi-arrow-right"></i>
+                            </a>
                         </div>
                     </div>
-                }
+                </article>
+            }
+        </section>
+    }
+    else
+    {
+        <section class="community-empty">
+            <div class="community-empty-icon">
+                <i class="bi bi-calendar2-event"></i>
             </div>
+            <h2>No community events yet.</h2>
+            <p>New announcements and property updates will appear here.</p>
         </section>
     }
 </div>

@@ -1,0 +1,117 @@
+@model MyMvcApp.Models.CommunityUpdate
+@{
+    ViewData["Title"] = "Edit Community Update";
+}
+
+<div class="row justify-content-center pt-4">
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center mb-4 gap-3">
+            <a asp-action="Index" class="btn btn-light rounded-circle p-2"><i class="bi bi-arrow-left"></i></a>
+            <h2 class="fw-bold mb-0">Edit Update</h2>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 mb-5">
+            <div class="card-body p-4 p-md-5">
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger mb-4 rounded-3 shadow-sm">
+                        <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle me-2"></i> Form Rejected:</h6>
+                        <div asp-validation-summary="All" class="mb-0"></div>
+                    </div>
+                }
+
+                <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                    
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="ImageUrl" />
+                    
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-8">
+                            <label asp-for="Title" class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                            <input asp-for="Title" class="form-control form-control-lg" placeholder="e.g., Rooftop BBQ Party" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Type" class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                            <select asp-for="Type" class="form-select form-select-lg" asp-items="Html.GetEnumSelectList<MyMvcApp.Models.UpdateType>()"></select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label fw-semibold">Description (Rich Text) <span class="text-danger">*</span></label>
+                        <textarea asp-for="Description" id="rich-text-editor" class="form-control"></textarea>
+                    </div>
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4">
+                            <label asp-for="EventStartDate" class="form-label fw-semibold">Event/Promo Start Date</label>
+                            <input asp-for="EventStartDate" type="date" class="form-control" />
+                            <small class="text-muted">Optional. Actual start date.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EventEndDate" class="form-label fw-semibold">Event/Promo End Date</label>
+                            <input asp-for="EventEndDate" type="date" class="form-control" />
+                            <small class="text-muted">Optional. Actual end date.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EndDate" class="form-label fw-semibold text-danger">Hide Card On *</label>
+                            <input asp-for="EndDate" type="date" class="form-control" required />
+                            <small class="text-muted">When to remove from website.</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Cover Image (Uploads to AWS S3)</label>
+                        
+                        @if (!string.IsNullOrEmpty(Model?.ImageUrl))
+                        {
+                            <div class="mb-3 p-3 bg-light rounded-3 border">
+                                <span class="d-block text-muted small fw-bold mb-2">CURRENT IMAGE:</span>
+                                <img src="@Model.ImageUrl" alt="Current Cover" style="max-height: 120px; border-radius: 6px;" class="shadow-sm" />
+                            </div>
+                        }
+                        
+                        <input type="file" name="ImageFile" class="form-control" accept="image/*" />
+                        <small class="text-muted">Recommended ratio: 16:9. Max size: 5MB. <strong>Leave blank to keep existing image.</strong></small>
+                    </div>
+
+                    <hr class="my-4" />
+                    <h5 class="fw-bold mb-3">Call to Action (Optional)</h5>
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="CallToActionText" class="form-label fw-semibold">Button Text</label>
+                            <input asp-for="CallToActionText" class="form-control" placeholder="e.g., RSVP Now" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CallToActionUrl" class="form-label fw-semibold">Button Link URL</label>
+                            <input asp-for="CallToActionUrl" type="url" class="form-control" placeholder="https://forms.google.com/..." />
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-5">
+                        <a asp-action="Index" class="btn btn-light px-4 rounded-pill">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill fw-bold">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" integrity="sha512-6JR4bbn8rCKvrkdoTji/4c/8k/F1hHof4Z6x6o85+2ZpX626yZqgQk1z/X8S8sXJ12YkK2J8//IaqGZ5B/L11Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <script>
+      tinymce.init({
+        selector: '#rich-text-editor',
+        height: 300,
+        menubar: false,
+        promotion: false,
+        plugins: 'lists link image',
+        toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link',
+        skin: (window.matchMedia("(prefers-color-scheme: dark)").matches ? "oxide-dark" : "oxide"),
+        content_css: (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default")
+      });
+    </script>
+}

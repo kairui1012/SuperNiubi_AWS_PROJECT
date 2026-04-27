@@ -1,0 +1,384 @@
+@model MyMvcApp.Models.Admin.AdminPaymentListViewModel
+@using MyMvcApp.Models
+
+@functions {
+    private static string PaymentBadgeClass(PaymentStatus status, bool isComputedOverdue)
+    {
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+            return "badge-soft-danger";
+        return status switch
+        {
+            PaymentStatus.Pending => "badge-soft-secondary",
+            PaymentStatus.Submitted => "badge-soft-info",
+            PaymentStatus.Verified => "badge-soft-success",
+            PaymentStatus.Overdue => "badge-soft-danger",
+            PaymentStatus.Rejected => "badge-soft-danger",
+            _ => "badge-soft-secondary"
+        };
+    }
+
+    private static string PaymentStatusLabel(PaymentStatus status, bool isComputedOverdue)
+    {
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+            return "Overdue";
+        return status.ToString();
+    }
+
+    private static string SortIcon(string current, string column, string dir)
+    {
+        if (current != column) return "bi-arrow-down-up text-muted";
+        return dir == "asc" ? "bi-sort-up" : "bi-sort-down";
+    }
+}
+
+@{
+    ViewData["Title"] = "Payment Management";
+    var f = Model.Filter;
+
+    string SortLink(string col)
+    {
+        var newDir = (f.SortBy == col && f.SortDir == "asc") ? "desc" : "asc";
+        return Url.Action("Index", "AdminPayment", new
+        {
+            search = f.Search,
+            status = f.Status,
+            fromDate = f.FromDate?.ToString("yyyy-MM-dd"),
+            toDate = f.ToDate?.ToString("yyyy-MM-dd"),
+            sortBy = col,
+            sortDir = newDir,
+            page = 1
+        })!;
+    }
+
+    string PageLink(int p) => Url.Action("Index", "AdminPayment", new
+    {
+        search = f.Search,
+        status = f.Status,
+        fromDate = f.FromDate?.ToString("yyyy-MM-dd"),
+        toDate = f.ToDate?.ToString("yyyy-MM-dd"),
+        sortBy = f.SortBy,
+        sortDir = f.SortDir,
+        page = p
+    })!;
+
+    string ExportLink() => Url.Action("ExportCsv", "AdminPayment", new
+    {
+        search = f.Search,
+        status = f.Status,
+        fromDate = f.FromDate?.ToString("yyyy-MM-dd"),
+        toDate = f.ToDate?.ToString("yyyy-MM-dd")
+    })!;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/landlord.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/admin.css" asp-append-version="true" />
+}
+
+<div class="landlord-console admin-console" data-admin-page>
+    <aside class="landlord-rail">
+        <div class="landlord-rail-brand">
+            <span class="landlord-rail-logo">
+                <i class="bi bi-wallet2"></i>
+            </span>
+            <div>
+                <p class="landlord-rail-title">Payment Center</p>
+                <p class="landlord-rail-sub">Financial Management</p>
+            </div>
+        </div>
+        <nav class="landlord-rail-nav" aria-label="Payment sections">
+            <a href="@Url.Action("Index", "AdminPayment")"
+               class="landlord-rail-link @(string.IsNullOrEmpty(f.Status) ? "active" : "")">
+                <i class="bi bi-list-ul"></i>
+                All Payments
+            </a>
+            <a href="@Url.Action("Index", "AdminPayment", new { status = "Submitted" })"
+               class="landlord-rail-link @(f.Status == "Submitted" ? "active" : "")">
+                <i class="bi bi-clock"></i>
+                Submitted
+            </a>
+            <a href="@Url.Action("Index", "AdminPayment", new { status = "Overdue" })"
+               class="landlord-rail-link @(f.Status == "Overdue" ? "active" : "")">
+                <i class="bi bi-exclamation-triangle"></i>
+                Overdue
+            </a>
+            <a href="@Url.Action("Index", "AdminPayment", new { status = "Pending" })"
+               class="landlord-rail-link @(f.Status == "Pending" ? "active" : "")">
+                <i class="bi bi-hourglass-split"></i>
+                Pending
+            </a>
+            <a href="@Url.Action("Index", "AdminPayment", new { status = "Verified" })"
+               class="landlord-rail-link @(f.Status == "Verified" ? "active" : "")">
+                <i class="bi bi-check-circle"></i>
+                Verified
+            </a>
+            <hr style="border-color: var(--rail-divider, #e5e7eb); margin: 0.5rem 0;">
+            <a asp-controller="Admin" asp-action="Dashboard" asp-route-activePane="payments"
+               class="landlord-rail-link">
+                <i class="bi bi-arrow-left-circle"></i>
+                Back to Dashboard
+            </a>
+        </nav>
+    </aside>
+
+    <section class="landlord-workspace admin-workspace">
+        <div class="admin-shell">
+            <section class="admin-hero">
+                <div class="admin-page-titlebar">
+                    <div>
+                        <div class="admin-kicker">Payments</div>
+                        <h1 class="admin-title">Payment Management</h1>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="@ExportLink()" class="btn admin-btn-secondary">
+                            <i class="bi bi-download me-1"></i> Export CSV
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            @if (TempData["SuccessMessage"] is string successMsg)
+            {
+                <div class="alert alert-success admin-alert">@successMsg</div>
+            }
+            @if (TempData["ErrorMessage"] is string errorMsg)
+            {
+                <div class="alert alert-danger admin-alert">@errorMsg</div>
+            }
+
+            @* Stats cards *@
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="panel-card text-center py-3">
+                        <div class="panel-meta mb-1">Pending</div>
+                        <div class="fw-bold fs-4">@Model.PendingCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="panel-card text-center py-3">
+                        <div class="panel-meta mb-1">Submitted</div>
+                        <div class="fw-bold fs-4" style="color: var(--bs-info)">@Model.SubmittedCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="panel-card text-center py-3">
+                        <div class="panel-meta mb-1">Verified</div>
+                        <div class="fw-bold fs-4" style="color: var(--bs-success)">@Model.VerifiedCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="panel-card text-center py-3">
+                        <div class="panel-meta mb-1">Overdue</div>
+                        <div class="fw-bold fs-4" style="color: var(--bs-danger)">@Model.ComputedOverdueCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="panel-card text-center py-3">
+                        <div class="panel-meta mb-1">Rejected</div>
+                        <div class="fw-bold fs-4">@Model.RejectedCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="panel-card text-center py-3">
+                        <div class="panel-meta mb-1">Total Verified</div>
+                        <div class="fw-bold" style="font-size: 1.05rem; color: var(--bs-success)">
+                            @Model.TotalVerifiedAmount.ToString("C")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Filter bar *@
+            <div class="panel-card mb-4">
+                <form asp-controller="AdminPayment" asp-action="Index" method="get" class="admin-filter-bar" style="flex-wrap: wrap; gap: 0.75rem;">
+                    <input type="hidden" name="sortBy" value="@f.SortBy" />
+                    <input type="hidden" name="sortDir" value="@f.SortDir" />
+
+                    <div style="flex: 1 1 200px;">
+                        <label class="admin-filter-label" for="search">Search</label>
+                        <input type="text"
+                               id="search"
+                               name="search"
+                               class="form-control filter-input"
+                               placeholder="Tenant, property, landlord, ref #"
+                               value="@f.Search" />
+                    </div>
+
+                    <div style="flex: 0 1 150px;">
+                        <label class="admin-filter-label" for="status">Status</label>
+                        <select id="status" name="status" class="form-select filter-select">
+                            <option value="">All statuses</option>
+                            <option value="Pending" selected="@(f.Status == "Pending" ? "selected" : null)">Pending</option>
+                            <option value="Submitted" selected="@(f.Status == "Submitted" ? "selected" : null)">Submitted</option>
+                            <option value="Verified" selected="@(f.Status == "Verified" ? "selected" : null)">Verified</option>
+                            <option value="Overdue" selected="@(f.Status == "Overdue" ? "selected" : null)">Overdue</option>
+                            <option value="Rejected" selected="@(f.Status == "Rejected" ? "selected" : null)">Rejected</option>
+                        </select>
+                    </div>
+
+                    <div style="flex: 0 1 155px;">
+                        <label class="admin-filter-label" for="fromDate">From date</label>
+                        <input type="date"
+                               id="fromDate"
+                               name="fromDate"
+                               class="form-control filter-input"
+                               value="@f.FromDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div style="flex: 0 1 155px;">
+                        <label class="admin-filter-label" for="toDate">To date</label>
+                        <input type="date"
+                               id="toDate"
+                               name="toDate"
+                               class="form-control filter-input"
+                               value="@f.ToDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div style="flex: 0 0 auto; align-self: flex-end;">
+                        <button type="submit" class="btn admin-btn-primary">Apply</button>
+                    </div>
+
+                    <div style="flex: 0 0 auto; align-self: flex-end;">
+                        <a asp-controller="AdminPayment" asp-action="Index" class="btn admin-btn-secondary">Reset</a>
+                    </div>
+                </form>
+            </div>
+
+            @* Results table *@
+            <div class="panel-card">
+                <div class="panel-heading">
+                    <div>
+                        <h2 class="panel-title">Payment records</h2>
+                    </div>
+                    <span class="badge admin-count-badge">@Model.TotalCount result(s)</span>
+                </div>
+
+                @if (Model.Payments.Count == 0)
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        No payment records matched your filters.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table admin-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Tenant</th>
+                                    <th>Property</th>
+                                    <th>Landlord</th>
+                                    <th>
+                                        <a href="@SortLink("amount")" class="text-decoration-none text-inherit">
+                                            Amount <i class="bi @SortIcon(f.SortBy, "amount", f.SortDir)"></i>
+                                        </a>
+                                    </th>
+                                    <th>Status</th>
+                                    <th>Period</th>
+                                    <th>
+                                        <a href="@SortLink("due")" class="text-decoration-none text-inherit">
+                                            Due date <i class="bi @SortIcon(f.SortBy, "due", f.SortDir)"></i>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="@SortLink("submitted")" class="text-decoration-none text-inherit">
+                                            Submitted <i class="bi @SortIcon(f.SortBy, "submitted", f.SortDir)"></i>
+                                        </a>
+                                    </th>
+                                    <th>Ref #</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Payments)
+                                {
+                                    <tr>
+                                        <td class="panel-meta">@item.PaymentId</td>
+                                        <td>
+                                            <div class="fw-semibold" style="max-width: 180px; word-break: break-all;">@item.TenantEmail</div>
+                                        </td>
+                                        <td>
+                                            <div>@item.PropertyName</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.UnitNumber))
+                                            {
+                                                <div class="panel-meta">Unit @item.UnitNumber</div>
+                                            }
+                                        </td>
+                                        <td class="panel-meta" style="max-width: 160px; word-break: break-all;">
+                                            @(item.LandlordEmail ?? "—")
+                                        </td>
+                                        <td class="fw-semibold">@item.Amount.ToString("C")</td>
+                                        <td>
+                                            <span class="badge @PaymentBadgeClass(item.Status, item.IsComputedOverdue)">
+                                                @PaymentStatusLabel(item.Status, item.IsComputedOverdue)
+                                            </span>
+                                        </td>
+                                        <td class="panel-meta">@item.PaymentPeriod</td>
+                                        <td class="panel-meta">@item.DueDate.ToLocalTime().ToString("dd MMM yyyy")</td>
+                                        <td class="panel-meta">
+                                            @(item.SubmittedDate.HasValue
+                                                ? item.SubmittedDate.Value.ToLocalTime().ToString("dd MMM yyyy")
+                                                : "—")
+                                        </td>
+                                        <td class="panel-meta" style="max-width: 130px; word-break: break-all;">
+                                            @(item.ReferenceNo ?? "—")
+                                        </td>
+                                        <td>
+                                            @{
+                                                var detailUrl = Url.Action("Detail", "AdminPayment", new
+                                                {
+                                                    id = item.PaymentId,
+                                                    returnUrl = Context.Request.QueryString.ToString()
+                                                });
+                                            }
+                                            <a href="@detailUrl" class="btn admin-btn-secondary btn-sm">View</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav aria-label="Payment list pagination" class="mt-3">
+                            <ul class="pagination pagination-sm justify-content-center flex-wrap gap-1">
+                                @if (Model.CurrentPage > 1)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@PageLink(Model.CurrentPage - 1)">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                }
+
+                                @for (int p = Math.Max(1, Model.CurrentPage - 3);
+                                       p <= Math.Min(Model.TotalPages, Model.CurrentPage + 3);
+                                       p++)
+                                {
+                                    <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="@PageLink(p)">@p</a>
+                                    </li>
+                                }
+
+                                @if (Model.CurrentPage < Model.TotalPages)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@PageLink(Model.CurrentPage + 1)">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                        <p class="text-center panel-meta mt-1">
+                            Page @Model.CurrentPage of @Model.TotalPages &middot; @Model.TotalCount record(s)
+                        </p>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+</div>

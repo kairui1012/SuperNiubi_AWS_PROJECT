@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - PropEase</title>
     
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -16,6 +17,10 @@
     {
         <link rel="stylesheet" href="~/css/pages/landlord.css" asp-append-version="true" />
     }
+    else if ((ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty).Equals("Tenant", StringComparison.OrdinalIgnoreCase))
+    {
+        <link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+    }
     else if (!(ViewData["IsAuthPage"] as bool? ?? false))
     {
         <link rel="stylesheet" href="~/css/pages/admin.css" asp-append-version="true" />
@@ -25,12 +30,9 @@
     @await RenderSectionAsync("Styles", required: false)
 
     <script>
-        // 页面加载前立即设置主题，防止闪烁 (FOUC)
         const storedTheme = localStorage.getItem('theme');
         const getPreferredTheme = () => {
-            if (storedTheme) {
-                return storedTheme;
-            }
+            if (storedTheme) return storedTheme;
             return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         };
         document.documentElement.setAttribute('data-bs-theme', getPreferredTheme());
@@ -38,18 +40,23 @@
 </head>
 
 @{ 
-    // 保留你原有的皮肤判断逻辑，确保背景色正常
     var isAuthPage = ViewData["IsAuthPage"] as bool? ?? false; 
     var controllerName = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty; 
     var isLandlordPage = controllerName.Equals("Landlord", StringComparison.OrdinalIgnoreCase); 
+    var isTenantPage = controllerName.Equals("Tenant", StringComparison.OrdinalIgnoreCase); 
+    var currentUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
 }
-<body class="@(isAuthPage ? null : (isLandlordPage ? "landlord-cloud-skin" : "admin-cloud-skin"))">
+<body class="@(isAuthPage ? null : (isLandlordPage ? "landlord-cloud-skin" : (isTenantPage ? "tenant-cloud-skin" : "admin-cloud-skin")))">
     
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm bg-body-tertiary border-bottom box-shadow mb-4 py-2">
             <div class="container">
-                <a class="navbar-brand fw-bold text-primary fs-4" asp-area="" asp-controller="Home" asp-action="Index">
-                    PropEase
+                <a class="navbar-brand app-brand-link fw-bold text-primary fs-4" href="@currentUrl">
+                    <img src="~/images/propease_logo_header.svg"
+                         asp-append-version="true"
+                         alt=""
+                         class="app-brand-logo" />
+                    <span>PropEase</span>
                 </a>
                 
                 <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -69,27 +76,34 @@
                         {
                             var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? User.Identity.Name;
 
-                            <div class="dropdown">
-                                <button type="button" class="btn btn-outline-secondary rounded-pill dropdown-toggle d-flex align-items-center gap-2" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-person-circle fs-5"></i> 
-                                    <span>@userEmail</span>
+                            <div class="dropdown app-account-menu">
+                                <button type="button" class="app-account-trigger" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="app-account-avatar"><i class="bi bi-person"></i></span>
+                                    <span class="app-account-email">@userEmail</span>
+                                    <i class="bi bi-chevron-down app-account-chevron"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="userMenuDropdown">
+                                <ul class="dropdown-menu dropdown-menu-end app-account-dropdown mt-2" aria-labelledby="userMenuDropdown">
                                     
                                     @if (User.IsInRole("Admin"))
                                     {
-                                        <li><a class="dropdown-item" asp-controller="Admin" asp-action="Admin"><i class="bi bi-shield-lock me-2 text-muted"></i>Admin Panel</a></li>
+                                        <li><a class="dropdown-item app-account-item" asp-controller="Admin" asp-action="Dashboard"><i class="bi bi-shield-lock"></i><span>Admin Dashboard</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
+                                        <li><a class="dropdown-item app-account-item" asp-controller="CommunityAdmin" asp-action="Index"><i class="bi bi-megaphone"></i><span>Community Hub</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
                                     }
-                                    <li><a class="dropdown-item" asp-controller="Landlord" asp-action="Dashboard"><i class="bi bi-speedometer2 me-2 text-muted"></i>Dashboard</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Landlord" asp-action="MyProperties"><i class="bi bi-building me-2 text-muted"></i>Properties</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Tenant" asp-action="TenantDashboard"><i class="bi bi-people me-2 text-muted"></i>Tenants</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Tenant" asp-action="Payments"><i class="bi bi-credit-card me-2 text-muted"></i>Payments</a></li>
-                                    <li><hr class="dropdown-divider"></li>
+                                    else if (User.IsInRole("Landlord"))
+                                    {
+                                        <li><a class="dropdown-item app-account-item" asp-controller="Landlord" asp-action="Dashboard"><i class="bi bi-speedometer2"></i><span>Landlord Dashboard</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
+                                    }
+                                    else if (User.IsInRole("Tenant"))
+                                    {
+                                        <li><a class="dropdown-item app-account-item" asp-controller="Tenant" asp-action="Dashboard"><i class="bi bi-grid-1x2-fill"></i><span>Tenant Dashboard</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
+                                    }
+                                    <li><a class="dropdown-item app-account-item" asp-controller="Home" asp-action="Index"><i class="bi bi-calendar-event"></i><span>Community Events</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
+                                    <li><hr class="dropdown-divider app-account-divider"></li>
                                     
                                     <li>
                                         <form asp-controller="Account" asp-action="Logout" method="post" class="m-0 p-0">
-                                            <button type="submit" class="dropdown-item text-danger d-flex align-items-center">
-                                                <i class="bi bi-box-arrow-right me-2"></i> Log Out
+                                            <button type="submit" class="dropdown-item app-account-item app-account-item-danger">
+                                                <i class="bi bi-box-arrow-right"></i><span>Log Out</span>
                                             </button>
                                         </form>
                                     </li>
@@ -114,10 +128,10 @@
         </main>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <!-- Bootstrap 5.3.3 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const toggleBtn = document.getElementById('theme-toggle');

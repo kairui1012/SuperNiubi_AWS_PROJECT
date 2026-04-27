@@ -7,13 +7,19 @@
     var registerErrorMessage = ViewBag.RegisterError as string;
 }
 
-<div class="auth-page" data-auth-page data-auth-mode="@(isLogin ? "login" : "register")">
+<div class="auth-page auth-page-shell" data-auth-page data-auth-mode="@(isLogin ? "login" : "register")">
     <main class="auth-layout">
-        <section class="auth-panel auth-panel-form">
-            <div class="auth-copy-block">
-                <h1 class="auth-title" data-auth-title>@(isLogin ? "Login to your account" : "Create your account")</h1>
-                <p class="auth-subtitle" data-auth-subtitle>@(isLogin ? "Welcome back. Login to continue." : "Create an account and get started.")</p>
+        <section class="auth-panel auth-card auth-panel-form">
+            <div class="auth-brand" aria-label="Propease">
+                <span class="auth-brand-mark"><i class="bi bi-buildings"></i></span>
+                <span>Propease</span>
             </div>
+
+            <header class="auth-copy-block">
+                <p class="auth-kicker">Cloud property management</p>
+                <h1 class="auth-title" data-auth-title>@(isLogin ? "Welcome back" : "Create your Propease account")</h1>
+                <p class="auth-subtitle" data-auth-subtitle>@(isLogin ? "Sign in to manage properties, tenants, payments, and maintenance in one place." : "Start managing properties, tenants, requests, and payments from one secure cloud dashboard.")</p>
+            </header>
 
             <div class="auth-mode-switch" role="tablist" aria-label="Authentication mode">
                 <button type="button" class="auth-mode-tab @(isLogin ? "is-active" : "")" data-auth-switch="login" aria-pressed="@(isLogin ? "true" : "false")">Login</button>
@@ -23,6 +29,10 @@
             @if (TempData["SuccessMessage"] != null)
             {
                 <div class="alert alert-success auth-alert">@TempData["SuccessMessage"]</div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger auth-alert auth-alert-danger">@TempData["ErrorMessage"]</div>
             }
 
             <div class="auth-form-stack">
@@ -52,8 +62,24 @@
                     }
 
                     <div class="auth-action-row">
-                        <button type="submit" class="btn btn-primary auth-submit w-100 auth-submit-login">Login</button>
+                        <button type="submit" class="btn btn-primary auth-submit w-100 auth-submit-login">Sign in</button>
                     </div>
+                </form>
+
+                <form asp-action="ExternalLogin" method="post" class="auth-external-form @(isLogin ? "" : "d-none")" data-auth-form="login-external">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="provider" value="Google" />
+                    <input type="hidden" name="mode" value="login" />
+                    <button type="submit" class="auth-google-button">
+                        <i class="bi bi-google" aria-hidden="true"></i>
+                        <span>Continue with Google</span>
+                    </button>
+                </form>
+
+                <form asp-action="RequestPasswordReset" method="post" class="auth-forgot-form @(isLogin ? "" : "d-none")" data-auth-form="forgot">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="email" data-forgot-email />
+                    <button type="submit" class="auth-forgot-button">Forgot password?</button>
                 </form>
 
                 <form asp-action="Register" method="post" autocomplete="off" class="auth-form @(!isLogin ? "" : "d-none")" data-auth-form="register">
@@ -75,13 +101,44 @@
                     }
 
                     <div class="auth-action-row">
-                        <button type="submit" class="btn btn-primary auth-submit w-100 auth-submit-register">Register</button>
+                        <button type="submit" class="btn btn-primary auth-submit w-100 auth-submit-register">Create account</button>
                     </div>
+                </form>
+
+                <form asp-action="ExternalLogin" method="post" class="auth-external-form @(!isLogin ? "" : "d-none")" data-auth-form="register-external">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="provider" value="Google" />
+                    <input type="hidden" name="mode" value="register" />
+                    <button type="submit" class="auth-google-button">
+                        <i class="bi bi-google" aria-hidden="true"></i>
+                        <span>Sign up with Google</span>
+                    </button>
                 </form>
             </div>
         </section>
 
-        <section class="auth-panel auth-panel-visual" style="background-image: url('@authImageUrl');">
+        <section class="auth-panel auth-visual-panel auth-panel-visual" style="background-image: url('@authImageUrl');" aria-label="Propease platform overview">
+            <div class="auth-visual-overlay">
+                <div class="auth-visual-content">
+                    <span class="auth-visual-kicker">AWS-ready operations</span>
+                    <h2>One calm dashboard for every property workflow.</h2>
+                    <p>Coordinate residents, landlords, payments, maintenance, and community updates with a secure cloud foundation built for daily operations.</p>
+                    <div class="auth-visual-metrics" aria-label="Platform capabilities">
+                        <div>
+                            <strong>24/7</strong>
+                            <span>cloud access</span>
+                        </div>
+                        <div>
+                            <strong>6</strong>
+                            <span>core modules</span>
+                        </div>
+                        <div>
+                            <strong>AWS</strong>
+                            <span>deployment</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 </div>
@@ -92,6 +149,10 @@
         const tabs = document.querySelectorAll('[data-auth-switch]');
         const loginForm = document.querySelector('[data-auth-form="login"]');
         const registerForm = document.querySelector('[data-auth-form="register"]');
+        const forgotForm = document.querySelector('[data-auth-form="forgot"]');
+        const loginExternalForm = document.querySelector('[data-auth-form="login-external"]');
+        const registerExternalForm = document.querySelector('[data-auth-form="register-external"]');
+        const forgotEmail = document.querySelector('[data-forgot-email]');
         const modeTabs = document.querySelectorAll('.auth-mode-tab');
         const loginSubmit = document.querySelector('.auth-submit-login');
         const registerSubmit = document.querySelector('.auth-submit-register');
@@ -103,10 +164,13 @@
             if (page) page.dataset.authMode = mode;
             loginForm?.classList.toggle('d-none', !isLogin);
             registerForm?.classList.toggle('d-none', isLogin);
-            title.textContent = isLogin ? 'Login to your account' : 'Create your account';
-            subtitle.textContent = isLogin ? 'Welcome back. Login to continue.' : 'Create an account and get started.';
-            loginSubmit && (loginSubmit.textContent = 'Login');
-            registerSubmit && (registerSubmit.textContent = 'Register');
+            forgotForm?.classList.toggle('d-none', !isLogin);
+            loginExternalForm?.classList.toggle('d-none', !isLogin);
+            registerExternalForm?.classList.toggle('d-none', isLogin);
+            title.textContent = isLogin ? 'Welcome back' : 'Create your Propease account';
+            subtitle.textContent = isLogin ? 'Sign in to manage properties, tenants, payments, and maintenance in one place.' : 'Start managing properties, tenants, requests, and payments from one secure cloud dashboard.';
+            loginSubmit && (loginSubmit.textContent = 'Sign in');
+            registerSubmit && (registerSubmit.textContent = 'Create account');
             modeTabs.forEach(tab => {
                 const active = tab.dataset.authSwitch === mode;
                 tab.classList.toggle('is-active', active);
@@ -118,6 +182,13 @@
             event.preventDefault();
             setMode(tab.dataset.authSwitch);
         }));
+
+        forgotForm?.addEventListener('submit', () => {
+            const emailInput = loginForm?.querySelector('input[name="Email"]');
+            if (forgotEmail && emailInput) {
+                forgotEmail.value = emailInput.value;
+            }
+        });
 
         setMode(page?.dataset.authMode || 'login');
     })();
