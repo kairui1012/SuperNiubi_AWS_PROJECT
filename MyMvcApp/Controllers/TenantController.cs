@@ -1,21 +1,30 @@
-using Amazon.Extensions.CognitoAuthentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using System.Globalization;
+using System.Security.Claims;
+using System.Text.RegularExpressions;
+using QRCoder;
 
 namespace MyMvcApp.Controllers
-
 {
     [Authorize] // Ensures only logged-in users can reach this page
     public class TenantController : Controller
     {
-        private readonly UserManager<CognitoUser> _userManager;
         private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _environment;
+        private const long MaxDocumentSizeBytes = 10 * 1024 * 1024;
+        private const long MaxMaintenanceImageSizeBytes = 8 * 1024 * 1024;
+        private static readonly string[] AllowedDocumentExtensions = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"];
+        private static readonly string[] AllowedMaintenanceImageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
-        public TenantController(AppDbContext context, UserManager<CognitoUser> userManager)
+        public TenantController(AppDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
             _environment = environment;
@@ -36,8 +45,152 @@ namespace MyMvcApp.Controllers
             return $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
         }
 
+        private static string ExtractPassCode(string? rawPassCode)
+        {
+            var input = (rawPassCode ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return string.Empty;
+            }
+
+            var payloadMatch = Regex.Match(input, @"(?:^|\|)\s*Code\s*:\s*([^|]+)", RegexOptions.IgnoreCase);
+            if (payloadMatch.Success)
+            {
+                return payloadMatch.Groups[1].Value.Trim().ToUpperInvariant();
+            }
+
+            var tokenMatch = Regex.Match(input, @"VIS-[A-Z0-9]+", RegexOptions.IgnoreCase);
+            if (tokenMatch.Success)
+            {
+                return tokenMatch.Value.ToUpperInvariant();
+            }
+
+            return input.ToUpperInvariant();
+        }
+
+        private static bool HasAllowedExtension(string fileName, string[] allowedExtensions)
+        {
+            var extension = Path.GetExtension(fileName);
+            return !string.IsNullOrWhiteSpace(extension) && allowedExtensions.Contains(extension.ToLowerInvariant());
+        }
+
+        private async Task ExpireVisitorPassesAsync(int tenantId)
+        {
+            var today = DateTime.UtcNow.Date;
+            var activePastPasses = await _context.VisitorPasses
+                .Where(v => v.TenantId == tenantId && v.Status == VisitorPassStatus.Active && v.VisitDate.Date < today)
+                .ToListAsync();
+
+            if (activePastPasses.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var pass in activePastPasses)
+            {
+                pass.Status = VisitorPassStatus.Expired;
+                pass.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task<List<TenantNotificationItem>> BuildTenantNotificationsAsync(
+            Tenant tenant,
+            DateTime nextPaymentDue,
+            List<MaintenanceRequest> maintenanceRequests,
+            List<VisitorPass> visitorPasses)
+        {
+            var notifications = new List<TenantNotificationItem>();
+            var now = DateTime.UtcNow;
+
+            var daysUntilDue = (nextPaymentDue.Date - now.Date).Days;
+            if (daysUntilDue <= 7)
+            {
+                notifications.Add(new TenantNotificationItem
+                {
+                    Category = "Payment",
+                    Title = "Upcoming rent due",
+                    Message = $"Your rent is due on {nextPaymentDue.ToLocalTime():dd MMM yyyy}.",
+                    CreatedAt = now,
+                    ActionText = "Pay now",
+                    ActionUrl = Url.Action(nameof(Payments), "Tenant")
+                });
+            }
+
+            var daysToLeaseEnd = (tenant.LeaseEndDate.Date - now.Date).Days;
+            if (daysToLeaseEnd <= 45)
+            {
+                notifications.Add(new TenantNotificationItem
+                {
+                    Category = "Lease",
+                    Title = "Lease expiry reminder",
+                    Message = daysToLeaseEnd >= 0
+                        ? $"Your lease ends in {daysToLeaseEnd} day(s) on {tenant.LeaseEndDate.ToLocalTime():dd MMM yyyy}."
+                        : $"Your lease ended on {tenant.LeaseEndDate.ToLocalTime():dd MMM yyyy}.",
+                    CreatedAt = now,
+                    ActionText = "View property",
+                    ActionUrl = Url.Action(nameof(MyProperty), "Tenant")
+                });
+            }
+
+            foreach (var request in maintenanceRequests
+                .Where(r => r.Status != MaintenanceStatus.Pending)
+                .OrderByDescending(r => r.UpdatedAt)
+                .Take(3))
+            {
+                notifications.Add(new TenantNotificationItem
+                {
+                    Category = "Maintenance",
+                    Title = "Maintenance status update",
+                    Message = $"{request.Title} is now {request.Status}.",
+                    CreatedAt = request.UpdatedAt,
+                    ActionText = "Open maintenance",
+                    ActionUrl = Url.Action(nameof(MaintenanceRequest), "Tenant")
+                });
+            }
+
+            var recentVisitorPass = visitorPasses.OrderByDescending(v => v.CreatedAt).FirstOrDefault();
+            if (recentVisitorPass is not null)
+            {
+                notifications.Add(new TenantNotificationItem
+                {
+                    Category = "Visitor",
+                    Title = "Visitor pass created",
+                    Message = $"Pass {recentVisitorPass.PassCode} for {recentVisitorPass.VisitorName} ({recentVisitorPass.VisitDate.ToLocalTime():dd MMM yyyy}) is ready.",
+                    CreatedAt = recentVisitorPass.CreatedAt,
+                    ActionText = "Open visitors",
+                    ActionUrl = Url.Action(nameof(Visitors), "Tenant", new { passId = recentVisitorPass.VisitorPassId })
+                });
+            }
+
+            var announcementItems = await _context.SystemAnnouncements
+                .AsNoTracking()
+                .Where(a => a.VisibleTo == "All" || a.VisibleTo == "Tenant")
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(3)
+                .ToListAsync();
+
+            notifications.AddRange(announcementItems.Select(a => new TenantNotificationItem
+            {
+                Category = "Announcement",
+                Title = a.Title,
+                Message = a.Body.Length > 120 ? a.Body[..120] + "..." : a.Body,
+                CreatedAt = a.CreatedAt,
+                ActionText = "Read announcement",
+                ActionUrl = Url.Action(nameof(Announcements), "Tenant")
+            }));
+
+            return notifications
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(8)
+                .ToList();
+        }
+
         private async Task<TenantVisitorsViewModel> BuildVisitorViewModelAsync(Tenant tenant, CreateVisitorViewModel? newVisitor = null, int? selectedVisitorPassId = null)
         {
+            await ExpireVisitorPassesAsync(tenant.TenantId);
+
             var visitors = await _context.VisitorPasses
                 .Where(v => v.TenantId == tenant.TenantId)
                 .OrderByDescending(v => v.CreatedAt)
@@ -200,9 +353,9 @@ namespace MyMvcApp.Controllers
             }
 
             var tenantData = await _context.Tenants
-                .Include(t => t.User)     // Link 'User' Table
-                .Include(t => t.Property) // Link 'Property' Table
-                .Include(t => t.MaintenanceRequests) // Link 'Property' Table
+                .Include(t => t.User)
+                .Include(t => t.Property)
+                .Include(t => t.MaintenanceRequests)
                 .Include(t => t.Documents)
                 .Include(t => t.Payments)
                 .Include(t => t.VisitorPasses)
@@ -217,6 +370,7 @@ namespace MyMvcApp.Controllers
                 .OrderByDescending(r => r.CreatedAt)
                 .ToList();
             var paymentRecords = tenantData.Payments.ToList();
+            var visitorPasses = tenantData.VisitorPasses.ToList();
             var nextPaymentDue = GetNextDueDateUtc(tenantData.RentDueDay, paymentRecords, DateTime.UtcNow);
             var openMaintenanceCount = orderedMaintenanceRequests.Count(r =>
                 r.Status == MaintenanceStatus.Pending ||
@@ -226,11 +380,31 @@ namespace MyMvcApp.Controllers
                 ? $"{openMaintenanceCount} open"
                 : orderedMaintenanceRequests.FirstOrDefault()?.Status.ToString() ?? "No requests";
 
+            var chartMonths = Enumerable.Range(0, 6)
+                .Select(offset => new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-5 + offset))
+                .ToList();
+
+            var verifiedPaymentsByMonth = paymentRecords
+                .Where(p => p.Status == PaymentStatus.Verified)
+                .GroupBy(p => new { p.PaymentYear, Month = ParseMonthNumber(p.PaymentMonth) })
+                .Where(g => g.Key.Month >= 1 && g.Key.Month <= 12)
+                .ToDictionary(g => (g.Key.PaymentYear, g.Key.Month), g => g.Sum(p => p.Amount));
+
+            var notifications = await BuildTenantNotificationsAsync(tenantData, nextPaymentDue, orderedMaintenanceRequests, visitorPasses);
+
             var viewModel = new TenantDashboardViewModel
             {
                 TenantEmail = tenantData.User.Email,
-                PropertyName = tenantData.Property.PropertyName,
-                PropertyAddress = tenantData.Property.AddressLine1,
+                PropertyName = tenantData.Property?.PropertyName ?? "No property assigned",
+                PropertyAddress = tenantData.Property is null
+                    ? "Not assigned"
+                    : string.Join(", ", new[]
+                    {
+                        tenantData.Property.AddressLine1,
+                        tenantData.Property.City,
+                        tenantData.Property.State,
+                        tenantData.Property.PostalCode
+                    }.Where(s => !string.IsNullOrWhiteSpace(s))),
                 LeaseStartDate = tenantData.LeaseStartDate,
                 LeaseEndDate = tenantData.LeaseEndDate,
                 LeaseStatus = tenantData.LeaseStatus.ToString(),
@@ -241,7 +415,20 @@ namespace MyMvcApp.Controllers
                 MonthlyRent = tenantData.MonthlyRent,
                 NextPaymentDue = nextPaymentDue,
                 OpenMaintenanceCount = openMaintenanceCount,
-                MaintenanceStatusSummary = maintenanceStatusSummary
+                MaintenanceStatusSummary = maintenanceStatusSummary,
+                Notifications = notifications,
+                PaymentChartLabels = chartMonths.Select(month => month.ToString("MMM yy")).ToList(),
+                PaymentChartAmounts = chartMonths
+                    .Select(month => verifiedPaymentsByMonth.TryGetValue((month.Year, month.Month), out var amount) ? amount : 0m)
+                    .ToList(),
+                MaintenanceStatusCounts =
+                [
+                    orderedMaintenanceRequests.Count(r => r.Status == MaintenanceStatus.Pending),
+                    orderedMaintenanceRequests.Count(r => r.Status == MaintenanceStatus.Approved),
+                    orderedMaintenanceRequests.Count(r => r.Status == MaintenanceStatus.InProgress),
+                    orderedMaintenanceRequests.Count(r => r.Status == MaintenanceStatus.Completed),
+                    orderedMaintenanceRequests.Count(r => r.Status == MaintenanceStatus.Rejected)
+                ]
             };
 
             return View("TenantDashboard", viewModel);
@@ -260,49 +447,106 @@ namespace MyMvcApp.Controllers
                 }
             }
 
-			return View();
+            return View();
+        }
+
+        public async Task<IActionResult> MyProperty()
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenantData = await _context.Tenants
+                .Include(t => t.User)
+                .Include(t => t.Property)
+                    .ThenInclude(p => p.Amenities)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenantData == null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var model = new TenantPropertyViewModel
+            {
+                TenantEmail = tenantData.User.Email,
+                LeaseStartDate = tenantData.LeaseStartDate,
+                LeaseEndDate = tenantData.LeaseEndDate,
+                LeaseStatus = tenantData.LeaseStatus,
+                MonthlyRent = tenantData.MonthlyRent,
+                RentDueDay = tenantData.RentDueDay,
+                DepositPaid = tenantData.DepositPaid,
+                DepositStatus = tenantData.DepositStatus,
+                Property = tenantData.Property,
+                Amenities = tenantData.Property.Amenities
+                    .OrderBy(a => a.AmenityName)
+                    .ToList()
+            };
+
+            return View(model);
         }
 
         public async Task<IActionResult> MaintenanceRequest()
         {
-			var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-				?? User.Identity?.Name;
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
 
-			// Get all maintenance requests
-			var requests = await _context.MaintenanceRequests
-				.Include(r => r.Property)
-				.Where(r => r.Tenant.User.Email == email)
-				.OrderByDescending(r => r.CreatedAt)
-				.ToListAsync();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
 
-			var viewModel = new MaintenanceRequestViewModel
-			{
-				Requests = requests,
-			};
+            var tenant = await _context.Tenants
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
 
-			return View(viewModel);
-		}
+            if (tenant == null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var requests = await _context.MaintenanceRequests
+                .Include(r => r.Property)
+                .Where(r => r.TenantId == tenant.TenantId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            var viewModel = new MaintenanceRequestViewModel
+            {
+                Requests = requests,
+            };
+
+            return View(viewModel);
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateMaintenance(MaintenanceRequestViewModel viewModel)
         {
-            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant == null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
 
             if (!ModelState.IsValid)
             {
                 viewModel.Requests = await _context.MaintenanceRequests
-                    .Where(r => r.Tenant.User.Email == email)
+                    .Where(r => r.TenantId == tenant.TenantId)
                     .OrderByDescending(r => r.CreatedAt)
                     .ToListAsync();
 
                 return View("MaintenanceRequest", viewModel);
             }
-
-            var tenant = await _context.Tenants
-                .FirstOrDefaultAsync(t => t.User.Email == email);
-
-            if (tenant == null) return NotFound();
 
             var newRequest = new MaintenanceRequest
             {
@@ -312,20 +556,260 @@ namespace MyMvcApp.Controllers
                 Category = viewModel.NewRequest.Category,
                 Priority = viewModel.NewRequest.Priority,
                 Description = viewModel.NewRequest.Description,
-                PreferredDate = DateTime.SpecifyKind(viewModel.NewRequest.PreferredDate.Value, DateTimeKind.Utc),
+                PreferredDate = viewModel.NewRequest.PreferredDate.HasValue
+                    ? DateTime.SpecifyKind(viewModel.NewRequest.PreferredDate.Value, DateTimeKind.Utc)
+                    : null,
                 Status = MaintenanceStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
+            var issueImage = viewModel.NewRequest.IssueImage;
+            if (issueImage is not null && issueImage.Length > 0)
+            {
+                if (issueImage.Length > MaxMaintenanceImageSizeBytes)
+                {
+                    ModelState.AddModelError("NewRequest.IssueImage", "Image must be 8MB or smaller.");
+                }
+                else if (!HasAllowedExtension(issueImage.FileName, AllowedMaintenanceImageExtensions))
+                {
+                    ModelState.AddModelError("NewRequest.IssueImage", "Only JPG, JPEG, PNG, and WEBP images are allowed.");
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    viewModel.Requests = await _context.MaintenanceRequests
+                        .Where(r => r.TenantId == tenant.TenantId)
+                        .OrderByDescending(r => r.CreatedAt)
+                        .ToListAsync();
+
+                    return View("MaintenanceRequest", viewModel);
+                }
+
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "tenant", tenant.TenantId.ToString(), "maintenance");
+                Directory.CreateDirectory(uploadsFolder);
+
+                var safeExtension = Path.GetExtension(issueImage.FileName).ToLowerInvariant();
+                var savedFileName = $"{Guid.NewGuid():N}{safeExtension}";
+                var physicalPath = Path.Combine(uploadsFolder, savedFileName);
+                await using var stream = System.IO.File.Create(physicalPath);
+                await issueImage.CopyToAsync(stream);
+
+                newRequest.IssueImageKey = Path.Combine("uploads", "tenant", tenant.TenantId.ToString(), "maintenance", savedFileName)
+                    .Replace("\\", "/");
+            }
+
             _context.MaintenanceRequests.Add(newRequest);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("Tenant"); 
+            TempData["SuccessMessage"] = "Maintenance request submitted.";
+
+            return RedirectToAction(nameof(MaintenanceRequest));
         }
+
         public async Task<IActionResult> Documents()
-        { 
-            return View();
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant == null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var model = new TenantDocumentsViewModel
+            {
+                Documents = await _context.Documents
+                    .Where(d => d.TenantId == tenant.TenantId && !d.IsDeleted)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToListAsync()
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadDocument(TenantDocumentsViewModel model)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (tenant == null || appUser == null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                model.Documents = await _context.Documents
+                    .Where(d => d.TenantId == tenant.TenantId && !d.IsDeleted)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToListAsync();
+                return View(nameof(Documents), model);
+            }
+
+            var file = model.NewDocument.File;
+            if (file is null || file.Length <= 0)
+            {
+                ModelState.AddModelError("NewDocument.File", "Please choose a valid file.");
+                model.Documents = await _context.Documents
+                    .Where(d => d.TenantId == tenant.TenantId && !d.IsDeleted)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToListAsync();
+                return View(nameof(Documents), model);
+            }
+
+            if (file.Length > MaxDocumentSizeBytes)
+            {
+                ModelState.AddModelError("NewDocument.File", "File size must not exceed 10MB.");
+                model.Documents = await _context.Documents
+                    .Where(d => d.TenantId == tenant.TenantId && !d.IsDeleted)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToListAsync();
+                return View(nameof(Documents), model);
+            }
+
+            if (!HasAllowedExtension(file.FileName, AllowedDocumentExtensions))
+            {
+                ModelState.AddModelError("NewDocument.File", "Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.");
+                model.Documents = await _context.Documents
+                    .Where(d => d.TenantId == tenant.TenantId && !d.IsDeleted)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToListAsync();
+                return View(nameof(Documents), model);
+            }
+
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "tenant", tenant.TenantId.ToString(), "documents");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var safeExtension = Path.GetExtension(file.FileName);
+            var savedFileName = $"{Guid.NewGuid():N}{safeExtension}";
+            var physicalPath = Path.Combine(uploadsFolder, savedFileName);
+            await using (var stream = System.IO.File.Create(physicalPath))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var fileKey = Path.Combine("uploads", "tenant", tenant.TenantId.ToString(), "documents", savedFileName)
+                .Replace("\\", "/");
+
+            var document = new MyMvcApp.Models.Document
+            {
+                UploadedBy = appUser.Id,
+                PropertyId = tenant.PropertyId,
+                TenantId = tenant.TenantId,
+                DocumentName = model.NewDocument.DocumentName,
+                DocumentType = model.NewDocument.DocumentType ?? DocumentType.Others,
+                FileKey = fileKey,
+                FileSize = (int)Math.Min(file.Length, int.MaxValue),
+                FileType = file.ContentType,
+                S3Url = "/" + fileKey,
+                Notes = model.NewDocument.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Documents.Add(document);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Document uploaded successfully.";
+            return RedirectToAction(nameof(Documents));
+        }
+
+        public async Task<IActionResult> DownloadDocument(int id)
+        {
+            var email = GetCurrentEmail();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant is null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var document = await _context.Documents
+                .FirstOrDefaultAsync(d => d.DocumentId == id && d.TenantId == tenant.TenantId && !d.IsDeleted);
+
+            if (document is null)
+            {
+                return NotFound();
+            }
+
+            if (!string.IsNullOrWhiteSpace(document.S3Url) && Uri.IsWellFormedUriString(document.S3Url, UriKind.Absolute))
+            {
+                return Redirect(document.S3Url);
+            }
+
+            var relativeFileKey = document.FileKey.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var physicalPath = Path.Combine(_environment.WebRootPath, relativeFileKey);
+            if (!System.IO.File.Exists(physicalPath))
+            {
+                return NotFound();
+            }
+
+            var provider = new FileExtensionContentTypeProvider();
+            var contentType = provider.TryGetContentType(document.FileKey, out var detected)
+                ? detected
+                : "application/octet-stream";
+
+            return PhysicalFile(physicalPath, contentType, enableRangeProcessing: true);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDocument(int id)
+        {
+            var email = GetCurrentEmail();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant is null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var document = await _context.Documents
+                .FirstOrDefaultAsync(d => d.DocumentId == id && d.TenantId == tenant.TenantId && !d.IsDeleted);
+
+            if (document is null)
+            {
+                TempData["ErrorMessage"] = "Document not found.";
+                return RedirectToAction(nameof(Documents));
+            }
+
+            document.IsDeleted = true;
+            document.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Document moved to archive.";
+            return RedirectToAction(nameof(Documents));
         }
 
         public async Task<IActionResult> Payments()
@@ -512,6 +996,221 @@ namespace MyMvcApp.Controllers
             TempData["SuccessMessage"] = "Visitor pass created and QR code generated.";
 
             return RedirectToAction(nameof(Visitors), new { passId = visitorPass.VisitorPassId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelVisitorPass(int id)
+        {
+            var email = GetCurrentEmail();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant is null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var pass = await _context.VisitorPasses
+                .FirstOrDefaultAsync(v => v.VisitorPassId == id && v.TenantId == tenant.TenantId);
+
+            if (pass is null)
+            {
+                TempData["ErrorMessage"] = "Visitor pass not found.";
+                return RedirectToAction(nameof(Visitors));
+            }
+
+            if (pass.Status == VisitorPassStatus.Used || pass.Status == VisitorPassStatus.Cancelled)
+            {
+                TempData["ErrorMessage"] = "This visitor pass can no longer be cancelled.";
+                return RedirectToAction(nameof(Visitors), new { passId = pass.VisitorPassId });
+            }
+
+            pass.Status = VisitorPassStatus.Cancelled;
+            pass.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Visitor pass cancelled.";
+            return RedirectToAction(nameof(Visitors), new { passId = pass.VisitorPassId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkVisitorPassUsed(int id)
+        {
+            var email = GetCurrentEmail();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant is null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var pass = await _context.VisitorPasses
+                .FirstOrDefaultAsync(v => v.VisitorPassId == id && v.TenantId == tenant.TenantId);
+
+            if (pass is null)
+            {
+                TempData["ErrorMessage"] = "Visitor pass not found.";
+                return RedirectToAction(nameof(Visitors));
+            }
+
+            if (pass.Status != VisitorPassStatus.Active)
+            {
+                TempData["ErrorMessage"] = "Only active passes can be marked as used.";
+                return RedirectToAction(nameof(Visitors), new { passId = pass.VisitorPassId });
+            }
+
+            pass.Status = VisitorPassStatus.Used;
+            pass.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Visitor pass marked as used.";
+            return RedirectToAction(nameof(Visitors), new { passId = pass.VisitorPassId });
+        }
+
+        [AllowAnonymous]
+        [Route("/ValidateQrPass")]
+        //[Route("/Tenant/ValidateVisitorPass")]
+        public async Task<IActionResult> ValidateVisitorPass(string? passCode, bool checkedIn = false)
+        {
+            var code = ExtractPassCode(passCode);
+            var model = new VisitorPassValidationViewModel
+            {
+                PassCode = code,
+                CheckedIn = checkedIn,
+                StatusMessage = string.IsNullOrWhiteSpace(code)
+                    ? "Enter a visitor pass code to validate access."
+                    : "Pass code not found."
+            };
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return View(model);
+            }
+
+            var pass = await _context.VisitorPasses
+                .Include(v => v.Tenant)
+                .ThenInclude(t => t.Property)
+                .FirstOrDefaultAsync(v => v.PassCode == code);
+
+            if (pass is null)
+            {
+                return View(model);
+            }
+
+            if (pass.Status == VisitorPassStatus.Active && pass.VisitDate.Date < DateTime.UtcNow.Date)
+            {
+                pass.Status = VisitorPassStatus.Expired;
+                pass.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+
+            var isValid = pass.Status == VisitorPassStatus.Active && pass.VisitDate.Date >= DateTime.UtcNow.Date;
+            model.Pass = pass;
+            model.Found = true;
+            model.IsValid = isValid;
+            model.StatusMessage = isValid
+                ? "Valid pass. Entry may proceed."
+                : $"Pass is {pass.Status}. Entry denied.";
+
+            return View(model);
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ValidateVisitorPassAndCheckIn(string passCode)
+        {
+            var code = ExtractPassCode(passCode);
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return RedirectToAction(nameof(ValidateVisitorPass));
+            }
+
+            var pass = await _context.VisitorPasses
+                .FirstOrDefaultAsync(v => v.PassCode == code);
+
+            if (pass is null)
+            {
+                return RedirectToAction(nameof(ValidateVisitorPass), new { passCode = code });
+            }
+
+            if (pass.Status != VisitorPassStatus.Active || pass.VisitDate.Date < DateTime.UtcNow.Date)
+            {
+                return RedirectToAction(nameof(ValidateVisitorPass), new { passCode = code });
+            }
+
+            pass.Status = VisitorPassStatus.Used;
+            pass.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(ValidateVisitorPass), new { passCode = code, checkedIn = true });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmMaintenanceCompletion(int requestId, int? rating, string? feedbackComment)
+        {
+            var email = GetCurrentEmail();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant is null)
+            {
+                return RedirectToAction(nameof(PendingAssignment));
+            }
+
+            var request = await _context.MaintenanceRequests
+                .FirstOrDefaultAsync(r => r.RequestId == requestId && r.TenantId == tenant.TenantId);
+
+            if (request is null)
+            {
+                TempData["ErrorMessage"] = "Maintenance request not found.";
+                return RedirectToAction(nameof(MaintenanceRequest));
+            }
+
+            if (request.Status != MaintenanceStatus.Completed)
+            {
+                TempData["ErrorMessage"] = "Only completed requests can be confirmed.";
+                return RedirectToAction(nameof(MaintenanceRequest));
+            }
+
+            if (rating.HasValue && (rating < 1 || rating > 5))
+            {
+                TempData["ErrorMessage"] = "Rating must be between 1 and 5.";
+                return RedirectToAction(nameof(MaintenanceRequest));
+            }
+
+            request.TenantConfirmedAt = DateTime.UtcNow;
+            request.TenantFeedbackRating = rating;
+            request.TenantFeedbackComment = string.IsNullOrWhiteSpace(feedbackComment)
+                ? null
+                : feedbackComment.Trim()[..Math.Min(feedbackComment.Trim().Length, 1000)];
+            request.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Completion confirmed. Thank you for your feedback.";
+            return RedirectToAction(nameof(MaintenanceRequest));
         }
 
         [Authorize(Roles = "Tenant")]

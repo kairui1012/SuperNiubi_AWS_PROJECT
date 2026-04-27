@@ -4,6 +4,8 @@
     var selectedPassId = Model.LatestPass?.VisitorPassId;
 }
 
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
+
 <style>
     .visitor-select-row {
         cursor: pointer;
@@ -40,13 +42,21 @@
             <div class="alert alert-success">@successMessage</div>
         }
 
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
         <div class="tenant-toolbar">
             <div>
                 <p class="tenant-kicker">Visitor Control</p>
                 <h1 class="tenant-heading">Generate visitor QR passes</h1>
                 <p class="tenant-sub">Register a visitor, save the record in the database, and generate a QR code for entry verification.</p>
             </div>
-            <span class="tenant-badge badge-primary">@Model.PropertyName</span>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                @* <a href="@Url.Action("ValidateVisitorPass", "Tenant")" target="_blank" class="btn tenant-btn tenant-btn-outline"><i class="bi bi-qr-code-scan"></i> Guard Validation</a> *@
+                <span class="tenant-badge badge-primary">@Model.PropertyName</span>
+            </div>
         </div>
 
         <div class="tenant-layout-2">
@@ -133,7 +143,7 @@
                                 <th>Purpose</th>
                                 <th>Pass Code</th>
                                 <th>Status</th>
-                                <th class="text-end">Action</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -148,6 +158,13 @@
                                 @foreach (var visitor in Model.Visitors)
                                 {
                                     var isSelected = selectedPassId.HasValue && visitor.VisitorPassId == selectedPassId.Value;
+                                    var badgeClass = visitor.Status switch
+                                    {
+                                        VisitorPassStatus.Active => "badge-success",
+                                        VisitorPassStatus.Used => "badge-primary",
+                                        VisitorPassStatus.Expired => "badge-warning",
+                                        _ => "badge-danger"
+                                    };
                                     <tr class="visitor-select-row @(isSelected ? "is-selected" : string.Empty)"
                                         data-pass-url="@Url.Action("Visitors", "Tenant", new { passId = visitor.VisitorPassId })"
                                         role="button"
@@ -160,13 +177,29 @@
                                         <td>@visitor.VisitDate.ToLocalTime().ToString("dd MMM yyyy")</td>
                                         <td>@visitor.Purpose</td>
                                         <td>@visitor.PassCode</td>
-                                        <td><span class="tenant-badge badge-primary">@visitor.Status</span></td>
+                                        <td><span class="tenant-badge @badgeClass">@visitor.Status</span></td>
                                         <td class="text-end">
-                                            <a class="btn btn-sm tenant-btn tenant-btn-primary"
-                                               asp-action="Visitors"
-                                               asp-route-passId="@visitor.VisitorPassId">
-                                                View
-                                            </a>
+                                            <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                                <a class="btn btn-sm tenant-btn tenant-btn-primary"
+                                                   asp-action="Visitors"
+                                                   asp-route-passId="@visitor.VisitorPassId">
+                                                    View
+                                                </a>
+                                                @if (visitor.Status == VisitorPassStatus.Active)
+                                                {
+                                                    @* <form asp-action="MarkVisitorPassUsed" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@visitor.VisitorPassId" />
+                                                        <button type="submit" class="btn btn-sm tenant-btn tenant-btn-outline">Mark Used</button>
+                                                    </form> *@
+
+                                                    <form asp-action="CancelVisitorPass" method="post" class="d-inline cancel-pass-form">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@visitor.VisitorPassId" />
+                                                        <button type="button" class="btn btn-sm tenant-btn btn-danger cancel-pass-trigger">Cancel</button>
+                                                    </form>
+                                                }
+                                            </div>
                                         </td>
                                     </tr>
                                 }
@@ -179,31 +212,83 @@
     </section>
 </div>
 
-<script>
-    (function () {
-        const rows = document.querySelectorAll('.visitor-select-row');
+<div class="modal fade" id="cancelPassModal" tabindex="-1" aria-labelledby="cancelPassModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="cancelPassModalLabel">Cancel Visitor Pass</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Are you sure you want to cancel this pass? This action will mark the visitor pass as cancelled.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Pass</button>
+                <button type="button" class="btn btn-danger" id="confirmCancelPassBtn">Yes, Cancel Pass</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        const goToPass = (row) => {
-            const url = row.getAttribute('data-pass-url');
-            if (url) {
-                window.location.href = url;
-            }
-        };
 
-        rows.forEach((row) => {
-            row.addEventListener('click', (event) => {
-                if (event.target.closest('a, button, input, textarea, select, label')) {
-                    return;
+@section Scripts {
+    <script>
+        // 使用 DOMContentLoaded 确保 Bootstrap 的 JS 已经完全加载
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const rows = document.querySelectorAll('.visitor-select-row');
+            const cancelPassModalEl = document.getElementById('cancelPassModal');
+            
+            // 此时 bootstrap 变量已经在 Layout 中加载了，不会报 undefined 错误
+            const cancelPassModal = cancelPassModalEl ? new bootstrap.Modal(cancelPassModalEl) : null;
+            
+            const confirmCancelPassBtn = document.getElementById('confirmCancelPassBtn');
+            let pendingCancelForm = null;
+
+            const goToPass = (row) => {
+                const url = row.getAttribute('data-pass-url');
+                if (url) {
+                    window.location.href = url;
                 }
-                goToPass(row);
-            });
+            };
 
-            row.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
+            // 处理表格行点击跳转
+            rows.forEach((row) => {
+                row.addEventListener('click', (event) => {
+                    // 如果点击的是行内的按钮或链接，不触发整行跳转
+                    if (event.target.closest('a, button, input, textarea, select, label')) {
+                        return;
+                    }
                     goToPass(row);
-                }
+                });
+
+                row.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        goToPass(row);
+                    }
+                });
             });
+
+            // 绑定取消按钮点击事件，显示 Modal
+            document.querySelectorAll('.cancel-pass-trigger').forEach((button) => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault(); // 阻止 form 自动提交
+                    pendingCancelForm = button.closest('form');
+                    if (cancelPassModal) {
+                        cancelPassModal.show();
+                    }
+                });
+            });
+
+            // 点击 Modal 里的确认按钮后，提交对应的 form
+            if (confirmCancelPassBtn) {
+                confirmCancelPassBtn.addEventListener('click', () => {
+                    if (pendingCancelForm) {
+                        pendingCancelForm.submit();
+                    }
+                });
+            }
         });
-    })();
-</script>
+    </script>
+}

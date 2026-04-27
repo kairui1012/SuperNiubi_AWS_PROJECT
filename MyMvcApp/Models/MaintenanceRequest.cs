@@ -34,6 +34,13 @@ namespace MyMvcApp.Models
         public DateTime? PreferredDate { get; set; }
         public DateTime? ResolvedDate { get; set; }
         public string? LandlordRemarks { get; set; }
+        [MaxLength(500)]
+        public string? IssueImageKey { get; set; }
+        public DateTime? TenantConfirmedAt { get; set; }
+        [Range(1, 5)]
+        public int? TenantFeedbackRating { get; set; }
+        [MaxLength(1000)]
+        public string? TenantFeedbackComment { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

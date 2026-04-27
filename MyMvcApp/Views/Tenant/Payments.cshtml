@@ -1,6 +1,18 @@
+@model TenantPaymentsViewModel
 @{
     ViewData["Title"] = "Payments";
+    var displayMonthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(Model.NewPayment.PaymentMonth);
+    var thisYearPayments = Model.Payments
+        .Where(p => p.PaymentYear == DateTime.UtcNow.Year && p.Status == PaymentStatus.Verified)
+        .ToList();
+    var monthlySeries = Enumerable.Range(1, 12)
+        .Select(month => thisYearPayments
+            .Where(p => string.Equals(p.PaymentMonth, System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month), StringComparison.OrdinalIgnoreCase))
+            .Sum(p => p.Amount))
+        .ToList();
 }
+
+<link rel="stylesheet" href="~/css/pages/tenant-theme.css" asp-append-version="true" />
 
 <div class="tenant-console">
     <aside class="tenant-rail">
@@ -23,75 +35,102 @@
     </aside>
 
     <section class="tenant-workspace">
+        @if (TempData["SuccessMessage"] is string successMessage)
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
         <div class="tenant-toolbar">
             <div>
                 <p class="tenant-kicker">Billing Center</p>
-                <h1 class="tenant-heading">Rent Payments</h1>
-                <p class="tenant-sub">Track payment cycles, upload receipts, and keep billing records audit-ready.</p>
+                <h1 class="tenant-heading">Rent Payment Portal</h1>
+                <p class="tenant-sub">Submit payment for the next due period and keep a clean history with generated receipts.</p>
             </div>
-            <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ Upload Receipt</button>
+            <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ Pay Now</button>
         </div>
 
         <div class="tenant-grid-4">
-            <div class="tenant-stat"><div class="tenant-stat-label">Total Paid (2025)</div><div class="tenant-stat-value">RM 6,000</div></div>
-            <div class="tenant-stat"><div class="tenant-stat-label">Payments Recorded</div><div class="tenant-stat-value">5</div></div>
-            <div class="tenant-stat"><div class="tenant-stat-label">Next Due</div><div class="tenant-stat-value">1 May</div></div>
-            <div class="tenant-stat"><div class="tenant-stat-label">Monthly Rent</div><div class="tenant-stat-value">RM 1,200</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Total Verified</div><div class="tenant-stat-value">@Model.TotalVerifiedAmount.ToString("C")</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Payments Recorded</div><div class="tenant-stat-value">@Model.Payments.Count</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Next Due</div><div class="tenant-stat-value">@(Model.NextDueDate?.ToLocalTime().ToString("dd MMM") ?? "-")</div></div>
+            <div class="tenant-stat"><div class="tenant-stat-label">Monthly Rent</div><div class="tenant-stat-value">@Model.MonthlyRent.ToString("C")</div></div>
+        </div>
+
+        <div class="tenant-panel">
+            <div class="tenant-panel-head"><h3 class="tenant-panel-title">Collection Analytics</h3></div>
+            <div class="tenant-panel-body">
+                <div class="tenant-chart-wrap">
+                    <canvas id="tenantPaymentYearChart" aria-label="Tenant yearly payment chart"></canvas>
+                </div>
+            </div>
         </div>
 
         <div class="tenant-panel" id="uploadForm" style="display:none;">
-            <div class="tenant-panel-head"><h3 class="tenant-panel-title">Upload Payment Receipt</h3></div>
+            <div class="tenant-panel-head"><h3 class="tenant-panel-title">Payment Checkout</h3></div>
             <div class="tenant-panel-body tenant-form">
-                <form asp-action="UploadPayment" method="post" enctype="multipart/form-data">
+                <form asp-action="UploadPayment" method="post" id="paymentForm">
                     @Html.AntiForgeryToken()
                     <div class="tenant-form-grid">
                         <div>
                             <label>Payment Month</label>
-                            <select class="form-select" name="PaymentMonth" required>
-                                <option value="" disabled selected>Select month</option>
-                                <option>January 2025</option>
-                                <option>February 2025</option>
-                                <option>March 2025</option>
-                                <option>April 2025</option>
-                                <option>May 2025</option>
-                            </select>
+                            <input class="form-control"
+                                   value="@displayMonthName"
+                                   readonly
+                                   style="background-color: #e9ecef; cursor: not-allowed;" />
+                            <input type="hidden" asp-for="NewPayment.PaymentMonth" />
+                            <span asp-validation-for="NewPayment.PaymentMonth" class="text-danger"></span>
+                        </div>
+                        <div>
+                            <label>Payment Year</label>
+                            <input class="form-control" asp-for="NewPayment.PaymentYear" type="number" min="2000" max="2100" readonly style="background-color: #e9ecef; cursor: not-allowed;" />
+                            <input type="hidden" asp-for="NewPayment.PaymentYear" />
+                            <span asp-validation-for="NewPayment.PaymentYear" class="text-danger"></span>
                         </div>
                         <div>
                             <label>Amount Paid (RM)</label>
-                            <input class="form-control" type="number" name="Amount" placeholder="1200.00" step="0.01" min="0" required />
+                            <input class="form-control" asp-for="NewPayment.Amount" type="number" step="0.01" min="0" readonly style="background-color: #e9ecef; cursor: not-allowed;" />
+                            <input type="hidden" asp-for="NewPayment.Amount" />
+                            <span asp-validation-for="NewPayment.Amount" class="text-danger"></span>
                         </div>
                         <div>
                             <label>Payment Date</label>
-                            <input class="form-control" type="date" name="PaymentDate" required />
+                            <input class="form-control" asp-for="NewPayment.PaymentDate" type="date" readonly style="background-color: #e9ecef; cursor: not-allowed;" />
+                            <input type="hidden" asp-for="NewPayment.PaymentDate" />
+                            <span asp-validation-for="NewPayment.PaymentDate" class="text-danger"></span>
                         </div>
                         <div>
                             <label>Payment Method</label>
-                            <select class="form-select" name="PaymentMethod">
-                                <option>Online Transfer</option>
-                                <option>Cash</option>
-                                <option>Cheque</option>
-                                <option>DuitNow / QR</option>
+                            <select class="form-select" asp-for="NewPayment.PaymentMethod">
+                                <option value="OnlineTransfer">Online Transfer</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="DuitNow">DuitNow / QR</option>
+                                <option value="Others">Others</option>
                             </select>
-                        </div>
-                        <div>
-                            <label>Reference No.</label>
-                            <input class="form-control" type="text" name="ReferenceNo" placeholder="e.g. TXN123456789" />
-                        </div>
-                        <div>
-                            <label>Receipt / Proof</label>
-                            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-                                <input type="file" id="fileInput" name="ReceiptFile" accept=".pdf,.jpg,.jpeg,.png" />
-                                <div><i class="bi bi-paperclip fs-4"></i></div>
-                                <div class="tenant-sub drop-zone-text"><strong>Click to upload</strong> or drag and drop</div>
-                                <div class="tenant-sub">PDF, JPG, PNG - max 5MB</div>
-                            </div>
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
                         <button type="button" class="btn tenant-btn tenant-btn-outline" onclick="toggleForm()">Cancel</button>
-                        <button type="submit" class="btn tenant-btn tenant-btn-primary">Upload Payment</button>
+                        <button type="submit" class="btn tenant-btn tenant-btn-primary" id="confirmPaymentBtn">Confirm Payment</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div class="modal fade" id="paymentProcessingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content">
+                    <div class="modal-body text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                        <h5 class="mb-1">Processing payment</h5>
+                        <p class="text-muted mb-0">We are processing your payment. Please wait...</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -108,15 +147,47 @@
                                 <th>Method</th>
                                 <th>Reference</th>
                                 <th>Status</th>
+                                <th>Note</th>
                                 <th>Receipt</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td><strong>April 2025</strong></td><td>RM 1,200.00</td><td>1 Apr 2025</td><td>Online Transfer</td><td>TXN-0041234</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
-                            <tr><td><strong>March 2025</strong></td><td>RM 1,200.00</td><td>2 Mar 2025</td><td>DuitNow</td><td>TXN-0038921</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
-                            <tr><td><strong>February 2025</strong></td><td>RM 1,200.00</td><td>1 Feb 2025</td><td>Online Transfer</td><td>TXN-0035678</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
-                            <tr><td><strong>January 2025</strong></td><td>RM 1,200.00</td><td>1 Jan 2025</td><td>Cash</td><td>-</td><td><span class="tenant-badge badge-success">Verified</span></td><td><a href="#" class="tenant-link">Download</a></td></tr>
-                            <tr><td><strong>May 2025</strong></td><td>RM 1,200.00</td><td>-</td><td>-</td><td>-</td><td><span class="tenant-badge badge-warning">Pending</span></td><td>-</td></tr>
+                            @if (Model.Payments.Count == 0)
+                            {
+                                <tr><td colspan="8" class="text-center">No payment records yet.</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var payment in Model.Payments)
+                                {
+                                    var badgeClass = payment.Status == PaymentStatus.Verified
+                                        ? "badge-success"
+                                        : payment.Status == PaymentStatus.Submitted
+                                            ? "badge-primary"
+                                            : payment.Status == PaymentStatus.Pending || payment.Status == PaymentStatus.Overdue
+                                                ? "badge-warning"
+                                                : "badge-danger";
+                                    <tr>
+                                        <td><strong>@payment.PaymentMonth @payment.PaymentYear</strong></td>
+                                        <td>@payment.Amount.ToString("C")</td>
+                                        <td>@(payment.PaymentDate?.ToLocalTime().ToString("dd MMM yyyy") ?? "-")</td>
+                                        <td>@(payment.PaymentMethod?.ToString() ?? "-")</td>
+                                        <td>@(string.IsNullOrWhiteSpace(payment.ReferenceNo) ? "-" : payment.ReferenceNo)</td>
+                                        <td><span class="tenant-badge @badgeClass">@payment.Status</span></td>
+                                        <td>@(string.IsNullOrWhiteSpace(payment.LandlordRemarks) ? "-" : payment.LandlordRemarks)</td>
+                                        <td>
+                                            @if (string.IsNullOrWhiteSpace(payment.ReceiptFileKey))
+                                            {
+                                                <span>-</span>
+                                            }
+                                            else
+                                            {
+                                                <a class="tenant-link" href="@($"/{payment.ReceiptFileKey}")" target="_blank" rel="noopener noreferrer">View PDF</a>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
                         </tbody>
                     </table>
                 </div>
@@ -125,6 +196,7 @@
     </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
     function toggleForm() {
         const form = document.getElementById('uploadForm');
@@ -134,30 +206,91 @@
         }
     }
 
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
+    let isDelayedSubmitInProgress = false;
+    const paymentForm = document.getElementById('paymentForm');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', function (event) {
+            if (isDelayedSubmitInProgress) {
+                return;
+            }
 
-    dropZone.addEventListener('dragover', e => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
+            event.preventDefault();
 
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
+            const processingModalElement = document.getElementById('paymentProcessingModal');
+            if (!processingModalElement) {
+                isDelayedSubmitInProgress = true;
+                paymentForm.submit();
+                return;
+            }
 
-    dropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            dropZone.querySelector('.drop-zone-text').innerHTML = '<strong>' + e.dataTransfer.files[0].name + '</strong>';
+            const processingModal = new bootstrap.Modal(processingModalElement, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            const submitButton = document.getElementById('confirmPaymentBtn');
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            processingModal.show();
+
+            setTimeout(function () {
+                isDelayedSubmitInProgress = true;
+                paymentForm.submit();
+            }, 1200);
+        });
+    }
+
+    if (document.querySelector('#uploadForm span.text-danger:not(:empty)')) {
+        toggleForm();
+    }
+
+    (() => {
+        const chartElement = document.getElementById('tenantPaymentYearChart');
+        if (!chartElement || !window.Chart) {
+            return;
         }
-    });
 
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length) {
-            dropZone.querySelector('.drop-zone-text').innerHTML = '<strong>' + fileInput.files[0].name + '</strong>';
-        }
-    });
+        const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const values = @Json.Serialize(monthlySeries);
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const gridColor = isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.24)';
+        const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+        new Chart(chartElement, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Verified paid amount',
+                    data: values,
+                    borderRadius: 8,
+                    maxBarThickness: 26,
+                    backgroundColor: '#2563eb'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: {
+                            color: tickColor,
+                            callback: (value) => `RM ${Number(value).toLocaleString()}`
+                        }
+                    },
+                    x: {
+                        grid: { color: gridColor },
+                        ticks: { color: tickColor }
+                    }
+                }
+            }
+        });
+    })();
 </script>
