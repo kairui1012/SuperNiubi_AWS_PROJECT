@@ -12,7 +12,6 @@ services:
       EnableHttpsRedirection: "false"
 
       # ✅ ADD THESE
-      ConnectionStrings__DefaultConnection: "Host=ep-morning-credit-a1bwfeun.ap-southeast-1.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=npg_ejTVuG02fHXy;Ssl Mode=Require;"
 
       AWS__UserPoolClientSecret: ${AWS_USER_POOL_CLIENT_SECRET}
       AWS__AccessKey: ${AWS_ACCESS_KEY}
