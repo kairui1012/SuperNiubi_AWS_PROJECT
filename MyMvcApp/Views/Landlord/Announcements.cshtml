@@ -62,6 +62,60 @@
             <div class="alert alert-success">@successMessage</div>
         }
 
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <article class="landlord-panel landlord-announce-card">
+            <div class="landlord-panel-head">
+                <h3 class="landlord-panel-title">Publish Announcement</h3>
+            </div>
+
+            <form asp-action="CreateAnnouncement" asp-controller="Landlord" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="landlord-announce-form-grid">
+                    <div>
+                        <label class="landlord-label" for="announcementTitle">Title</label>
+                        <input id="announcementTitle"
+                               name="Title"
+                               maxlength="200"
+                               class="landlord-input"
+                               placeholder="Announcement title"
+                               required />
+                    </div>
+
+                    <div>
+                        <label class="landlord-label" for="announcementVisibleTo">Visible to</label>
+                        <select id="announcementVisibleTo"
+                                name="VisibleTo"
+                                class="landlord-select">
+                            <option value="All">All users</option>
+                            <option value="Tenant">Tenants only</option>
+                            <option value="Landlord">Landlords only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label class="landlord-label" for="announcementBody">Message</label>
+                <textarea id="announcementBody"
+                          name="Body"
+                          maxlength="2000"
+                          rows="4"
+                          class="landlord-textarea"
+                          placeholder="Write your announcement here..."
+                          required></textarea>
+
+                <div class="landlord-actions mt-4">
+                    <button type="submit" class="landlord-btn landlord-btn-primary">
+                        <i class="bi bi-megaphone"></i>
+                        Publish Announcement
+                    </button>
+                </div>
+            </form>
+        </article>
+
         @if (Model == null || Model.Count == 0)
         {
             <article class="landlord-panel">
@@ -111,8 +165,13 @@
 <style>
     .landlord-announce-list { display: flex; flex-direction: column; gap: 1rem; }
     .landlord-announce-card { padding: 1.25rem 1.5rem; }
+    .landlord-announce-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 1rem; }
     .landlord-announce-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: .5rem; }
     .landlord-announce-title { font-size: 1rem; font-weight: 700; margin: 0 0 .35rem; }
     .landlord-announce-meta { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
     .landlord-announce-body { margin: 0; white-space: pre-wrap; }
+
+    @@media (max-width: 720px) {
+        .landlord-announce-form-grid { grid-template-columns: 1fr; }
+    }
 </style>

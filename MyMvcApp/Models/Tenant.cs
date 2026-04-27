@@ -44,5 +44,6 @@ namespace MyMvcApp.Models
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
         public ICollection<Document> Documents { get; set; } = new List<Document>();
         public ICollection<VisitorPass> VisitorPasses { get; set; } = new List<VisitorPass>();
+        public ICollection<LeaseHistory> LeaseHistories { get; set; } = new List<LeaseHistory>();
     }
 }

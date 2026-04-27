@@ -20,13 +20,14 @@ builder.Services.AddScoped<EmailService>();
 
 builder.Services.AddScoped<IClaimsTransformation, MyMvcApp.Services.RoleClaimsTransformation>();
 
+// Register AWS options before AWS-backed services so Cognito, S3, and SES use the same configured region/credentials chain.
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+
 builder.Services.AddCognitoIdentity();
 builder.Services.AddGoogleLogin(builder.Configuration);
 
 builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIdentityProvider>();
 
-// 1. Add Amazon AWS setup
-builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 
 // 2. Register your custom S3 Image Service

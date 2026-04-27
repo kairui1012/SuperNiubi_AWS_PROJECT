@@ -20,6 +20,7 @@ namespace MyMvcApp.Data
         public DbSet<PasswordResetRequest> PasswordResetRequests { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<SystemAnnouncement> SystemAnnouncements { get; set; }
+        public DbSet<LeaseHistory> LeaseHistories { get; set; }
 
 
         // Setting rules to store the data
@@ -60,6 +61,15 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<SystemAnnouncement>()
                 .HasIndex(a => a.VisibleTo);
 
+            modelBuilder.Entity<LeaseHistory>()
+                .HasIndex(h => h.TenantId);
+
+            modelBuilder.Entity<LeaseHistory>()
+                .HasIndex(h => h.CreatedAt);
+
+            modelBuilder.Entity<LeaseHistory>()
+                .HasIndex(h => h.Action);
+
             // --- AppUser (Landlord) → Property ---
             // Deleting a landlord cascades to their properties
             modelBuilder.Entity<Property>()
@@ -74,6 +84,12 @@ namespace MyMvcApp.Data
                 .HasOne(t => t.User)
                 .WithMany()
                 .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<LeaseHistory>()
+                .HasOne(h => h.Tenant)
+                .WithMany(t => t.LeaseHistories)
+                .HasForeignKey(h => h.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // --- Property ↔ Tenant (one-to-one) ---
