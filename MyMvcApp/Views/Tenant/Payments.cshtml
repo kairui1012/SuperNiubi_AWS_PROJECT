@@ -147,13 +147,17 @@
                                         <td><span class="tenant-badge @badgeClass">@payment.Status</span></td>
                                         <td>@(string.IsNullOrWhiteSpace(payment.LandlordRemarks) ? "-" : payment.LandlordRemarks)</td>
                                         <td>
-                                            @if (string.IsNullOrWhiteSpace(payment.ReceiptFileKey))
+                                            @if (!string.IsNullOrWhiteSpace(payment.StripeReceiptUrl))
                                             {
-                                                <span>-</span>
+                                                <a class="tenant-link" href="@payment.StripeReceiptUrl" target="_blank" rel="noopener noreferrer">Stripe Receipt</a>
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(payment.ReceiptFileKey))
+                                            {
+                                                <a class="tenant-link" href="@($"/{payment.ReceiptFileKey}")" target="_blank" rel="noopener noreferrer">View PDF</a>
                                             }
                                             else
                                             {
-                                                <a class="tenant-link" href="@($"/{payment.ReceiptFileKey}")" target="_blank" rel="noopener noreferrer">View PDF</a>
+                                                <span>-</span>
                                             }
                                         </td>
                                     </tr>

@@ -109,6 +109,7 @@
                             payment.Status == PaymentStatus.Overdue ? "badge-warning" :
                             payment.Status == PaymentStatus.Submitted ? "badge-primary" :
                             "badge-warning";
+                        var stripeReference = payment.StripePaymentIntentId ?? payment.StripeSessionId ?? payment.ReferenceNo;
 
                         <div class="landlord-list-item">
                             <div>
@@ -141,12 +142,23 @@
 
                                 <p class="landlord-sub mb-1">
                                     <strong>Reference No:</strong>
-                                    @(string.IsNullOrEmpty(payment.ReferenceNo) ? "N/A" : payment.ReferenceNo)
+                                    @(string.IsNullOrEmpty(stripeReference) ? "N/A" : stripeReference)
                                 </p>
 
                                 <p class="landlord-sub mb-1">
-                                    <strong>Receipt File:</strong>
-                                    @(string.IsNullOrEmpty(payment.ReceiptFileKey) ? "No receipt uploaded" : payment.ReceiptFileKey)
+                                    <strong>Receipt:</strong>
+                                    @if (!string.IsNullOrWhiteSpace(payment.StripeReceiptUrl))
+                                    {
+                                        <a href="@payment.StripeReceiptUrl" target="_blank" rel="noopener noreferrer">Stripe receipt</a>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(payment.ReceiptFileKey))
+                                    {
+                                        <span>@payment.ReceiptFileKey</span>
+                                    }
+                                    else
+                                    {
+                                        <span>No receipt yet</span>
+                                    }
                                 </p>
 
                                 <p class="landlord-sub mb-1">

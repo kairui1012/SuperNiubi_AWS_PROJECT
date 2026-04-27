@@ -1,0 +1,143 @@
+@model AdminDashboardViewModel
+
+@{
+    var totalProperties = Model.Overview.TotalProperties;
+    var occupiedProperties = Model.Overview.OccupiedProperties;
+    var occupancyRate = totalProperties > 0
+        ? Math.Round((double)occupiedProperties / totalProperties * 100)
+        : 0;
+}
+
+<section class="admin-pane" data-admin-pane="dashboard">
+    <div class="admin-ops-summary mb-4" aria-label="Admin dashboard overview">
+        <div class="admin-ops-item">
+            <span>Total Users</span>
+            <strong>@Model.Overview.TotalUsers</strong>
+        </div>
+        <div class="admin-ops-item">
+            <span>Total Properties</span>
+            <strong>@Model.Overview.TotalProperties</strong>
+        </div>
+        <div class="admin-ops-item">
+            <span>Total Payments</span>
+            <strong>@Model.Overview.TotalPayments</strong>
+        </div>
+        <div class="admin-ops-item">
+            <span>Pending Landlords</span>
+            <strong>@Model.Overview.PendingLandlordApprovals</strong>
+        </div>
+        <div class="admin-ops-item">
+            <span>Open Maintenance</span>
+            <strong>@Model.Overview.OpenMaintenanceRequests</strong>
+        </div>
+        <div class="admin-ops-item">
+            <span>Occupancy</span>
+            <strong>@occupancyRate%</strong>
+        </div>
+    </div>
+
+    <div class="row g-4 admin-chart-grid">
+        <div class="col-xl-6">
+            <div class="panel-card admin-chart-card h-100">
+                <div class="panel-heading">
+                    <div>
+                        <h2 class="panel-title">Collection trend</h2>
+                        <span class="panel-meta">6-month verified payments with demand signals</span>
+                    </div>
+                </div>
+                <div class="admin-chart-frame admin-chart-frame-wide">
+                    <canvas id="adminCollectionTrendChart" aria-label="6-month collection trend chart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="panel-card admin-chart-card h-100">
+                <div class="panel-heading">
+                    <div>
+                        <h2 class="panel-title">Maintenance status</h2>
+                        <span class="panel-meta">Current queue split</span>
+                    </div>
+                </div>
+                <div class="admin-chart-frame">
+                    <canvas id="adminMaintenanceStatusChart" aria-label="Maintenance status doughnut chart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="panel-card admin-chart-card h-100">
+                <div class="panel-heading">
+                    <div>
+                        <h2 class="panel-title">User roles</h2>
+                        <span class="panel-meta">Account composition</span>
+                    </div>
+                </div>
+                <div class="admin-chart-frame">
+                    <canvas id="adminUserRoleChart" aria-label="User role composition pie chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">User analytics</h2>
+                    <span class="panel-meta">Accounts</span>
+                </div>
+                <div class="metric-row">
+                    <span>Approved users</span>
+                    <span class="metric-value">@Model.Overview.ApprovedUsers</span>
+                </div>
+                <div class="metric-row">
+                    <span>Pending users</span>
+                    <span class="metric-value">@Model.Overview.PendingUsers</span>
+                </div>
+                <div class="metric-row">
+                    <span>Disabled users</span>
+                    <span class="metric-value">@Model.Overview.DisabledUsers</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Property analytics</h2>
+                    <span class="panel-meta">Portfolio</span>
+                </div>
+                <div class="metric-row">
+                    <span>Occupied properties</span>
+                    <span class="metric-value">@Model.Overview.OccupiedProperties</span>
+                </div>
+                <div class="metric-row">
+                    <span>Vacant properties</span>
+                    <span class="metric-value">@Model.Overview.VacantProperties</span>
+                </div>
+                <div class="metric-row">
+                    <span>Active tenancies</span>
+                    <span class="metric-value">@Model.Overview.ActiveTenancies</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Operations analytics</h2>
+                    <span class="panel-meta">Workload</span>
+                </div>
+                <div class="metric-row">
+                    <span>Open maintenance</span>
+                    <span class="metric-value">@Model.Overview.OpenMaintenanceRequests</span>
+                </div>
+                <div class="metric-row">
+                    <span>Overdue payments</span>
+                    <span class="metric-value">@Model.Overview.OverduePayments</span>
+                </div>
+                <div class="metric-row">
+                    <span>Documents</span>
+                    <span class="metric-value">@Model.Overview.TotalDocuments</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

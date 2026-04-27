@@ -573,16 +573,57 @@ namespace MyMvcApp.Controllers
             var monthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month);
             var propertyName = tenant.Property?.PropertyName ?? "Rental Property";
             var unitAmount = (long)Math.Round(tenant.MonthlyRent * 100m, MidpointRounding.AwayFromZero);
-            var successUrl = Url.Action(nameof(PaymentSuccess), "Tenant", null, Request.Scheme);
-            var cancelUrl = Url.Action(nameof(PaymentCancel), "Tenant", null, Request.Scheme);
+            var payment = existingPayments.FirstOrDefault(p =>
+                p.Status == PaymentStatus.Pending &&
+                p.PaymentYear == year &&
+                ParseMonthNumber(p.PaymentMonth) == month);
+
+            if (payment is null)
+            {
+                payment = new Payment
+                {
+                    TenantId = tenant.TenantId,
+                    PropertyId = tenant.PropertyId,
+                    PaymentMonth = monthName,
+                    PaymentYear = year,
+                    Amount = tenant.MonthlyRent,
+                    DueDate = nextDueDate,
+                    PaymentMethod = PaymentMethod.OnlineTransfer,
+                    Status = PaymentStatus.Pending,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                _context.Payments.Add(payment);
+                await _context.SaveChangesAsync();
+            }
+
+            var successPath = Url.Action(nameof(PaymentSuccess), "Tenant");
+            var cancelPath = Url.Action(nameof(PaymentCancel), "Tenant");
+            var successUrl = $"{Request.Scheme}://{Request.Host}{successPath}?session_id={{CHECKOUT_SESSION_ID}}";
+            var cancelUrl = $"{Request.Scheme}://{Request.Host}{cancelPath}?session_id={{CHECKOUT_SESSION_ID}}";
+            var stripeMetadata = new Dictionary<string, string>
+            {
+                ["paymentId"] = payment.PaymentId.ToString(CultureInfo.InvariantCulture),
+                ["tenantId"] = tenant.TenantId.ToString(CultureInfo.InvariantCulture),
+                ["propertyId"] = tenant.PropertyId.ToString(CultureInfo.InvariantCulture),
+                ["paymentMonth"] = monthName,
+                ["paymentYear"] = year.ToString(CultureInfo.InvariantCulture)
+            };
 
             var options = new SessionCreateOptions
             {
                 Mode = "payment",
                 CustomerEmail = tenant.User.Email,
+                ClientReferenceId = payment.PaymentId.ToString(CultureInfo.InvariantCulture),
                 SuccessUrl = successUrl,
                 CancelUrl = cancelUrl,
                 PaymentMethodTypes = new List<string> { "card" },
+                PaymentIntentData = new SessionPaymentIntentDataOptions
+                {
+                    Metadata = stripeMetadata,
+                    ReceiptEmail = tenant.User.Email
+                },
                 LineItems = new List<SessionLineItemOptions>
                 {
                     new()
@@ -600,30 +641,46 @@ namespace MyMvcApp.Controllers
                         }
                     }
                 },
-                Metadata = new Dictionary<string, string>
-                {
-                    ["tenantId"] = tenant.TenantId.ToString(CultureInfo.InvariantCulture),
-                    ["propertyId"] = tenant.PropertyId.ToString(CultureInfo.InvariantCulture),
-                    ["paymentMonth"] = monthName,
-                    ["paymentYear"] = year.ToString(CultureInfo.InvariantCulture)
-                }
+                Metadata = stripeMetadata
             };
 
             var service = new SessionService();
             var session = await service.CreateAsync(options);
 
+            payment.StripeSessionId = session.Id;
+            payment.ReferenceNo = session.Id;
+            payment.LandlordRemarks = "Awaiting Stripe confirmation from Amazon EventBridge.";
+            payment.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
             return Redirect(session.Url);
         }
 
         [HttpGet]
-        public IActionResult PaymentSuccess()
+        public IActionResult PaymentSuccess(string? session_id)
         {
+            ViewBag.StripeSessionId = session_id;
             return View();
         }
 
         [HttpGet]
-        public IActionResult PaymentCancel()
+        public async Task<IActionResult> PaymentCancel(string? session_id)
         {
+            if (!string.IsNullOrWhiteSpace(session_id))
+            {
+                var payment = await _context.Payments.FirstOrDefaultAsync(p =>
+                    p.StripeSessionId == session_id &&
+                    p.Status == PaymentStatus.Pending);
+
+                if (payment is not null)
+                {
+                    payment.Status = PaymentStatus.Rejected;
+                    payment.LandlordRemarks = "Stripe Checkout was cancelled before payment was completed.";
+                    payment.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             return View();
         }
 

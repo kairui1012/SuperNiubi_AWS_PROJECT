@@ -1,0 +1,66 @@
+@model AdminDashboardViewModel
+
+<section class="admin-pane d-none" data-admin-pane="properties">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="panel-card">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Property overview</h2>
+                    <span class="panel-meta">Occupancy and asset health</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="summary-card">
+                            <div class="summary-label">Total properties</div>
+                            <div class="summary-value">@Model.PropertyReport.TotalProperties</div>
+                            <div class="summary-footnote">Managed units in the system</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="summary-card">
+                            <div class="summary-label">Occupied properties</div>
+                            <div class="summary-value">@Model.PropertyReport.OccupiedProperties</div>
+                            <div class="summary-footnote">Active rentals currently assigned</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="summary-card">
+                            <div class="summary-label">Vacant properties</div>
+                            <div class="summary-value">@Model.PropertyReport.VacantProperties</div>
+                            <div class="summary-footnote">Available for new tenants</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="summary-card">
+                            <div class="summary-label">Active tenancies</div>
+                            <div class="summary-value">@Model.PropertyReport.ActiveTenancies</div>
+                            <div class="summary-footnote">Live rental assignments</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="panel-card h-100">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Platform features</h2>
+                    <span class="panel-meta">New additions</span>
+                </div>
+                <div class="activity-list">
+                    <div class="activity-item">
+                        <div class="activity-title">Documents tracked in cloud</div>
+                        <div class="activity-meta">@Model.Overview.TotalDocuments files are available for review and audit.</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-title">Occupancy monitoring</div>
+                        <div class="activity-meta">The control panel keeps rental occupancy and vacancies visible at a glance.</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-title">Property workflow shortcuts</div>
+                        <div class="activity-meta">Quick actions help move from overview into management with fewer clicks.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

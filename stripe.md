@@ -1,452 +1,482 @@
-# Stripe Payment Integration Guide
-# Stripe 支付接入完整指南
+# Stripe Payment Integration
+# Stripe 租金支付流程说明
 
-## 项目现状
+## 1. Current Implementation Status
 
-- Stripe.net 包 **已安装** (v51.1.0)
-- `appsettings.json` 有 Stripe 配置但还是占位符 (`sk_test_xxx`)
-- 当前是 mock payment，直接 `Status = Verified`
-- 需要改成真实 Stripe Checkout 流程
+本项目目前已经完成 Stripe payment 的第一阶段：
 
----
+> Tenant 点击 Pay Rent  
+> .NET 创建 Stripe Checkout Session  
+> Redirect 到 Stripe 默认支付页面  
+> Stripe 支付后回到 Success / Cancel 页面
 
-## Step 1：获取 Stripe API Keys
+当前实现重点是 **把租客从系统带到 Stripe Checkout，再从 Stripe 返回系统**。  
+目前还没有实现 webhook、付款入库、receipt 更新和自动验证付款状态。
 
-1. 登录 [stripe.com](https://stripe.com) → 注册账号
-2. 进入 Dashboard → **Developers → API keys**
-3. 复制两个 key：
-   - `Publishable key`（`pk_test_...`）
-   - `Secret key`（`sk_test_...`）
-
-更新 `appsettings.json`：
-
-```json
-"Stripe": {
-  "SecretKey": "sk_test_你的真实key",
-  "PublishableKey": "pk_test_你的真实key",
-  "WebhookSecret": "whsec_你的webhook密钥"
-}
-```
+当前状态：**Stripe Checkout redirect flow 已完成**
 
 ---
 
-## Step 2：给 Payment 模型添加 Stripe 字段
+## 2. Completed Flow
 
-编辑 `Models/Payment.cs`，在 `LandlordRemarks` 后面添加三个字段：
+### Step 1: Tenant Opens Payment Page
+
+Tenant 进入付款页面：
+
+- `TenantController.Payments()`
+- `Views/Tenant/Payments.cshtml`
+
+页面会显示：
+
+- Total Verified
+- Payments Recorded
+- Next Due
+- Monthly Rent
+- Payment History
+- Pay Rent 按钮
+
+相关文件：
+
+- `MyMvcApp/Controllers/TenantController.cs`
+- `MyMvcApp/Views/Tenant/Payments.cshtml`
+- `MyMvcApp/Models/TenantPaymentsViewModel.cs`
+
+---
+
+### Step 2: Tenant Clicks Pay Rent
+
+在 `Payments.cshtml` 中，租客点击 **Pay Rent** 后会打开 payment checkout panel。
+
+Panel 显示当前系统计算出的付款信息：
+
+- Payment Month
+- Payment Year
+- Amount Paid
+- Payment Date
+
+这些字段目前都是 readonly。  
+真正提交时，表单会 POST 到：
 
 ```csharp
-[MaxLength(200)]
-public string? StripeSessionId { get; set; }       // Checkout Session ID
-
-[MaxLength(200)]
-public string? StripePaymentIntentId { get; set; } // PaymentIntent ID
-
-[MaxLength(500)]
-public string? StripeReceiptUrl { get; set; }      // Stripe 收据 URL
+TenantController.CreateCheckoutSession()
 ```
 
-然后跑 Migration：
+Razor form：
 
-```bash
-cd /Users/project/dotnet/SuperNiubi_AWS_PROJECT
-dotnet ef migrations add AddStripeFieldsToPayment --project MyMvcApp
-dotnet ef database update --project MyMvcApp
-```
-
----
-
-## Step 3：注册 Stripe 到 Program.cs
-
-在 `Program.cs` 顶部 using 区加：
-
-```csharp
-using Stripe;
-```
-
-在 `var app = builder.Build();` 前面加：
-
-```csharp
-StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
-```
-
----
-
-## Step 4：创建 StripeController
-
-新建文件 `Controllers/StripeController.cs`：
-
-```csharp
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MyMvcApp.Data;
-using MyMvcApp.Models;
-using Stripe;
-using Stripe.Checkout;
-using System.Security.Claims;
-
-namespace MyMvcApp.Controllers
-{
-    public class StripeController : Controller
-    {
-        private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _config;
-
-        public StripeController(ApplicationDbContext context, IConfiguration config)
-        {
-            _context = context;
-            _config = config;
-        }
-
-        // Step A: Tenant 点击 Pay Now → 创建 Checkout Session → 跳转 Stripe
-        [Authorize]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateCheckoutSession()
-        {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(email))
-                return RedirectToAction("Login", "Account");
-
-            var tenant = await _context.Tenants
-                .Include(t => t.User)
-                .Include(t => t.Property)
-                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
-
-            if (tenant == null)
-                return RedirectToAction("PendingAssignment", "Tenant");
-
-            // 计算应付月份
-            var payments = await _context.Payments
-                .Where(p => p.TenantId == tenant.TenantId)
-                .ToListAsync();
-
-            var now = DateTime.UtcNow;
-            var nextDue = GetNextDueDate(tenant.RentDueDay, payments, now);
-            var monthName = System.Globalization.CultureInfo.InvariantCulture
-                .DateTimeFormat.GetMonthName(nextDue.Month);
-
-            // 创建 Pending 付款记录
-            var dueDay = Math.Clamp(tenant.RentDueDay, 1,
-                DateTime.DaysInMonth(nextDue.Year, nextDue.Month));
-            var dueDate = new DateTime(nextDue.Year, nextDue.Month, dueDay,
-                0, 0, 0, DateTimeKind.Utc);
-
-            var payment = new Payment
-            {
-                TenantId = tenant.TenantId,
-                PropertyId = tenant.PropertyId,
-                PaymentMonth = monthName,
-                PaymentYear = nextDue.Year,
-                Amount = tenant.MonthlyRent,
-                DueDate = dueDate,
-                PaymentMethod = PaymentMethod.OnlineTransfer,
-                Status = PaymentStatus.Pending,
-                CreatedAt = now,
-                UpdatedAt = now
-            };
-
-            _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
-
-            // 创建 Stripe Checkout Session
-            var domain = $"{Request.Scheme}://{Request.Host}";
-            var options = new SessionCreateOptions
-            {
-                PaymentMethodTypes = new List<string> { "card" },
-                LineItems = new List<SessionLineItemOptions>
-                {
-                    new SessionLineItemOptions
-                    {
-                        PriceData = new SessionLineItemPriceDataOptions
-                        {
-                            Currency = "myr",
-                            UnitAmount = (long)(tenant.MonthlyRent * 100), // 分为单位
-                            ProductData = new SessionLineItemPriceDataProductDataOptions
-                            {
-                                Name = $"Rent - {monthName} {nextDue.Year}",
-                                Description = $"{tenant.Property?.PropertyName} | {tenant.Property?.Address}"
-                            }
-                        },
-                        Quantity = 1
-                    }
-                },
-                Mode = "payment",
-                CustomerEmail = email,
-                SuccessUrl = $"{domain}/Stripe/PaymentSuccess?session_id={{CHECKOUT_SESSION_ID}}&paymentId={payment.PaymentId}",
-                CancelUrl = $"{domain}/Stripe/PaymentCancelled?paymentId={payment.PaymentId}",
-                Metadata = new Dictionary<string, string>
-                {
-                    { "paymentId", payment.PaymentId.ToString() },
-                    { "tenantId", tenant.TenantId.ToString() }
-                }
-            };
-
-            var service = new SessionService();
-            var session = await service.CreateAsync(options);
-
-            // 保存 Session ID
-            payment.StripeSessionId = session.Id;
-            payment.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return Redirect(session.Url);
-        }
-
-        // Step B: 付款成功后 Stripe 跳回这里
-        public async Task<IActionResult> PaymentSuccess(string session_id, int paymentId)
-        {
-            var service = new SessionService();
-            var session = await service.GetAsync(session_id);
-
-            if (session.PaymentStatus == "paid")
-            {
-                var payment = await _context.Payments.FindAsync(paymentId);
-                if (payment != null && payment.Status != PaymentStatus.Verified)
-                {
-                    payment.Status = PaymentStatus.Verified;
-                    payment.PaymentDate = DateTime.UtcNow;
-                    payment.StripeSessionId = session.Id;
-                    payment.StripePaymentIntentId = session.PaymentIntentId;
-                    payment.ReferenceNo = session.PaymentIntentId;
-                    payment.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            TempData["SuccessMessage"] = "Payment successful! Your receipt has been recorded.";
-            return RedirectToAction("Payments", "Tenant");
-        }
-
-        // Step C: 用户取消付款后跳回这里
-        public async Task<IActionResult> PaymentCancelled(int paymentId)
-        {
-            var payment = await _context.Payments.FindAsync(paymentId);
-            if (payment != null && payment.Status == PaymentStatus.Pending)
-            {
-                payment.Status = PaymentStatus.Rejected;
-                payment.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-            }
-
-            TempData["ErrorMessage"] = "Payment was cancelled.";
-            return RedirectToAction("Payments", "Tenant");
-        }
-
-        // Step D: Stripe Webhook（正式环境必须用这个来更新状态）
-        [HttpPost]
-        [AllowAnonymous]
-        public async Task<IActionResult> Webhook()
-        {
-            var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            var webhookSecret = _config["Stripe:WebhookSecret"];
-
-            Stripe.Event stripeEvent;
-            try
-            {
-                stripeEvent = EventUtility.ConstructEvent(
-                    json,
-                    Request.Headers["Stripe-Signature"],
-                    webhookSecret);
-            }
-            catch (StripeException)
-            {
-                return BadRequest();
-            }
-
-            if (stripeEvent.Type == Events.CheckoutSessionCompleted)
-            {
-                var session = stripeEvent.Data.Object as Session;
-                if (session?.Metadata != null &&
-                    session.Metadata.TryGetValue("paymentId", out var pidStr) &&
-                    int.TryParse(pidStr, out var paymentId))
-                {
-                    var payment = await _context.Payments.FindAsync(paymentId);
-                    if (payment != null && payment.Status != PaymentStatus.Verified)
-                    {
-                        payment.Status = PaymentStatus.Verified;
-                        payment.PaymentDate = DateTime.UtcNow;
-                        payment.StripeSessionId = session.Id;
-                        payment.StripePaymentIntentId = session.PaymentIntentId;
-                        payment.ReferenceNo = session.PaymentIntentId;
-                        payment.UpdatedAt = DateTime.UtcNow;
-                        await _context.SaveChangesAsync();
-                    }
-                }
-            }
-
-            return Ok();
-        }
-
-        private static DateTime GetNextDueDate(int rentDueDay, IEnumerable<Payment> payments, DateTime now)
-        {
-            var candidate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            for (int i = 0; i < 24; i++)
-            {
-                var alreadyPaid = payments.Any(p =>
-                    p.Status == PaymentStatus.Verified &&
-                    p.PaymentYear == candidate.Year &&
-                    p.PaymentMonth == System.Globalization.CultureInfo.InvariantCulture
-                        .DateTimeFormat.GetMonthName(candidate.Month));
-                if (!alreadyPaid) return candidate;
-                candidate = candidate.AddMonths(1);
-            }
-            return candidate;
-        }
-    }
-}
-```
-
----
-
-## Step 5：更新 Payments.cshtml（把 Pay Now 改成 Stripe）
-
-找到 `Views/Tenant/Payments.cshtml` 中原来的 `<form asp-action="UploadPayment">` 整个表单，替换成：
-
-```html
-<form asp-controller="Stripe" asp-action="CreateCheckoutSession" method="post">
+```cshtml
+<form asp-action="CreateCheckoutSession" method="post" id="paymentForm">
     @Html.AntiForgeryToken()
-    <div class="tenant-panel-body" style="padding: 20px;">
-        <p>You will be redirected to Stripe to complete your payment securely.</p>
-        <ul>
-            <li><strong>Month:</strong> @displayMonthName @Model.NewPayment.PaymentYear</li>
-            <li><strong>Amount:</strong> RM @Model.NewPayment.Amount.ToString("F2")</li>
-        </ul>
-        <button type="submit" class="btn tenant-btn tenant-btn-primary">
-            <i class="bi bi-credit-card"></i> Pay with Stripe
-        </button>
-    </div>
+    ...
+    <button type="submit">Continue to Stripe</button>
 </form>
 ```
 
-同时在支付记录列表中，可以显示 Stripe Receipt 链接（如果有）：
-
-```html
-@if (!string.IsNullOrEmpty(payment.StripeReceiptUrl))
-{
-    <a href="@payment.StripeReceiptUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-receipt"></i> Stripe Receipt
-    </a>
-}
-```
+完成状态：**已完成**
 
 ---
 
-## Step 6：Webhook 本地测试（Stripe CLI）
+### Step 3: .NET Creates Stripe Checkout Session
 
-**安装 Stripe CLI（macOS）：**
+`TenantController.CreateCheckoutSession()` 会做以下事情：
 
-```bash
-brew install stripe/stripe-cli/stripe
-stripe login
+1. 读取当前登录用户 email
+2. 根据 email 查找当前 tenant
+3. 如果 tenant 还没有 property assignment，则跳转到 `PendingAssignment`
+4. 从 configuration 读取 `Stripe:SecretKey`
+5. 设置 Stripe API key
+6. 查询当前 tenant 的已有付款记录
+7. 计算 next due date
+8. 计算应付月份和年份
+9. 读取 property name
+10. 把 monthly rent 转换成 Stripe 使用的最小货币单位
+11. 创建 Success URL
+12. 创建 Cancel URL
+13. 创建 Stripe Checkout Session
+14. Redirect 到 `session.Url`
+
+相关代码位置：
+
+- `MyMvcApp/Controllers/TenantController.cs`
+
+核心代码逻辑：
+
+```csharp
+var stripeSecretKey = _configuration["Stripe:SecretKey"];
+Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
+
+var options = new SessionCreateOptions
+{
+    Mode = "payment",
+    CustomerEmail = tenant.User.Email,
+    SuccessUrl = successUrl,
+    CancelUrl = cancelUrl,
+    PaymentMethodTypes = new List<string> { "card" },
+    LineItems = new List<SessionLineItemOptions>
+    {
+        new()
+        {
+            Quantity = 1,
+            PriceData = new SessionLineItemPriceDataOptions
+            {
+                Currency = "myr",
+                UnitAmount = unitAmount,
+                ProductData = new SessionLineItemPriceDataProductDataOptions
+                {
+                    Name = $"Rent - {propertyName}",
+                    Description = $"{monthName} {year} rent payment"
+                }
+            }
+        }
+    },
+    Metadata = new Dictionary<string, string>
+    {
+        ["tenantId"] = tenant.TenantId.ToString(),
+        ["propertyId"] = tenant.PropertyId.ToString(),
+        ["paymentMonth"] = monthName,
+        ["paymentYear"] = year.ToString()
+    }
+};
+
+var service = new SessionService();
+var session = await service.CreateAsync(options);
+
+return Redirect(session.Url);
 ```
 
-**启动本地 webhook 转发：**
+完成状态：**已完成**
 
-```bash
-stripe listen --forward-to https://localhost:5001/Stripe/Webhook
+---
+
+### Step 4: Redirect To Stripe Checkout
+
+创建 Checkout Session 成功后，系统会执行：
+
+```csharp
+return Redirect(session.Url);
 ```
 
-CLI 会输出一个 `whsec_...` 密钥，填入 `appsettings.Development.json`：
+这会把租客带到 Stripe 默认支付页面。
+
+Stripe Checkout 页面由 Stripe 托管，因此本系统不需要自己处理：
+
+- 银行卡 UI
+- 卡号输入
+- 支付安全校验
+- Stripe payment form
+- 3D Secure 页面
+
+完成状态：**已完成**
+
+---
+
+### Step 5: Stripe Returns To Success Page
+
+如果租客在 Stripe Checkout 完成付款，Stripe 会 redirect 回：
+
+```csharp
+TenantController.PaymentSuccess()
+```
+
+对应页面：
+
+- `MyMvcApp/Views/Tenant/PaymentSuccess.cshtml`
+
+当前 Success 页面只负责显示成功结果：
+
+- Stripe Checkout
+- Payment Successful
+- Back to Payments 按钮
+
+当前状态：**已完成**
+
+注意：  
+目前 Success 页面只是显示 Stripe 返回成功，并没有从 Stripe 查询 session，也没有更新本地 `Payment` record。
+
+---
+
+### Step 6: Stripe Returns To Cancel Page
+
+如果租客取消付款，Stripe 会 redirect 回：
+
+```csharp
+TenantController.PaymentCancel()
+```
+
+对应页面：
+
+- `MyMvcApp/Views/Tenant/PaymentCancel.cshtml`
+
+当前 Cancel 页面只负责显示取消结果：
+
+- Stripe Checkout
+- Payment Cancelled
+- Back to Payments 按钮
+
+当前状态：**已完成**
+
+注意：  
+目前 Cancel 页面只是显示取消结果，并没有创建 failed payment record。
+
+---
+
+## 3. Files Changed
+
+### 3.1 Controller
+
+文件：
+
+- `MyMvcApp/Controllers/TenantController.cs`
+
+新增内容：
+
+- 引入 `Stripe.Checkout`
+- 注入 `IConfiguration`
+- 新增 `CreateCheckoutSession()`
+- 新增 `PaymentSuccess()`
+- 新增 `PaymentCancel()`
+
+主要用途：
+
+- 创建 Stripe Checkout Session
+- Redirect 到 Stripe hosted checkout page
+- 接收 Stripe success / cancel redirect
+
+---
+
+### 3.2 Tenant Payment View
+
+文件：
+
+- `MyMvcApp/Views/Tenant/Payments.cshtml`
+
+修改内容：
+
+- `Pay Now` 按钮改成 `Pay Rent`
+- form action 改成 `CreateCheckoutSession`
+- submit 按钮改成 `Continue to Stripe`
+- loading modal 改成 `Opening Stripe`
+- 新增显示 `TempData["ErrorMessage"]`
+
+主要用途：
+
+- 让租客从 payment page 发起 Stripe checkout
+
+---
+
+### 3.3 Success Page
+
+文件：
+
+- `MyMvcApp/Views/Tenant/PaymentSuccess.cshtml`
+
+用途：
+
+- Stripe 支付成功后返回此页面
+- 显示 Payment Successful
+- 提供 Back to Payments 按钮
+
+---
+
+### 3.4 Cancel Page
+
+文件：
+
+- `MyMvcApp/Views/Tenant/PaymentCancel.cshtml`
+
+用途：
+
+- Stripe 支付取消后返回此页面
+- 显示 Payment Cancelled
+- 提供 Back to Payments 按钮
+
+---
+
+## 4. Configuration
+
+Stripe key 配置在：
+
+- `MyMvcApp/appsettings.json`
+
+配置结构：
 
 ```json
 "Stripe": {
-  "WebhookSecret": "whsec_从CLI复制的密钥"
+  "SecretKey": "REPLACE_WITH_STRIPE_SECRET_KEY",
+  "PublishableKey": "REPLACE_WITH_STRIPE_PUBLISHABLE_KEY"
 }
 ```
 
-**测试触发付款成功事件：**
-
-```bash
-stripe trigger checkout.session.completed
-```
-
----
-
-## Step 7：Program.cs Webhook 路由（防止 Anti-Forgery 拦截）
-
-在 `Program.cs` 路由配置中，确保 Webhook 路径被正确映射且不走 CSRF 检查：
+当前代码只使用：
 
 ```csharp
-// Stripe Webhook 不需要 ANTIFORGERY，直接 map
-app.MapControllerRoute(
-    name: "stripe-webhook",
-    pattern: "Stripe/Webhook",
-    defaults: new { controller = "Stripe", action = "Webhook" });
+_configuration["Stripe:SecretKey"]
+```
 
-// 默认路由放在后面
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+`PublishableKey` 当前还没有用到，因为本项目使用的是 Stripe hosted Checkout 页面，不是自建前端 card element。
+
+安全建议：
+
+- 不要把真实 secret key commit 到 GitHub
+- 本地开发可以用 User Secrets
+- 部署环境建议使用环境变量或 AWS Secrets Manager
+- `SecretKey` 只能放在 server side
+- `PublishableKey` 才可以给前端使用
+
+---
+
+## 5. Current Payment Data Behavior
+
+目前这个阶段 **不会创建新的 Payment record**。
+
+也就是说：
+
+- 点击 Pay Rent 不会马上写入 `Payments` 表
+- Stripe checkout success 后也不会更新 `Payments` 表
+- Stripe checkout cancel 后也不会更新 `Payments` 表
+- Payment History 仍然显示原本数据库里的 payment records
+
+原因：  
+当前目标只做到 Stripe redirect flow，不包含 webhook 和本地付款状态同步。
+
+当前行为是刻意保留的，避免在没有 webhook 验证前错误地把付款标记成 `Verified`。
+
+---
+
+## 6. Current Flow Diagram
+
+```text
+Tenant Payments Page
+        |
+        v
+Click Pay Rent
+        |
+        v
+POST /Tenant/CreateCheckoutSession
+        |
+        v
+.NET calculates next rent month and amount
+        |
+        v
+.NET creates Stripe Checkout Session
+        |
+        v
+Redirect to Stripe hosted checkout page
+        |
+        +--------------------------+
+        |                          |
+        v                          v
+Stripe success                Stripe cancel
+        |                          |
+        v                          v
+/Tenant/PaymentSuccess        /Tenant/PaymentCancel
 ```
 
 ---
 
-## 完整支付流程图
+## 7. What Is Completed
 
-```
-Tenant 点击 Pay Now
-       ↓
-POST /Stripe/CreateCheckoutSession
-       ↓
-创建 Payment (Status=Pending) + 保存 StripeSessionId
-       ↓
-跳转到 Stripe 托管支付页面
-       ↓
-    ┌──────────────────────────────┐
-    │   用户填写信用卡 / FPX 信息   │
-    └──────────────────────────────┘
-         ↓                     ↓
-      付款成功              用户取消
-         ↓                     ↓
-GET /Stripe/PaymentSuccess   GET /Stripe/PaymentCancelled
-         ↓                     ↓
-  Status = Verified       Status = Rejected
-         ↓
-同时 Stripe 后台 POST /Stripe/Webhook
-（最可靠的状态更新方式，不依赖浏览器跳转）
+| Feature | Status |
+| --- | --- |
+| Stripe.net package | Completed |
+| Stripe secret key config reading | Completed |
+| Tenant Pay Rent button | Completed |
+| Create Checkout Session | Completed |
+| Redirect to Stripe hosted page | Completed |
+| Success return page | Completed |
+| Cancel return page | Completed |
+| Webhook payment confirmation | Not yet |
+| Save Stripe session id | Not yet |
+| Save Stripe payment intent id | Not yet |
+| Update local Payment status | Not yet |
+| Generate receipt after Stripe success | Not yet |
+
+---
+
+## 8. Important Limitations
+
+### 8.1 Success Page Is Not Proof Of Payment
+
+目前 `PaymentSuccess` 只是 Stripe redirect 后的页面。  
+正式企业系统不能只靠 success redirect 来确认付款。
+
+原因：
+
+- 用户可能刷新或复制 success URL
+- redirect 不是可靠的后台确认机制
+- Stripe 官方推荐使用 webhook 来确认付款完成
+
+正式付款确认必须通过：
+
+```text
+Stripe webhook: checkout.session.completed
 ```
 
 ---
 
-## 测试用信用卡号（Stripe Test Mode）
+### 8.2 No Payment Record Is Created Yet
 
-| 卡号 | 结果 |
-|------|------|
-| `4242 4242 4242 4242` | 付款成功 |
-| `4000 0000 0000 0002` | 卡被拒绝 |
-| `4000 0025 0000 3155` | 需要 3D Secure 验证 |
+当前没有创建 `Payment` record。  
+这是因为系统还没有 webhook，不能可靠确认付款结果。
 
-到期日随便填未来日期，CVV 随便填 3 位数字。
+下一阶段可以选择：
 
----
-
-## 优先级总结
-
-| 步骤 | 是否必须 | 说明 |
-|------|----------|------|
-| Step 1 获取真实 key | ✅ 必须 | 替换 `sk_test_xxx` |
-| Step 2 Payment 加字段 + Migration | ✅ 必须 | 存 SessionId / PaymentIntentId |
-| Step 3 注册 Stripe 到 Program.cs | ✅ 必须 | 初始化 API Key |
-| Step 4 创建 StripeController | ✅ 必须 | 核心业务逻辑 |
-| Step 5 更新 Payments.cshtml | ✅ 必须 | 替换 Pay Now 按钮 |
-| Step 6 Webhook 本地测试 | 推荐 | 正式上线必须配置 |
-| Step 7 Program.cs 路由配置 | 推荐 | 防止 webhook 被拦截 |
+1. 创建 Checkout Session 前先创建 `Pending` payment
+2. 保存 `StripeSessionId`
+3. webhook 收到成功后更新为 `Verified`
+4. webhook 收到失败或过期后更新为 `Rejected` 或 `Pending`
 
 ---
 
-## 部署到 EC2 后的 Webhook 配置
+### 8.3 No Receipt Update Yet
 
-本地开发用 Stripe CLI 转发，部署到 EC2 后需要在 Stripe Dashboard 配置正式 Webhook：
+当前 Success 页面不会生成 receipt。  
+下一阶段建议：
 
-1. Stripe Dashboard → **Developers → Webhooks → Add endpoint**
-2. Endpoint URL：`https://你的域名/Stripe/Webhook`
-3. 监听事件选择：`checkout.session.completed`
-4. 保存后复制 **Signing secret**（`whsec_...`）
-5. 填入服务器的环境变量或 `appsettings.json`
+- 从 Stripe session / payment intent 读取 receipt URL
+- 保存到 `Payment.ReceiptFileKey` 或新增 `StripeReceiptUrl`
+- Payment History 显示 Stripe receipt link
 
-```bash
-# EC2 上设置环境变量（推荐，不要把真实 key 写进代码）
-export Stripe__SecretKey="sk_live_..."
-export Stripe__WebhookSecret="whsec_..."
-```
+---
+
+## 9. Recommended Next Step
+
+下一阶段建议实现：
+
+### Phase 2: Webhook And Payment Persistence
+
+1. 给 `Payment` model 新增 Stripe 字段：
+   - `StripeSessionId`
+   - `StripePaymentIntentId`
+   - `StripeReceiptUrl`
+2. 创建 migration
+3. 创建 Checkout Session 前先创建 `Pending` payment
+4. 把 `paymentId` 放进 Stripe metadata
+5. 设置 Success URL 带 `session_id`
+6. 新增 Stripe webhook endpoint
+7. 监听 `checkout.session.completed`
+8. webhook 成功后更新 Payment 为 `Verified`
+9. 保存 Stripe payment intent id
+10. 保存 Stripe receipt URL
+11. Payment History 显示 Stripe receipt
+
+---
+
+## 10. Final Judgment
+
+当前 Stripe payment 已经完成了最关键的第一步：
+
+> Tenant 可以从系统进入 Stripe 默认支付页面，并根据支付结果回到 Success 或 Cancel 页面。
+
+这说明系统已经具备真实 payment gateway 的入口，不再只是纯 mock payment。
+
+不过，目前它还不是完整企业级付款闭环。  
+要变成完整 A+ payment flow，还需要补：
+
+- Payment record persistence
+- Stripe webhook verification
+- Payment status sync
+- Stripe receipt URL
+- Admin / Landlord payment monitoring
+- Payment audit log
+
+当前完成度：**Stripe Checkout Redirect Flow Completed**

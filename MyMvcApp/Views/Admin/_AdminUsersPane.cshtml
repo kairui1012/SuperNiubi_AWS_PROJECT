@@ -1,0 +1,219 @@
+@model AdminDashboardViewModel
+
+<section class="admin-pane d-none" data-admin-pane="users">
+    <div class="row g-4 admin-user-stack">
+        <div class="col-12 admin-user-main">
+            <div class="panel-card admin-users-card">
+                <div class="panel-heading user-panel-heading">
+                    <div>
+                        <h2 class="panel-title">Manage users</h2>
+                        <div class="panel-meta">Approval, role assignment, and disable/enable controls stay in one place.</div>
+                    </div>
+                    <span class="badge admin-count-badge">@Model.Users.Count result(s)</span>
+                </div>
+
+                <form asp-action="Dashboard" method="get" class="admin-filter-bar admin-user-filter">
+                    <input type="hidden" name="activePane" value="users" />
+                    <div class="admin-user-field admin-user-search">
+                        <label class="admin-filter-label" for="searchEmail">Search</label>
+                        <input type="text"
+                               id="searchEmail"
+                               name="searchEmail"
+                               class="form-control filter-input"
+                               placeholder="Search by email"
+                               value="@Model.SearchEmail" />
+                    </div>
+                    <div class="admin-user-field">
+                        <label class="admin-filter-label" for="roleFilter">Role</label>
+                        <select id="roleFilter" name="roleFilter" class="form-select filter-select">
+                            <option value="">All roles</option>
+                            <option value="Tenant" selected="@(Model.RoleFilter == "Tenant" ? "selected" : null)">Tenant</option>
+                            <option value="Landlord" selected="@(Model.RoleFilter == "Landlord" ? "selected" : null)">Landlord</option>
+                            <option value="Admin" selected="@(Model.RoleFilter == "Admin" ? "selected" : null)">Admin</option>
+                        </select>
+                    </div>
+                    <div class="admin-user-field">
+                        <label class="admin-filter-label" for="statusFilter">Status</label>
+                        <select id="statusFilter" name="statusFilter" class="form-select filter-select">
+                            <option value="">All status</option>
+                            <option value="Pending" selected="@(Model.StatusFilter == "Pending" ? "selected" : null)">Pending</option>
+                            <option value="Approved" selected="@(Model.StatusFilter == "Approved" ? "selected" : null)">Approved</option>
+                            <option value="Disabled" selected="@(Model.StatusFilter == "Disabled" ? "selected" : null)">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="admin-user-submit">
+                        <button type="submit" class="btn admin-btn-primary">Apply</button>
+                    </div>
+                    <div class="admin-filter-actions admin-user-actions">
+                        <a asp-action="Dashboard" asp-route-activePane="users" class="btn admin-btn-secondary btn-sm">Reset filters</a>
+                    </div>
+                </form>
+
+                <div class="table-responsive admin-users-scroll">
+                    <table class="table admin-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Users.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 muted-copy">No users matched the current filter.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var user in Model.Users)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@user.Email</div>
+                                            <div class="panel-meta">User #@user.Id</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @AdminDashboardUi.GetUserStatusBadgeClass(user)">@AdminDashboardUi.GetUserStatusLabel(user)</span>
+                                        </td>
+                                        <td>
+                                            <form asp-action="ChangeRole" method="post" class="d-flex flex-wrap gap-2 align-items-center">
+                                                <input type="hidden" name="id" value="@user.Id" />
+                                                <select name="newRole"
+                                                        class="form-select form-select-sm filter-select"
+                                                        style="width: 150px;"
+                                                        @(user.IsDisabled ? "disabled" : null)>
+                                                    <option value="Tenant" selected="@(user.Role == "Tenant" ? "selected" : null)">Tenant</option>
+                                                    <option value="Landlord" selected="@(user.Role == "Landlord" ? "selected" : null)">Landlord</option>
+                                                    <option value="Admin" selected="@(user.Role == "Admin" ? "selected" : null)">Admin</option>
+                                                </select>
+                                                <button type="submit"
+                                                        class="btn admin-btn-secondary btn-sm"
+                                                        @(user.IsDisabled ? "disabled" : null)>
+                                                    Save
+                                                </button>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <div class="table-actions">
+                                                @if (user.IsDisabled)
+                                                {
+                                                    <form asp-action="EnableUser" method="post" class="d-inline">
+                                                        <input type="hidden" name="id" value="@user.Id" />
+                                                        <button type="submit"
+                                                                class="btn btn-success btn-sm"
+                                                                onclick="return confirm('Enable this user account?');">
+                                                            Enable
+                                                        </button>
+                                                    </form>
+                                                }
+                                                else
+                                                {
+                                                    @if (!user.IsApproved)
+                                                    {
+                                                        <form asp-action="ApproveUser" method="post" class="d-inline">
+                                                            <input type="hidden" name="id" value="@user.Id" />
+                                                            <button type="submit" class="btn btn-warning btn-sm">Approve & Email</button>
+                                                        </form>
+                                                    }
+
+                                                    <form asp-action="DisableUser" method="post" class="d-inline">
+                                                        <input type="hidden" name="id" value="@user.Id" />
+                                                        <button type="submit"
+                                                                class="btn btn-danger btn-sm"
+                                                                onclick="return confirm('Disable this user account?');">
+                                                            Disable
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="panel-card admin-user-section admin-user-password">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Password reset requests</h2>
+                    <span class="badge admin-count-badge">@Model.PasswordResetRequests.Count pending</span>
+                </div>
+                @if (Model.PasswordResetRequests.Count == 0)
+                {
+                    <div class="empty-state">No password reset requests.</div>
+                }
+                else
+                {
+                    <div class="activity-list">
+                        @foreach (var resetRequest in Model.PasswordResetRequests)
+                        {
+                            <div class="activity-item">
+                                <div class="activity-title">@resetRequest.Email</div>
+                                <div class="activity-meta">
+                                    Requested @resetRequest.RequestedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                </div>
+                                <div class="table-actions mt-3">
+                                    <form asp-action="ApprovePasswordResetRequest" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
+                                        <button type="submit"
+                                                class="btn btn-success btn-sm"
+                                                onclick="return confirm('Approve this password reset request and send a Cognito reset email?');">
+                                            Approve
+                                        </button>
+                                    </form>
+                                    <form asp-action="RejectPasswordResetRequest" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@resetRequest.PasswordResetRequestId" />
+                                        <button type="submit"
+                                                class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Reject this password reset request?');">
+                                            Reject
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="panel-card admin-user-section admin-user-latest">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Latest user records</h2>
+                    <span class="panel-meta">Newest DB entries</span>
+                </div>
+                @if (Model.LatestUsers.Count == 0)
+                {
+                    <div class="empty-state">No users available yet.</div>
+                }
+                else
+                {
+                    <div class="activity-list">
+                        @foreach (var user in Model.LatestUsers)
+                        {
+                            <div class="activity-item">
+                                <div class="activity-title">@user.Email</div>
+                                <div class="activity-meta">
+                                    User #@user.Id • @user.Role •
+                                    <span class="badge @AdminDashboardUi.GetUserStatusBadgeClass(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })">
+                                        @AdminDashboardUi.GetUserStatusLabel(new AppUser { IsApproved = user.IsApproved, IsDisabled = user.IsDisabled })
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

@@ -62,10 +62,22 @@ body {
 #theme-toggle {
   border: 0;
   border-radius: 50%;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
   background: transparent !important;
   outline: none !important;
   box-shadow: none !important;
-  transition: color 0.18s ease;
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+#theme-toggle i {
+  color: currentColor;
 }
 
 #theme-toggle:focus,
@@ -74,7 +86,20 @@ body {
 #theme-toggle:hover {
   outline: none !important;
   box-shadow: none !important;
-  background: transparent !important;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1) !important;
+}
+
+[data-bs-theme="dark"] #theme-toggle {
+  color: rgb(248, 250, 252) !important;
+}
+
+[data-bs-theme="dark"] #theme-toggle:focus,
+[data-bs-theme="dark"] #theme-toggle:focus-visible,
+[data-bs-theme="dark"] #theme-toggle:active,
+[data-bs-theme="dark"] #theme-toggle:hover {
+  color: #ffffff !important;
+  background: rgba(248, 250, 252, 0.14) !important;
 }
 
 .text-gradient {

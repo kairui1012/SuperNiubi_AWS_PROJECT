@@ -29,6 +29,8 @@ namespace MyMvcApp.Models.Admin
         public DateTime? VerifiedDate { get; set; }
         public PaymentMethod? PaymentMethod { get; set; }
         public string? ReferenceNo { get; set; }
+        public string? StripeSessionId { get; set; }
+        public string? StripePaymentIntentId { get; set; }
         public string PaymentPeriod { get; set; } = string.Empty;
     }
 
@@ -63,6 +65,10 @@ namespace MyMvcApp.Models.Admin
         public PaymentMethod? PaymentMethod { get; set; }
         public string? ReferenceNo { get; set; }
         public string? ReceiptFileUrl { get; set; }
+        public string? StripeSessionId { get; set; }
+        public string? StripePaymentIntentId { get; set; }
+        public string? StripeReceiptUrl { get; set; }
+        public string? StripeEventId { get; set; }
         public string? LandlordRemarks { get; set; }
         public string PaymentPeriod { get; set; } = string.Empty;
         public string? ReturnUrl { get; set; }
