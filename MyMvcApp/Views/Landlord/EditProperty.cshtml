@@ -1,7 +1,7 @@
 @model MyMvcApp.Models.Property
 
 @{
-    ViewData["Title"] = "Add Property";
+    ViewData["Title"] = "Edit Property";
 }
 
 <div class="landlord-console">
@@ -57,15 +57,15 @@
             <div>
 
                 <p class="landlord-kicker">
-                    ADD PROPERTY
+                    EDIT PROPERTY
                 </p>
 
                 <h1 class="landlord-heading">
-                    Register New Property
+                    Update Property Details
                 </h1>
 
                 <p class="landlord-sub">
-                    Enter property details below to add a new rental unit.
+                    Modify the property information below.
                 </p>
 
             </div>
@@ -78,26 +78,26 @@
 
         <article class="landlord-panel">
 
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="landlord-success mb-3">
-                    @TempData["SuccessMessage"]
-                </div>
-            }
-
             <div asp-validation-summary="All"
                  class="landlord-error mb-3">
             </div>
 
-
-            <form asp-action="AddProperty"
+            <form asp-action="EditProperty"
                   asp-controller="Landlord"
                   method="post">
 
                 @Html.AntiForgeryToken()
 
+                <!-- Hidden Fields -->
 
-                <!-- Basic Info -->
+                <input asp-for="PropertyId" type="hidden" />
+                <input asp-for="LandlordId" type="hidden" />
+                <input asp-for="CreatedAt" type="hidden" />
+                <input asp-for="UpdatedAt" type="hidden" />
+
+
+
+                <!-- Basic Information -->
 
                 <h4 class="mb-3">
                     Basic Information
@@ -295,7 +295,7 @@
                     <button type="submit"
                             class="landlord-btn landlord-btn-primary">
 
-                        Save Property
+                        Update Property
 
                     </button>
 

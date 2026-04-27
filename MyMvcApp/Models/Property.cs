@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using MyMvcApp.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace MyMvcApp.Models
 {
@@ -57,12 +57,22 @@ namespace MyMvcApp.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation properties
-        public AppUser Landlord { get; set; } = null!;
+        [ValidateNever]
+        public AppUser? Landlord { get; set; }
+
+        [ValidateNever]
         public Tenant? Tenant { get; set; }
+
+        [ValidateNever]
         public ICollection<PropertyAmenity> Amenities { get; set; } = new List<PropertyAmenity>();
+
+        [ValidateNever]
         public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; } = new List<MaintenanceRequest>();
+
+        [ValidateNever]
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+        [ValidateNever]
         public ICollection<Document> Documents { get; set; } = new List<Document>();
     }
 }

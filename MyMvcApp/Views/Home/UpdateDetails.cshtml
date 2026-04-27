@@ -1,0 +1,42 @@
+@model MyMvcApp.Models.CommunityUpdate
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="container py-5" style="max-width: 800px;">
+    <a asp-action="Index" class="text-decoration-none text-muted mb-4 d-inline-block">
+        <i class="bi bi-arrow-left me-1"></i> Back to Hub
+    </a>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <img src="@Model.ImageUrl" class="img-fluid w-100" alt="@Model.Title" style="max-height: 400px; object-fit: cover;" />
+        }
+        
+        <div class="card-body p-4 p-md-5">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                @if (Model.Type == MyMvcApp.Models.UpdateType.Event) { <span class="badge bg-success px-3 py-2">Event</span> }
+                else if (Model.Type == MyMvcApp.Models.UpdateType.Promotion) { <span class="badge bg-primary px-3 py-2">Promotion</span> }
+                else { <span class="badge bg-danger px-3 py-2">Notice</span> }
+                
+                <span class="text-muted"><i class="bi bi-clock me-1"></i> Ends: @Model.EndDate.ToString("MMMM dd, yyyy")</span>
+            </div>
+
+            <h1 class="fw-bold mb-4">@Model.Title</h1>
+
+            <div class="fs-5 text-secondary" style="line-height: 1.8;">
+                @Html.Raw(Model.Description)
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.CallToActionUrl) && !string.IsNullOrEmpty(Model.CallToActionText))
+            {
+                <div class="mt-5 pt-4 border-top text-center">
+                    <a href="@Model.CallToActionUrl" target="_blank" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                        @Model.CallToActionText <i class="bi bi-box-arrow-up-right ms-2"></i>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
