@@ -1,0 +1,37 @@
+@{
+    ViewData["Title"] = "Payment Successful";
+}
+
+<div class="tenant-console">
+    <aside class="tenant-rail">
+        <div class="tenant-rail-brand">
+            <span class="tenant-rail-logo"><i class="bi bi-buildings"></i></span>
+            <div>
+                <p class="tenant-rail-title">Tenant Console</p>
+                <p class="tenant-rail-sub">Property Operations</p>
+            </div>
+        </div>
+        <nav class="tenant-rail-nav">
+            <a asp-action="Dashboard" class="tenant-rail-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a asp-action="MyProperty" class="tenant-rail-link"><i class="bi bi-house-door-fill"></i> Property</a>
+            <a asp-action="MaintenanceRequest" class="tenant-rail-link"><i class="bi bi-tools"></i> Maintenance</a>
+            <a asp-action="Payments" class="tenant-rail-link active"><i class="bi bi-wallet2"></i> Payments</a>
+            <a asp-action="Visitors" class="tenant-rail-link"><i class="bi bi-qr-code-scan"></i> Visitors</a>
+            <a asp-action="Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
+            <a asp-action="Announcements" class="tenant-rail-link"><i class="bi bi-megaphone-fill"></i> Announcements</a>
+        </nav>
+    </aside>
+
+    <section class="tenant-workspace">
+        <div class="tenant-panel">
+            <div class="tenant-panel-body text-center py-5">
+                <div class="tenant-stat mx-auto mb-3" style="max-width: 360px;">
+                    <div class="tenant-stat-label">Stripe Checkout</div>
+                    <div class="tenant-stat-value">Payment Successful</div>
+                </div>
+                <p class="tenant-sub mb-4">Stripe returned a successful checkout result.</p>
+                <a asp-action="Payments" class="btn tenant-btn tenant-btn-primary">Back to Payments</a>
+            </div>
+        </div>
+    </section>
+</div>
