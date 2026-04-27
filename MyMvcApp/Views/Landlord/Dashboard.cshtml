@@ -1,337 +1,202 @@
+@model MyMvcApp.Models.LandlordDashboardViewModel
+@using MyMvcApp.Models
+
 @{
     ViewData["Title"] = "Landlord Dashboard";
 }
 
 <div class="landlord-console">
-
-    <!-- Sidebar -->
-
     <aside class="landlord-rail">
-
         <div class="landlord-rail-brand">
-
             <span class="landlord-rail-logo">
                 <i class="bi bi-buildings"></i>
             </span>
-
             <div>
-                <p class="landlord-rail-title">
-                    Landlord Console
-                </p>
-
-                <p class="landlord-rail-sub">
-                    Property Operations
-                </p>
+                <p class="landlord-rail-title">Landlord Console</p>
+                <p class="landlord-rail-sub">Property Operations</p>
             </div>
-
         </div>
-
 
         <nav class="landlord-rail-nav">
-
-            <a href="/Landlord/Dashboard"
-               class="landlord-rail-link active">
-
-                <i class="bi bi-grid-1x2-fill"></i>
-                Dashboard
-
+            <a href="/Landlord/Dashboard" class="landlord-rail-link active">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard
             </a>
-
-
-            <a href="/Landlord/MyProperties"
-               class="landlord-rail-link">
-
-                <i class="bi bi-houses-fill"></i>
-                Properties
-
+            <a href="/Landlord/MyProperties" class="landlord-rail-link">
+                <i class="bi bi-houses-fill"></i> Properties
             </a>
-
-
-            <a href="/Landlord/Tenants"
-               class="landlord-rail-link">
-
-                <i class="bi bi-people-fill"></i>
-                Tenants
-
+            <a href="/Landlord/Tenants" class="landlord-rail-link">
+                <i class="bi bi-people-fill"></i> Tenants
             </a>
-
-
-            <a href="/Landlord/MaintenanceRequests"
-               class="landlord-rail-link">
-
-                <i class="bi bi-tools"></i>
-                Maintenance
-
+            <a href="/Landlord/AssignTenant" class="landlord-rail-link">
+                <i class="bi bi-person-plus-fill"></i> Assign Tenant
             </a>
-
-
-            <a href="/Landlord/Documents"
-               class="landlord-rail-link">
-
-                <i class="bi bi-file-earmark-text-fill"></i>
-                Documents
-
+            <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link">
+                <i class="bi bi-tools"></i> Maintenance
             </a>
-
-
-            <a href="/Landlord/Payments"
-               class="landlord-rail-link">
-
-                <i class="bi bi-wallet2"></i>
-                Payments
-
+            <a href="/Landlord/Documents" class="landlord-rail-link">
+                <i class="bi bi-file-earmark-text-fill"></i> Documents
             </a>
-
+            <a href="/Landlord/Payments" class="landlord-rail-link">
+                <i class="bi bi-wallet2"></i> Payments
+            </a>
+            <a href="/Landlord/Announcements" class="landlord-rail-link">
+                <i class="bi bi-megaphone-fill"></i> Announcements
+            </a>
         </nav>
-
     </aside>
 
-
-
-    <!-- Workspace -->
-
     <section class="landlord-workspace">
-
-        <!-- Header -->
-
         <div class="landlord-toolbar">
-
             <div>
-
-                <p class="landlord-kicker">
-                    LANDLORD WORKSPACE
-                </p>
-
-                <h1 class="landlord-heading">
-                    Welcome, Landlord
-                </h1>
-
-                <p class="landlord-sub">
-                    Manage properties, tenants, maintenance,
-                    documents, and payment records.
-                </p>
-
+                <p class="landlord-kicker">Landlord Dashboard</p>
+                <h1 class="landlord-heading">Portfolio Analytics</h1>
+                <p class="landlord-sub">@(!string.IsNullOrWhiteSpace(Model.LandlordEmail) ? Model.LandlordEmail : "Property performance overview")</p>
             </div>
-
-
             <div class="landlord-time">
-
                 <strong id="currentDate"></strong>
-
                 <span id="currentTime"></span>
-
             </div>
-
         </div>
 
-
-
-        <!-- Hero -->
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <article class="landlord-panel mb-3">
+                <p class="landlord-error mb-0">@TempData["ErrorMessage"]</p>
+            </article>
+        }
 
         <div class="landlord-hero">
-
             <div>
-
-                <h2>
-                    Property Management Dashboard
-                </h2>
-
-                <p class="landlord-sub">
-                    Select a function below to begin managing your rental portfolio.
-                </p>
-
+                <h2>Rental Portfolio</h2>
+                <p class="landlord-sub">Monitor properties, income, unpaid tenants, and active maintenance work.</p>
             </div>
-
-            <span class="landlord-badge badge-success">
-                Active
-            </span>
-
+            <a href="/Landlord/AddProperty" class="landlord-btn landlord-btn-primary">
+                <i class="bi bi-plus-lg"></i> Add Property
+            </a>
         </div>
 
-
-
-        <!-- Quick Actions -->
+        <div class="landlord-grid-4 landlord-dashboard-grid">
+            <article class="landlord-stat">
+                <div class="landlord-stat-label">My Properties</div>
+                <div class="landlord-stat-value">@Model.MyPropertiesCount</div>
+                <div class="landlord-sub">@Model.VacantPropertiesCount vacant</div>
+            </article>
+            <article class="landlord-stat">
+                <div class="landlord-stat-label">Monthly Rental Income</div>
+                <div class="landlord-stat-value">RM @Model.MonthlyRentalIncome.ToString("N2")</div>
+                <div class="landlord-sub">Verified this month</div>
+            </article>
+            <article class="landlord-stat">
+                <div class="landlord-stat-label">Unpaid Tenants</div>
+                <div class="landlord-stat-value">@Model.UnpaidTenantsCount</div>
+                <div class="landlord-sub">Active leases without current payment</div>
+            </article>
+            <article class="landlord-stat">
+                <div class="landlord-stat-label">Active Maintenance</div>
+                <div class="landlord-stat-value">@Model.ActiveMaintenanceRequestsCount</div>
+                <div class="landlord-sub">Pending, approved, or in progress</div>
+            </article>
+        </div>
 
         <div class="landlord-layout-2">
-
-
-            <!-- Functions Panel -->
-
             <article class="landlord-panel">
-
                 <div class="landlord-panel-head">
-
-                    <h3 class="landlord-panel-title">
-                        Main Functions
-                    </h3>
-
+                    <h3 class="landlord-panel-title">Recent Payments</h3>
+                    <a href="/Landlord/Payments" class="landlord-link">View all</a>
                 </div>
 
+                @if (Model.RecentPayments.Count == 0)
+                {
+                    <div class="landlord-empty">No payment records yet.</div>
+                }
+                else
+                {
+                    <div class="landlord-list">
+                        @foreach (var payment in Model.RecentPayments)
+                        {
+                            var statusClass = payment.Status == PaymentStatus.Verified ? "badge-success" :
+                                payment.Status == PaymentStatus.Rejected ? "badge-danger" :
+                                payment.Status == PaymentStatus.Submitted ? "badge-primary" :
+                                "badge-warning";
 
-                <div class="landlord-actions">
-
-                    <a href="/Landlord/MyProperties"
-                       class="landlord-btn landlord-btn-primary">
-
-                        Manage Properties
-
-                    </a>
-
-
-                    <a href="/Landlord/Tenants"
-                       class="landlord-btn landlord-btn-outline">
-
-                        View Tenant Details
-
-                    </a>
-
-
-                    <a href="/Landlord/MaintenanceRequests"
-                       class="landlord-btn landlord-btn-outline">
-
-                        Handle Maintenance Requests
-
-                    </a>
-
-
-                    <a href="/Landlord/Documents"
-                       class="landlord-btn landlord-btn-outline">
-
-                        Upload Documents
-
-                    </a>
-
-
-                    <a href="/Landlord/Payments"
-                       class="landlord-btn landlord-btn-outline">
-
-                        View Payment Records
-
-                    </a>
-
-                </div>
-
+                            <div class="landlord-list-item">
+                                <div>
+                                    <strong>@payment.Tenant.User.Email</strong>
+                                    <p class="landlord-sub mb-0">@payment.Property.PropertyName · @payment.PaymentMonth @payment.PaymentYear · RM @payment.Amount.ToString("N2")</p>
+                                </div>
+                                <span class="landlord-badge @statusClass">@payment.Status</span>
+                            </div>
+                        }
+                    </div>
+                }
             </article>
 
-
-
-            <!-- Responsibilities Panel -->
-
             <article class="landlord-panel">
-
                 <div class="landlord-panel-head">
-
-                    <h3 class="landlord-panel-title">
-                        Landlord Responsibilities
-                    </h3>
-
+                    <h3 class="landlord-panel-title">Maintenance Status</h3>
+                    <a href="/Landlord/MaintenanceRequests" class="landlord-link">View queue</a>
                 </div>
 
+                @if (Model.RecentMaintenanceRequests.Count == 0)
+                {
+                    <div class="landlord-empty">No maintenance requests found.</div>
+                }
+                else
+                {
+                    <div class="landlord-list">
+                        @foreach (var request in Model.RecentMaintenanceRequests)
+                        {
+                            var statusClass = request.Status == MaintenanceStatus.Completed ? "badge-success" :
+                                request.Status == MaintenanceStatus.Rejected ? "badge-danger" :
+                                request.Status == MaintenanceStatus.InProgress ? "badge-primary" :
+                                "badge-warning";
 
-                <div class="landlord-list">
-
-
-                    <div class="landlord-list-item">
-
-                        <span>
-                            Add and manage properties
-                        </span>
-
-                        <span class="landlord-badge badge-success">
-                            Enabled
-                        </span>
-
+                            <div class="landlord-list-item">
+                                <div>
+                                    <strong>@request.Title</strong>
+                                    <p class="landlord-sub mb-0">@request.Property.PropertyName · @request.Tenant.User.Email</p>
+                                </div>
+                                <span class="landlord-badge @statusClass">@request.Status</span>
+                            </div>
+                        }
                     </div>
-
-
-                    <div class="landlord-list-item">
-
-                        <span>
-                            View tenant details
-                        </span>
-
-                        <span class="landlord-badge badge-success">
-                            Enabled
-                        </span>
-
-                    </div>
-
-
-                    <div class="landlord-list-item">
-
-                        <span>
-                            Handle maintenance requests
-                        </span>
-
-                        <span class="landlord-badge badge-warning">
-                            Active
-                        </span>
-
-                    </div>
-
-
-                    <div class="landlord-list-item">
-
-                        <span>
-                            Upload documents
-                        </span>
-
-                        <span class="landlord-badge badge-primary">
-                            Cloud Ready
-                        </span>
-
-                    </div>
-
-
-                    <div class="landlord-list-item">
-
-                        <span>
-                            View payment records
-                        </span>
-
-                        <span class="landlord-badge badge-primary">
-                            Tracking
-                        </span>
-
-                    </div>
-
-
-                </div>
-
+                }
             </article>
-
         </div>
 
+        <article class="landlord-panel mt-3">
+            <div class="landlord-panel-head">
+                <h3 class="landlord-panel-title">Quick Actions</h3>
+            </div>
+            <div class="landlord-actions">
+                <a href="/Landlord/MyProperties" class="landlord-btn landlord-btn-outline"><i class="bi bi-houses"></i> Manage Properties</a>
+                <a href="/Landlord/Tenants" class="landlord-btn landlord-btn-outline"><i class="bi bi-people"></i> Tenants</a>
+                <a href="/Landlord/AssignTenant" class="landlord-btn landlord-btn-outline"><i class="bi bi-person-plus"></i> Assign Tenant</a>
+                <a href="/Landlord/MaintenanceRequests" class="landlord-btn landlord-btn-outline"><i class="bi bi-tools"></i> Maintenance</a>
+                <a href="/Landlord/Payments" class="landlord-btn landlord-btn-outline"><i class="bi bi-wallet2"></i> Payments</a>
+            </div>
+        </article>
     </section>
-
 </div>
 
-
-
 <script>
+    function updateDateTime() {
+        const now = new Date();
+        document.getElementById('currentDate').textContent =
+            now.toLocaleDateString('en-MY', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
 
-function updateDateTime() {
+        document.getElementById('currentTime').textContent =
+            now.toLocaleTimeString('en-MY', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+    }
 
-    const now = new Date();
-
-    document.getElementById('currentDate').textContent =
-        now.toLocaleDateString('en-MY', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-
-    document.getElementById('currentTime').textContent =
-        now.toLocaleTimeString('en-MY', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-}
-
-updateDateTime();
-
-setInterval(updateDateTime, 30000);
-
+    updateDateTime();
+    setInterval(updateDateTime, 30000);
 </script>

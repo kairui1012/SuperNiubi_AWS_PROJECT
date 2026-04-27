@@ -189,6 +189,11 @@ namespace MyMvcApp.Controllers
             return Path.Combine("uploads", "tenant", tenant.TenantId.ToString(), "payments", fileName).Replace("\\", "/");
         }
 
+        public Task<IActionResult> Dashboard()
+        {
+            return TenantDashboard();
+        }
+
         public async Task<IActionResult> TenantDashboard()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -212,6 +217,19 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction(nameof(PendingAssignment));
             }
 
+            var orderedMaintenanceRequests = tenantData.MaintenanceRequests
+                .OrderByDescending(r => r.CreatedAt)
+                .ToList();
+            var paymentRecords = tenantData.Payments.ToList();
+            var nextPaymentDue = GetNextDueDateUtc(tenantData.RentDueDay, paymentRecords, DateTime.UtcNow);
+            var openMaintenanceCount = orderedMaintenanceRequests.Count(r =>
+                r.Status == MaintenanceStatus.Pending ||
+                r.Status == MaintenanceStatus.Approved ||
+                r.Status == MaintenanceStatus.InProgress);
+            var maintenanceStatusSummary = openMaintenanceCount > 0
+                ? $"{openMaintenanceCount} open"
+                : orderedMaintenanceRequests.FirstOrDefault()?.Status.ToString() ?? "No requests";
+
             var viewModel = new TenantDashboardViewModel
             {
                 TenantEmail = tenantData.User.Email,
@@ -228,16 +246,17 @@ namespace MyMvcApp.Controllers
                 LeaseStartDate = tenantData.LeaseStartDate,
                 LeaseEndDate = tenantData.LeaseEndDate,
                 LeaseStatus = tenantData.LeaseStatus.ToString(),
-                MaintenanceRequest = tenantData.MaintenanceRequests
-                    .OrderByDescending(r => r.CreatedAt)
-                    .ToList(),
-                PaymentRecord = tenantData.Payments.Count,
+                MaintenanceRequest = orderedMaintenanceRequests,
+                PaymentRecord = paymentRecords.Count,
                 DocumentQuantity = tenantData.Documents.Count(d => !d.IsDeleted),
                 VisitorPassCount = tenantData.VisitorPasses.Count,
-                MonthlyRent = tenantData.MonthlyRent
+                MonthlyRent = tenantData.MonthlyRent,
+                NextPaymentDue = nextPaymentDue,
+                OpenMaintenanceCount = openMaintenanceCount,
+                MaintenanceStatusSummary = maintenanceStatusSummary
             };
 
-            return View(viewModel);
+            return View("TenantDashboard", viewModel);
         }
 
         public async Task<IActionResult> PendingAssignment()
@@ -249,7 +268,7 @@ namespace MyMvcApp.Controllers
                 var hasAssignment = await _context.Tenants.AnyAsync(t => t.User.Email == email);
                 if (hasAssignment)
                 {
-                    return RedirectToAction(nameof(TenantDashboard));
+                    return RedirectToAction(nameof(Dashboard));
                 }
             }
 
@@ -665,7 +684,19 @@ namespace MyMvcApp.Controllers
 
             TempData["SuccessMessage"] = "Visitor pass created and QR code generated.";
 
-            return RedirectToAction(nameof(Visitors), new { passId = visitorPass.VisitorPassId });        
+            return RedirectToAction(nameof(Visitors), new { passId = visitorPass.VisitorPassId });
+        }
+
+        [Authorize(Roles = "Tenant")]
+        public async Task<IActionResult> Announcements()
+        {
+            var announcements = await _context.SystemAnnouncements
+                .AsNoTracking()
+                .Where(a => a.VisibleTo == "All" || a.VisibleTo == "Tenant")
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync();
+
+            return View(announcements);
         }
     }
 }

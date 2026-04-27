@@ -12,8 +12,8 @@
 - 具备 AWS Cognito 用户状态同步
 - 具备社区公告发布功能，并支持 S3 图片上传
 
-从目前代码完成度来看，Admin 模块已经达到 **B+/A-** 水平。  
-如果老师要求的是“企业级系统”，目前 Admin 还需要补齐更完整的业务闭环、审计能力和运营管理能力，才能更接近 **A+**。
+从目前代码完成度来看，Admin 模块已经达到 **A-** 水平。  
+如果老师要求的是“企业级系统”，目前 Admin 还需要补齐更完整的业务闭环、平台级运营管理能力和更严格的安全治理，才能更接近 **A+**。
 
 ---
 
@@ -104,7 +104,8 @@ Admin 可以修改用户角色：
 完成状态：**已完成**
 
 企业级评价：  
-功能已完成，但如果要更企业级，建议增加“角色变更审计记录”，记录谁在什么时候把谁改成什么角色。
+功能已完成，并且目前已经有基础 audit log 记录角色变更。  
+如果要更企业级，建议进一步记录 old value / new value、IP address，并防止系统最后一个 Admin 被降级。
 
 ---
 
@@ -168,7 +169,7 @@ Admin 可以查看维修请求统计：
 
 完成状态：**部分完成**
 
-目前限制：
+目前限制： 
 
 - Admin 可以查看维修情况
 - 但不能直接介入、指派、升级、关闭维修请求
@@ -199,7 +200,8 @@ Admin 可以查看付款统计：
 - 不能按日期、物业、房东、租客筛选
 
 企业级评价：  
-目前适合 demo，但还不是完整的企业财务管理后台。
+目前适合 demo，但还不是完整的企业财务管理后台。  
+如果后续升级，建议使用 Stripe payment，并在 Admin 端显示 Stripe payment status、receipt URL、failed / cancelled payment 和 webhook event 记录。
 
 ---
 
@@ -224,34 +226,51 @@ Admin 可以查看付款统计：
 
 ## 3. Main Missing Feature For A+
 
-### Tenant Assignment Is Not Complete
+### Admin Tenant Assignment Is Not Complete
 
 这是目前 Admin 模块最大的问题。
 
 README 和 Tenant 页面中都提到：
 
-- Tenant 注册后等待 Admin 分配物业
+- Tenant 注册后等待分配物业
 - Demo Flow 中写了 `Admin assigns tenant`
 - Tenant 页面有 `PendingAssignment`
 
-但是目前 Admin 模块还没有完整功能来：
+当前代码中，**Landlord 模块已经具备租客分配功能**：
 
-- 查看等待分配的 Tenant
-- 查看空置物业
-- 选择 Tenant
-- 选择 Property
-- 创建 Tenant-Property assignment
-- 设置 lease start date
-- 设置 lease end date
-- 设置 monthly rent
-- 设置 deposit
-- 设置 rent due day
-- 设置 lease status
+- Landlord 可以查看未分配的 Tenant
+- Landlord 可以查看自己名下的空置 Property
+- Landlord 可以选择 Tenant 和 Property
+- Landlord 可以创建 Tenant-Property assignment
+- Landlord 可以设置 lease start date
+- Landlord 可以设置 lease end date
+- Landlord 可以设置 monthly rent
+- Landlord 可以设置 deposit
+- Landlord 可以设置 rent due day
+- 系统会创建 `Tenant` 记录，并设置 `LeaseStatus = Active`
+
+相关文件：
+
+- `MyMvcApp/Controllers/LandlordController.cs`
+- `MyMvcApp/Views/Landlord/AssignTenant.cshtml`
+- `MyMvcApp/Models/AssignTenantViewModel.cs`
+
+但是，目前 **Admin 模块本身还没有平台级 Tenant Assignment Management**，也就是说 Admin 还不能在后台统一完成：
+
+- 查看所有等待分配的 Tenant
+- 查看所有 Landlord 的空置 Property
+- 跨 Landlord 选择 Property
+- 给 Tenant 分配 Property
+- 修改已分配的 Property
+- 终止租约
+- 续约
+- 查看 assignment history
+- 在 audit log 中记录租客分配操作
 
 企业级判断：  
-如果老师严格要求“build an enterprise system”，这个功能必须补。因为物业管理系统的核心业务不是单纯用户审批，而是 **用户、物业、租约之间的业务关系管理**。
+如果老师严格要求“build an enterprise system”，这个功能必须补到 Admin。因为物业管理系统的核心业务不是单纯用户审批，而是 **用户、物业、租约之间的业务关系管理**。
 
-当前状态：**未完成**
+当前状态：**Landlord 端已完成，Admin 端未完成**
 
 优先级：**最高**
 
@@ -270,21 +289,47 @@ README 和 Tenant 页面中都提到：
 - 谁删除了公告
 - 操作发生在什么时候
 
-建议新增 `AdminAuditLogs` 表。
+当前代码中已经有基础审计功能：
 
-建议字段：
+- 已有 `AuditLog` model
+- 已有 `AuditLogs` database migration
+- Admin Dashboard 已经可以查看 audit logs
+- 支持 audit search
+- 支持 action filter
+- 支持 date range filter
+- 已记录 user approval、disable、enable、role change
+- 已记录 password reset approval / rejection
+- 已记录 announcement create / edit / delete
 
-- Id
+相关文件：
+
+- `MyMvcApp/Models/AuditLog.cs`
+- `MyMvcApp/Migrations/20260427030000_AddAuditLogs.cs`
+- `MyMvcApp/Controllers/AdminController.cs`
+
+但是目前 audit log 仍然不够企业级。建议增强字段：
+
 - AdminUserId
-- ActionType
 - TargetType
 - TargetId
+- ActionType
 - OldValue
 - NewValue
 - CreatedAt
 - IpAddress
+- UserAgent
 
-当前状态：**未完成**
+建议增强覆盖范围：
+
+- 记录 tenant assignment
+- 记录 lease termination
+- 记录 lease renewal
+- 记录 property status changes
+- 记录 maintenance escalation
+- 记录 Stripe payment success / failed / cancelled events
+- 记录 document delete / restore
+
+当前状态：**基础版已完成，企业级增强未完成**
 
 优先级：**高**
 
@@ -333,7 +378,13 @@ README 和 Tenant 页面中都提到：
 
 ### 4.4 Advanced Reports
 
-目前 Dashboard 有基础统计，但企业级报表还可以加强：
+目前 Dashboard 不只有基础统计，也已经有部分 monthly analytics：
+
+- Monthly collected amount
+- Monthly new users
+- Monthly maintenance requests
+
+但是企业级报表还可以继续加强：
 
 - Monthly revenue report
 - Overdue payment report
@@ -349,8 +400,10 @@ README 和 Tenant 页面中都提到：
 - CSV export
 - PDF export
 - 按 landlord / property / tenant 过滤
+- 按 Stripe payment status 过滤
+- Stripe transaction / receipt reference
 
-当前状态：**部分完成**
+当前状态：**部分完成，已有趋势数据但缺少导出和高级筛选**
 
 优先级：**中**
 
@@ -360,12 +413,26 @@ README 和 Tenant 页面中都提到：
 
 建议加强：
 
-- Admin POST action 加 `[ValidateAntiForgeryToken]`
+- Admin user-management POST action 加 `[ValidateAntiForgeryToken]`
 - 防止越权修改
 - 防止最后一个 Admin 被降级或禁用
 - 敏感配置不要直接放在 `appsettings.json`
 - 使用 AWS Secrets Manager 或环境变量管理 connection string
 - Admin 操作增加确认弹窗和审计记录
+
+当前代码中，部分 Admin POST 已经有 `[ValidateAntiForgeryToken]`，例如：
+
+- Approve / Reject password reset request
+- Create announcement
+- Edit announcement
+- Delete announcement
+
+但以下核心用户管理 POST 仍建议补上：
+
+- ApproveUser
+- DisableUser
+- EnableUser
+- ChangeRole
 
 当前状态：**部分完成**
 
@@ -395,7 +462,7 @@ README 提到 CloudWatch 和 X-Ray。
 
 ### Phase 1: Complete Core Business Flow
 
-必须优先完成：
+必须优先完成 Admin 端平台级租客分配：
 
 1. Pending Tenant list
 2. Vacant Property list
@@ -403,6 +470,7 @@ README 提到 CloudWatch 和 X-Ray。
 4. Lease information form
 5. Tenant assignment success page
 6. Tenant Dashboard 自动从 PendingAssignment 进入正式 dashboard
+7. Assignment audit log
 
 完成后，系统业务闭环会变成：
 
@@ -414,13 +482,14 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
 
 ### Phase 2: Add Enterprise Governance
 
-建议加入：
+建议增强：
 
-1. Admin audit log
+1. Audit log old value / new value
 2. Last admin protection
-3. Anti-forgery validation
+3. Anti-forgery validation for all Admin POST actions
 4. Better role change rules
-5. Admin activity history page
+5. Admin activity history page refinement
+6. IP address and user agent logging
 
 这样可以证明系统不是普通 demo，而是考虑了企业权限治理。
 
@@ -463,16 +532,16 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
 | Admin login protection | Completed | Keep |
 | User approval | Completed | Keep |
 | Enable / disable user | Completed | Keep |
-| Role management | Completed | Add audit logs |
+| Role management | Completed | Add last-admin protection and richer audit data |
 | User search/filter | Completed | Add pagination |
-| Dashboard statistics | Completed | Add charts and date filters |
+| Dashboard statistics | Completed | Add more charts and date filters |
 | Property overview | Partial | Add full property management |
-| Tenant assignment | Missing | Must implement |
+| Tenant assignment | Landlord completed, Admin missing | Must implement Admin assignment console |
 | Maintenance monitoring | Partial | Add escalation and filtering |
 | Payment monitoring | Partial | Add reports/export |
-| Community announcement | Completed | Add edit and expiry handling |
-| Audit log | Missing | Must implement for enterprise quality |
-| Security hardening | Partial | Add anti-forgery and secret management |
+| Community announcement | Completed | Add expiry handling and richer targeting |
+| Audit log | Basic completed | Add old/new values, IP address, assignment logs |
+| Security hardening | Partial | Add anti-forgery to all Admin POST actions and improve secret management |
 | Cloud monitoring | Partial | Show AWS operation status |
 
 ---
@@ -489,6 +558,11 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
 - 维修请求概览
 - 付款状态概览
 - 社区公告管理
+- 系统公告创建、编辑、删除
+- 基础 audit log
+- audit search / filter / date range
+- password reset approval / rejection
+- monthly analytics
 - AWS Cognito 用户状态同步
 - S3 图片上传支持
 
@@ -496,11 +570,12 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
 
 主要原因：
 
-1. Admin 还没有完成租客分配物业这个核心业务功能
-2. Admin 缺少 audit log
-3. Admin 目前很多模块只是 overview，不是 full management
-4. 报表还没有导出、筛选和趋势分析
-5. 安全治理还可以进一步加强
+1. Admin 还没有完成平台级租客分配物业这个核心业务功能
+2. Audit log 已有基础版，但还缺 old value / new value、IP address 和更多业务覆盖
+3. Admin 目前很多模块还是 overview，不是 full management
+4. 报表还没有导出、复杂筛选和 drill-down 分析
+5. 安全治理还可以进一步加强，例如所有 Admin POST 都应有 anti-forgery protection
+6. CloudWatch / X-Ray 等 AWS operational monitoring 还没有真正显示在 Admin 页面
 
 建议最终目标：
 
@@ -520,4 +595,167 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
 - 看审计记录
 - 看云端运行状态
 
-如果补上 **Tenant Assignment + Audit Log + Advanced Reports**，Admin 模块会更接近 A+ 标准。
+如果补上 **Admin Tenant Assignment + Audit Log Enhancement + Advanced Reports + Admin Full Management Pages**，Admin 模块会更接近 A+ 标准。
+
+---
+
+## 8. Missing Features Summary
+
+下面是目前 Admin 模块真正缺少或还不完整的功能。
+
+### 8.1 Highest Priority Missing Features
+
+这些是最影响 A+ 的部分：
+
+1. **Admin Tenant Assignment Console**
+   - 查看所有 pending tenants
+   - 查看所有 vacant properties
+   - Admin 选择 tenant 和 property
+   - Admin 创建 tenant-property assignment
+   - 设置 lease start date
+   - 设置 lease end date
+   - 设置 monthly rent
+   - 设置 deposit
+   - 设置 rent due day
+   - 设置 lease status
+   - 分配成功后写入 audit log
+
+2. **Lease Management**
+   - Admin 查看所有 active leases
+   - Admin 修改租约
+   - Admin terminate lease
+   - Admin renew lease
+   - Admin 查看 lease history
+
+3. **Last Admin Protection**
+   - 防止最后一个 Admin 被降级
+   - 防止最后一个 Admin 被禁用
+   - 防止系统没有任何可用 Admin
+
+4. **Anti-Forgery Protection For All Admin POST Actions**
+   - `ApproveUser`
+   - `DisableUser`
+   - `EnableUser`
+   - `ChangeRole`
+
+---
+
+### 8.2 High Priority Missing Features
+
+这些功能能明显提高企业级质量：
+
+1. **Audit Log Enhancement**
+   - 记录 old value
+   - 记录 new value
+   - 记录 IP address
+   - 记录 user agent
+   - 记录 tenant assignment
+   - 记录 lease operation
+   - 记录 Stripe payment success / failed / cancelled events
+   - 记录 maintenance escalation
+
+2. **Full Admin Property Management**
+   - 查看所有 properties
+   - 按 landlord 过滤
+   - 按 occupied / vacant 过滤
+   - 查看 property details
+   - 查看 property tenants
+   - 查看 property payments
+   - 查看 property maintenance requests
+   - 禁用异常 property
+
+3. **Full Admin Tenant Management**
+   - 查看所有 tenants
+   - 按 assigned / unassigned 过滤
+   - 按 property 过滤
+   - 按 landlord 过滤
+   - 查看 tenant lease
+   - 查看 tenant payments
+   - 查看 tenant documents
+   - 查看 tenant maintenance requests
+
+4. **Advanced Payment Management**
+   - 查看完整 payment list
+   - 按日期筛选
+   - 按 tenant 筛选
+   - 按 property 筛选
+   - 按 landlord 筛选
+   - 按 Stripe payment status 筛选
+   - 查看 Stripe payment id
+   - 查看 Stripe receipt URL
+   - 查看 Stripe webhook event
+   - 导出 CSV
+   - 导出 PDF
+
+---
+
+### 8.3 Medium Priority Missing Features
+
+这些功能属于增强项，适合在核心业务完成后补：
+
+1. **Advanced Reports**
+   - Monthly revenue report
+   - Overdue payment report
+   - Occupancy trend
+   - Maintenance response time report
+   - Tenant payment reliability report
+   - Landlord performance report
+
+2. **Maintenance Escalation**
+   - Admin 查看所有 maintenance requests
+   - Admin 按 priority / status 过滤
+   - Admin 升级 high priority request
+   - Admin 指派或提醒 landlord
+   - Admin 关闭异常 request
+
+3. **Announcement Expiry And Targeting**
+   - announcement expiry date
+   - visible to Tenant / Landlord / All
+   - pinned announcement
+   - announcement status
+
+4. **Admin Pagination**
+   - user list pagination
+   - audit log pagination
+   - payment list pagination
+   - maintenance list pagination
+
+---
+
+### 8.4 AWS / Cloud Missing Features
+
+这些功能可以加强 AWS 项目主题：
+
+1. **CloudWatch Metrics Display**
+   - request count
+   - error count
+   - failed login count
+   - S3 upload failure count
+
+2. **System Health Page**
+   - database status
+   - Cognito status
+   - S3 upload status
+   - email service status
+
+3. **X-Ray / Trace Reference**
+   - recent trace id
+   - slow request summary
+   - failed operation trace reference
+
+---
+
+### Final Missing Feature Priority
+
+如果时间有限，建议按照这个顺序完成：
+
+1. Admin Tenant Assignment Console
+2. Anti-forgery protection for all Admin POST actions
+3. Last Admin Protection
+4. Audit Log Enhancement
+5. Full Admin Property / Tenant Management
+6. Payment report export
+7. AWS operational monitoring
+
+其中最重要的是 **Admin Tenant Assignment Console**。  
+因为它能把系统从 “用户审批后台” 变成真正的 “物业租赁业务运营后台”。

@@ -7,6 +7,7 @@ using MyMvcApp.Models.Admin;
 using MyMvcApp.Services;
 using Amazon.CognitoIdentityProvider; // ADD THIS
 using Amazon.CognitoIdentityProvider.Model; // ADD THIS
+using System.Globalization;
 using System.Security.Claims;
 
 namespace MyMvcApp.Controllers
@@ -16,6 +17,23 @@ namespace MyMvcApp.Controllers
     {
         private static readonly string[] AllowedRoles = { "Tenant", "Landlord", "Admin" };
         private static readonly string[] AllowedStatuses = { "Pending", "Approved", "Disabled" };
+        private static readonly string[] AllowedAdminPanes = { "dashboard", "users", "properties", "maintenance", "payments", "audit", "announcements" };
+        private static readonly string[] AllowedVisibleTo = { "All", "Tenant", "Landlord" };
+        private static readonly string[] AllowedAuditActions =
+        {
+            "ApproveUser",
+            "DisableUser",
+            "EnableUser",
+            "ChangeRole",
+            "ApprovePasswordReset",
+            "RejectPasswordReset",
+            "CreateAnnouncement",
+            "EditAnnouncement",
+            "DeleteAnnouncement",
+            "VerifyPayment",
+            "RejectPayment",
+            "ExportPaymentReport"
+        };
 
         private readonly AppDbContext _dbContext;
         private readonly EmailService _emailService;
@@ -31,11 +49,40 @@ namespace MyMvcApp.Controllers
             _config = config;
         }
 
-        public async Task<IActionResult> Admin(string? searchEmail, string? roleFilter, string? statusFilter)
+        public Task<IActionResult> Admin(
+            string? searchEmail,
+            string? roleFilter,
+            string? statusFilter,
+            string? activePane,
+            string? auditSearch,
+            string? auditActionFilter,
+            DateTime? auditFromDate,
+            DateTime? auditToDate)
+        {
+            return Dashboard(searchEmail, roleFilter, statusFilter, activePane, auditSearch, auditActionFilter, auditFromDate, auditToDate);
+        }
+
+        public async Task<IActionResult> Dashboard(
+            string? searchEmail,
+            string? roleFilter,
+            string? statusFilter,
+            string? activePane,
+            string? auditSearch,
+            string? auditActionFilter,
+            DateTime? auditFromDate,
+            DateTime? auditToDate)
         {
             var normalizedSearchEmail = searchEmail?.Trim() ?? string.Empty;
             var normalizedRoleFilter = NormalizeFilter(roleFilter, AllowedRoles);
             var normalizedStatusFilter = NormalizeFilter(statusFilter, AllowedStatuses);
+            var normalizedAuditSearch = auditSearch?.Trim() ?? string.Empty;
+            var normalizedAuditActionFilter = NormalizeFilter(auditActionFilter, AllowedAuditActions);
+            var hasAuditFilter = !string.IsNullOrWhiteSpace(normalizedAuditSearch)
+                || !string.IsNullOrWhiteSpace(normalizedAuditActionFilter)
+                || auditFromDate.HasValue
+                || auditToDate.HasValue;
+            var normalizedActivePane = NormalizeFilter(activePane, AllowedAdminPanes)
+                ?? (hasAuditFilter ? "audit" : "dashboard");
 
             var usersQuery = _dbContext.Users.AsNoTracking().AsQueryable();
 
@@ -60,6 +107,81 @@ namespace MyMvcApp.Controllers
             var utcNow = DateTime.UtcNow;
             var currentMonthStart = new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var nextMonthStart = currentMonthStart.AddMonths(1);
+            var analyticsStartMonth = currentMonthStart.AddMonths(-5);
+            var analyticsMonths = Enumerable.Range(0, 6)
+                .Select(offset => analyticsStartMonth.AddMonths(offset))
+                .ToList();
+            var auditLast24HoursStart = utcNow.AddHours(-24);
+
+            var monthlyPaymentRows = await _dbContext.Payments.AsNoTracking()
+                .Where(p => p.Status == PaymentStatus.Verified
+                    && p.PaymentDate.HasValue
+                    && p.PaymentDate.Value >= analyticsStartMonth
+                    && p.PaymentDate.Value < nextMonthStart)
+                .GroupBy(p => new
+                {
+                    p.PaymentDate!.Value.Year,
+                    p.PaymentDate!.Value.Month
+                })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Amount = g.Sum(p => p.Amount)
+                })
+                .ToListAsync();
+
+            var monthlyUserRows = await _dbContext.Users.AsNoTracking()
+                .Where(u => u.CreatedAt >= analyticsStartMonth
+                    && u.CreatedAt < nextMonthStart)
+                .GroupBy(u => new
+                {
+                    u.CreatedAt.Year,
+                    u.CreatedAt.Month
+                })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Count = g.Count()
+                })
+                .ToListAsync();
+
+            var monthlyMaintenanceRows = await _dbContext.MaintenanceRequests.AsNoTracking()
+                .Where(m => m.CreatedAt >= analyticsStartMonth
+                    && m.CreatedAt < nextMonthStart)
+                .GroupBy(m => new
+                {
+                    m.CreatedAt.Year,
+                    m.CreatedAt.Month
+                })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Count = g.Count()
+                })
+                .ToListAsync();
+
+            var monthlyPaymentLookup = monthlyPaymentRows.ToDictionary(
+                row => (row.Year, row.Month),
+                row => row.Amount);
+            var monthlyUserLookup = monthlyUserRows.ToDictionary(
+                row => (row.Year, row.Month),
+                row => row.Count);
+            var monthlyMaintenanceLookup = monthlyMaintenanceRows.ToDictionary(
+                row => (row.Year, row.Month),
+                row => row.Count);
+
+            var monthlyAnalytics = analyticsMonths
+                .Select(month => new AdminMonthlyAnalyticsViewModel
+                {
+                    MonthLabel = month.ToString("MMM yyyy", CultureInfo.InvariantCulture),
+                    CollectedAmount = monthlyPaymentLookup.TryGetValue((month.Year, month.Month), out var amount) ? amount : 0m,
+                    NewUsers = monthlyUserLookup.TryGetValue((month.Year, month.Month), out var newUsers) ? newUsers : 0,
+                    MaintenanceRequests = monthlyMaintenanceLookup.TryGetValue((month.Year, month.Month), out var maintenanceRequests) ? maintenanceRequests : 0
+                })
+                .ToList();
 
             var totalProperties = await _dbContext.Properties.AsNoTracking().CountAsync();
             var occupiedProperties = await _dbContext.Tenants.AsNoTracking()
@@ -71,8 +193,11 @@ namespace MyMvcApp.Controllers
             var totalUsers = await _dbContext.Users.AsNoTracking().CountAsync();
             var approvedUsers = await _dbContext.Users.AsNoTracking().CountAsync(u => u.IsApproved && !u.IsDisabled);
             var pendingUsers = await _dbContext.Users.AsNoTracking().CountAsync(u => !u.IsApproved && !u.IsDisabled);
+            var pendingLandlordApprovals = await _dbContext.Users.AsNoTracking()
+                .CountAsync(u => u.Role == "Landlord" && !u.IsApproved && !u.IsDisabled);
             var disabledUsers = await _dbContext.Users.AsNoTracking().CountAsync(u => u.IsDisabled);
             var activeTenancies = await _dbContext.Tenants.AsNoTracking().CountAsync(t => t.LeaseStatus == LeaseStatus.Active);
+            var totalPayments = await _dbContext.Payments.AsNoTracking().CountAsync();
             var totalMaintenanceRequests = await _dbContext.MaintenanceRequests.AsNoTracking().CountAsync();
             var openMaintenanceRequests = await _dbContext.MaintenanceRequests.AsNoTracking()
                 .CountAsync(m => m.Status == MaintenanceStatus.Pending
@@ -81,11 +206,49 @@ namespace MyMvcApp.Controllers
             var totalDocuments = await _dbContext.Documents.AsNoTracking().CountAsync(d => !d.IsDeleted);
             var overduePayments = await _dbContext.Payments.AsNoTracking().CountAsync(p => p.Status == PaymentStatus.Overdue);
 
+            var auditQuery = _dbContext.AuditLogs.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(normalizedAuditSearch))
+            {
+                auditQuery = auditQuery.Where(a =>
+                    a.Action.Contains(normalizedAuditSearch)
+                    || a.ActorEmail.Contains(normalizedAuditSearch)
+                    || a.TargetType.Contains(normalizedAuditSearch)
+                    || (a.TargetEmail != null && a.TargetEmail.Contains(normalizedAuditSearch))
+                    || (a.Details != null && a.Details.Contains(normalizedAuditSearch)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedAuditActionFilter))
+            {
+                auditQuery = auditQuery.Where(a => a.Action == normalizedAuditActionFilter);
+            }
+
+            if (auditFromDate.HasValue)
+            {
+                var auditFromUtc = DateTime.SpecifyKind(auditFromDate.Value.Date, DateTimeKind.Utc);
+                auditQuery = auditQuery.Where(a => a.CreatedAt >= auditFromUtc);
+            }
+
+            if (auditToDate.HasValue)
+            {
+                var auditToUtcExclusive = DateTime.SpecifyKind(auditToDate.Value.Date.AddDays(1), DateTimeKind.Utc);
+                auditQuery = auditQuery.Where(a => a.CreatedAt < auditToUtcExclusive);
+            }
+
+            var auditTotalMatches = await auditQuery.CountAsync();
+
             var model = new AdminDashboardViewModel
             {
+                ActivePane = normalizedActivePane,
                 SearchEmail = normalizedSearchEmail,
                 RoleFilter = normalizedRoleFilter ?? string.Empty,
                 StatusFilter = normalizedStatusFilter ?? string.Empty,
+                AuditSearch = normalizedAuditSearch,
+                AuditActionFilter = normalizedAuditActionFilter ?? string.Empty,
+                AuditFromDate = auditFromDate,
+                AuditToDate = auditToDate,
+                AuditTotalMatches = auditTotalMatches,
+                AuditActions = AllowedAuditActions.ToList(),
                 Users = await usersQuery
                     .OrderBy(u => u.IsDisabled)
                     .ThenBy(u => u.IsApproved)
@@ -101,6 +264,8 @@ namespace MyMvcApp.Controllers
                     OccupiedProperties = occupiedProperties,
                     VacantProperties = vacantProperties,
                     ActiveTenancies = activeTenancies,
+                    TotalPayments = totalPayments,
+                    PendingLandlordApprovals = pendingLandlordApprovals,
                     TotalMaintenanceRequests = totalMaintenanceRequests,
                     OpenMaintenanceRequests = openMaintenanceRequests,
                     TotalDocuments = totalDocuments,
@@ -148,6 +313,7 @@ namespace MyMvcApp.Controllers
                             && p.PaymentDate < nextMonthStart)
                         .SumAsync(p => (decimal?)p.Amount) ?? 0m
                 },
+                MonthlyAnalytics = monthlyAnalytics,
                 LatestUsers = await _dbContext.Users.AsNoTracking()
                     .OrderByDescending(u => u.Id)
                     .Take(5)
@@ -200,10 +366,38 @@ namespace MyMvcApp.Controllers
                         Status = r.Status,
                         RequestedAt = r.RequestedAt
                     })
+                    .ToListAsync(),
+                AuditSummary = new AdminAuditSummaryViewModel
+                {
+                    TotalEvents = await _dbContext.AuditLogs.AsNoTracking().CountAsync(),
+                    EventsLast24Hours = await _dbContext.AuditLogs.AsNoTracking()
+                        .CountAsync(a => a.CreatedAt >= auditLast24HoursStart),
+                    UserManagementEvents = await _dbContext.AuditLogs.AsNoTracking()
+                        .CountAsync(a => a.TargetType == "User"),
+                    PasswordResetEvents = await _dbContext.AuditLogs.AsNoTracking()
+                        .CountAsync(a => a.TargetType == "PasswordResetRequest")
+                },
+                AuditLogs = await auditQuery
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Take(200)
+                    .Select(a => new AdminAuditLogViewModel
+                    {
+                        AuditLogId = a.AuditLogId,
+                        Action = a.Action,
+                        ActorEmail = a.ActorEmail,
+                        TargetType = a.TargetType,
+                        TargetId = a.TargetId,
+                        TargetEmail = a.TargetEmail,
+                        Details = a.Details,
+                        CreatedAt = a.CreatedAt
+                    })
+                    .ToListAsync(),
+                Announcements = await _dbContext.SystemAnnouncements.AsNoTracking()
+                    .OrderByDescending(a => a.CreatedAt)
                     .ToListAsync()
             };
 
-            return View(model);
+            return View("Admin", model);
         }
 
         [HttpPost]
@@ -225,10 +419,16 @@ namespace MyMvcApp.Controllers
                 catch (Exception ex)
                 {
                     TempData["ErrorMessage"] = $"Failed to confirm in Cognito: {ex.Message}";
-                    return RedirectToAction(nameof(Admin));
+                    return RedirectToAction(nameof(Dashboard));
                 }
 
                 user.IsApproved = true;
+                AddAuditLog(
+                    "ApproveUser",
+                    "User",
+                    user.Id,
+                    user.Email,
+                    "Approved user registration.");
                 await _dbContext.SaveChangesAsync();
                 
                 try 
@@ -243,7 +443,7 @@ namespace MyMvcApp.Controllers
                     TempData["SuccessMessage"] = "User approved, but the notification email failed to send.";
                 }
             }
-            return RedirectToAction(nameof(Admin));
+            return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpPost]
@@ -255,7 +455,7 @@ namespace MyMvcApp.Controllers
             if (request == null || request.Status != PasswordResetRequestStatus.Pending)
             {
                 TempData["ErrorMessage"] = "Password reset request is no longer available.";
-                return RedirectToAction(nameof(Admin));
+                return RedirectToAction(nameof(Dashboard));
             }
 
             try
@@ -270,16 +470,22 @@ namespace MyMvcApp.Controllers
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = $"Failed to send reset email through Cognito: {ex.Message}";
-                return RedirectToAction(nameof(Admin));
+                return RedirectToAction(nameof(Dashboard));
             }
 
             request.Status = PasswordResetRequestStatus.Approved;
             request.ReviewedAt = DateTime.UtcNow;
             request.ReviewedByEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
+            AddAuditLog(
+                "ApprovePasswordReset",
+                "PasswordResetRequest",
+                request.PasswordResetRequestId,
+                request.Email,
+                "Approved password reset request and triggered Cognito reset email.");
             await _dbContext.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Password reset approved. Cognito has sent the reset email.";
-            return RedirectToAction(nameof(Admin));
+            return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpPost]
@@ -291,16 +497,22 @@ namespace MyMvcApp.Controllers
             if (request == null || request.Status != PasswordResetRequestStatus.Pending)
             {
                 TempData["ErrorMessage"] = "Password reset request is no longer available.";
-                return RedirectToAction(nameof(Admin));
+                return RedirectToAction(nameof(Dashboard));
             }
 
             request.Status = PasswordResetRequestStatus.Rejected;
             request.ReviewedAt = DateTime.UtcNow;
             request.ReviewedByEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
+            AddAuditLog(
+                "RejectPasswordReset",
+                "PasswordResetRequest",
+                request.PasswordResetRequestId,
+                request.Email,
+                "Rejected password reset request.");
             await _dbContext.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Password reset request rejected.";
-            return RedirectToAction(nameof(Admin));
+            return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpPost]
@@ -312,7 +524,7 @@ namespace MyMvcApp.Controllers
                 if (IsCurrentUser(user.Email))
                 {
                     TempData["ErrorMessage"] = "You cannot disable your own admin account.";
-                    return RedirectToAction(nameof(Admin));
+                    return RedirectToAction(nameof(Dashboard));
                 }
 
                 try
@@ -329,15 +541,21 @@ namespace MyMvcApp.Controllers
                 catch (Exception ex)
                 {
                     TempData["ErrorMessage"] = $"Failed to disable in Cognito: {ex.Message}";
-                    return RedirectToAction(nameof(Admin));
+                    return RedirectToAction(nameof(Dashboard));
                 }
 
                 // Mark as disabled in Neon DB
                 user.IsDisabled = true;
+                AddAuditLog(
+                    "DisableUser",
+                    "User",
+                    user.Id,
+                    user.Email,
+                    "Disabled user account in Cognito and local database.");
                 await _dbContext.SaveChangesAsync();
                 TempData["SuccessMessage"] = "User has been disabled successfully.";
             }
-            return RedirectToAction(nameof(Admin));
+            return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpPost]
@@ -360,15 +578,21 @@ namespace MyMvcApp.Controllers
                 catch (Exception ex)
                 {
                     TempData["ErrorMessage"] = $"Failed to enable in Cognito: {ex.Message}";
-                    return RedirectToAction(nameof(Admin));
+                    return RedirectToAction(nameof(Dashboard));
                 }
 
                 // 2. Mark as enabled in Neon DB
                 user.IsDisabled = false;
+                AddAuditLog(
+                    "EnableUser",
+                    "User",
+                    user.Id,
+                    user.Email,
+                    "Enabled user account in Cognito and local database.");
                 await _dbContext.SaveChangesAsync();
                 TempData["SuccessMessage"] = "User has been enabled successfully.";
             }
-            return RedirectToAction(nameof(Admin));
+            return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpPost]
@@ -382,21 +606,126 @@ namespace MyMvcApp.Controllers
                 if (string.IsNullOrWhiteSpace(normalizedRole))
                 {
                     TempData["ErrorMessage"] = "Invalid role selected.";
-                    return RedirectToAction(nameof(Admin));
+                    return RedirectToAction(nameof(Dashboard));
                 }
 
                 if (IsCurrentUser(user.Email) && !string.Equals(normalizedRole, "Admin", StringComparison.OrdinalIgnoreCase))
                 {
                     TempData["ErrorMessage"] = "You cannot remove your own admin role.";
-                    return RedirectToAction(nameof(Admin));
+                    return RedirectToAction(nameof(Dashboard));
                 }
 
+                var previousRole = user.Role;
                 user.Role = normalizedRole;
+                AddAuditLog(
+                    "ChangeRole",
+                    "User",
+                    user.Id,
+                    user.Email,
+                    $"Changed role from {previousRole} to {normalizedRole}.");
                 await _dbContext.SaveChangesAsync();
                 TempData["SuccessMessage"] = $"Role updated to {normalizedRole}.";
             }
 
-            return RedirectToAction(nameof(Admin));
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAnnouncement(CreateAnnouncementViewModel vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "Please fill in all required fields.";
+                return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
+            }
+
+            var normalizedVisibleTo = NormalizeFilter(vm.VisibleTo, AllowedVisibleTo) ?? "All";
+
+            var announcement = new SystemAnnouncement
+            {
+                Title = vm.Title.Trim(),
+                Body = vm.Body.Trim(),
+                VisibleTo = normalizedVisibleTo,
+                CreatedAt = DateTime.UtcNow,
+                CreatedByEmail = GetCurrentUserEmail()
+            };
+
+            _dbContext.SystemAnnouncements.Add(announcement);
+            await _dbContext.SaveChangesAsync();
+
+            AddAuditLog(
+                "CreateAnnouncement",
+                "SystemAnnouncement",
+                announcement.SystemAnnouncementId,
+                null,
+                $"Created announcement '{announcement.Title}' visible to {announcement.VisibleTo}.");
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Announcement created successfully.";
+            return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditAnnouncement(EditAnnouncementViewModel vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "Please fill in all required fields.";
+                return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
+            }
+
+            var announcement = await _dbContext.SystemAnnouncements.FindAsync(vm.SystemAnnouncementId);
+            if (announcement == null)
+            {
+                TempData["ErrorMessage"] = "Announcement not found.";
+                return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
+            }
+
+            var normalizedVisibleTo = NormalizeFilter(vm.VisibleTo, AllowedVisibleTo) ?? "All";
+
+            announcement.Title = vm.Title.Trim();
+            announcement.Body = vm.Body.Trim();
+            announcement.VisibleTo = normalizedVisibleTo;
+            announcement.UpdatedAt = DateTime.UtcNow;
+
+            AddAuditLog(
+                "EditAnnouncement",
+                "SystemAnnouncement",
+                announcement.SystemAnnouncementId,
+                null,
+                $"Edited announcement '{announcement.Title}' — visibility: {announcement.VisibleTo}.");
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Announcement updated successfully.";
+            return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAnnouncement(int id)
+        {
+            var announcement = await _dbContext.SystemAnnouncements.FindAsync(id);
+            if (announcement == null)
+            {
+                TempData["ErrorMessage"] = "Announcement not found.";
+                return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
+            }
+
+            var title = announcement.Title;
+            _dbContext.SystemAnnouncements.Remove(announcement);
+
+            AddAuditLog(
+                "DeleteAnnouncement",
+                "SystemAnnouncement",
+                id,
+                null,
+                $"Deleted announcement '{title}'.");
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Announcement deleted.";
+            return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
         }
 
         private static string? NormalizeFilter(string? value, IEnumerable<string> allowedValues)
@@ -415,6 +744,27 @@ namespace MyMvcApp.Controllers
             var currentUserEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
             return !string.IsNullOrWhiteSpace(currentUserEmail)
                 && string.Equals(currentUserEmail, email, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void AddAuditLog(string action, string targetType, int? targetId, string? targetEmail, string? details)
+        {
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                Action = action,
+                ActorEmail = GetCurrentUserEmail(),
+                TargetType = targetType,
+                TargetId = targetId,
+                TargetEmail = targetEmail,
+                Details = details,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        private string GetCurrentUserEmail()
+        {
+            return User.FindFirstValue(ClaimTypes.Email)
+                ?? User.Identity?.Name
+                ?? "Unknown admin";
         }
     }
 }

@@ -14,5 +14,8 @@
         public int DocumentQuantity { get; set; }
         public int VisitorPassCount { get; set; }
         public decimal MonthlyRent { get; set; }
+        public DateTime NextPaymentDue { get; set; }
+        public string MaintenanceStatusSummary { get; set; } = string.Empty;
+        public int OpenMaintenanceCount { get; set; }
     }
 }
