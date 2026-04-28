@@ -21,6 +21,10 @@ namespace MyMvcApp.Data
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<SystemAnnouncement> SystemAnnouncements { get; set; }
 
+        public DbSet<Facility> Facilities { get; set; }
+        public DbSet<FacilityBooking> FacilityBookings { get; set; }
+        public DbSet<PromoCode> PromoCodes { get; set; }
+
 
         // Setting rules to store the data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -41,6 +45,8 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<Document>().Property(d => d.DocumentType).HasConversion<string>();
             modelBuilder.Entity<VisitorPass>().Property(v => v.Status).HasConversion<string>();
             modelBuilder.Entity<PasswordResetRequest>().Property(p => p.Status).HasConversion<string>();
+            modelBuilder.Entity<FacilityBooking>().Property(f => f.Status).HasConversion<string>();
+            modelBuilder.Entity<FacilityBooking>().Property(f => f.PaymentStatus).HasConversion<string>();
 
             modelBuilder.Entity<AppUser>()
                 .HasIndex(u => u.CreatedAt);
@@ -151,6 +157,28 @@ namespace MyMvcApp.Data
                 .HasOne(p => p.AppUser)
                 .WithMany()
                 .HasForeignKey(p => p.AppUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<FacilityBooking>()
+                .HasOne(b => b.Facility)
+                .WithMany(f => f.Bookings)
+                .HasForeignKey(b => b.FacilityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // --- FacilityBooking -> AppUser ---
+            // If a user is deleted, we keep the booking for financial records but null out the User ID
+            modelBuilder.Entity<FacilityBooking>()
+                .HasOne(b => b.AppUser)
+                .WithMany()
+                .HasForeignKey(b => b.AppUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // --- FacilityBooking -> PromoCode ---
+            // If a promo code is deleted, null it out on the booking record
+            modelBuilder.Entity<FacilityBooking>()
+                .HasOne(b => b.PromoCode)
+                .WithMany()
+                .HasForeignKey(b => b.PromoCodeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
         }
