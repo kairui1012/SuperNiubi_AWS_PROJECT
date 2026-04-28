@@ -51,17 +51,19 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction(nameof(Book), new { id = propertyId });
             }
 
-            // Check for date overlaps. 
-            // Note: Guest A checking out on the 5th and Guest B checking in on the 5th is ALLOWED.
+            // --- FIX FOR ISSUE 2: The 15-Minute Abandoned Cart Rule ---
+            // Only block dates if the booking is CONFIRMED, OR if it is a PENDING booking created less than 15 minutes ago.
+            var fifteenMinsAgo = DateTime.UtcNow.AddMinutes(-15);
+            
             bool hasOverlap = await _context.PropertyBookings.AnyAsync(b =>
                 b.PropertyId == propertyId &&
-                b.Status != BookingStatus.Cancelled &&
+                (b.Status == BookingStatus.Confirmed || (b.Status == BookingStatus.Pending && b.CreatedAt > fifteenMinsAgo)) &&
                 (b.CheckInDate < utcCheckOut && b.CheckOutDate > utcCheckIn) 
             );
 
             if (hasOverlap)
             {
-                TempData["ErrorMessage"] = "Those dates are already booked.";
+                TempData["ErrorMessage"] = "Those dates are already booked or are currently locked by another user checking out. Please try again in 15 minutes.";
                 return RedirectToAction(nameof(Book), new { id = propertyId });
             }
 
@@ -95,13 +97,18 @@ namespace MyMvcApp.Controllers
                 PromoCodeId = appliedPromoId,
                 TotalAmount = totalAmount,
                 DiscountAmount = discountAmount,
-                FinalAmount = finalAmount
+                FinalAmount = finalAmount,
+                Status = BookingStatus.Pending,
+                PaymentStatus = BookingPaymentStatus.Pending,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.PropertyBookings.Add(booking);
             await _context.SaveChangesAsync();
 
-            var domain = _configuration["Domain"] ?? $"https://{Request.Host}"; 
+            // --- FIX FOR ISSUE 3: Dynamic HTTP/HTTPS resolution ---
+            var domain = _configuration["Domain"] ?? $"{Request.Scheme}://{Request.Host}"; 
+            
             var options = new SessionCreateOptions
             {
                 PaymentMethodTypes = new List<string> { "card", "fpx" }, 
@@ -123,7 +130,7 @@ namespace MyMvcApp.Controllers
                     },
                 },
                 Mode = "payment",
-                SuccessUrl = $"{domain}/PropertyBooking/Success", // We will build views later
+                SuccessUrl = $"{domain}/PropertyBooking/Success", 
                 CancelUrl = $"{domain}/PropertyBooking/Cancel",
                 Metadata = new Dictionary<string, string> { { "TransactionType", "PropertyBooking" }, { "BookingId", booking.Id.ToString() } }
             };
@@ -134,6 +141,17 @@ namespace MyMvcApp.Controllers
             await _context.SaveChangesAsync();
 
             return Redirect(session.Url);
+        }
+        // --- ADD THESE TWO METHODS ---
+
+        public IActionResult Success()
+        {
+            return View();
+        }
+
+        public IActionResult Cancel()
+        {
+            return View();
         }
     }
 }

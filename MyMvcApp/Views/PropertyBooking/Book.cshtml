@@ -54,11 +54,11 @@
                         <div class="row mb-4">
                             <div class="col-md-6 mb-3 mb-md-0">
                                 <label class="form-label text-muted small text-uppercase fw-bold">Check-in Date</label>
-                                <input type="date" name="checkInDate" class="form-control form-control-lg" required min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                                <input type="date" id="checkInDate" name="checkInDate" class="form-control form-control-lg" required min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted small text-uppercase fw-bold">Check-out Date</label>
-                                <input type="date" name="checkOutDate" class="form-control form-control-lg" required min="@DateTime.Now.AddDays(1).ToString("yyyy-MM-dd")" />
+                                <input type="date" id="checkOutDate" name="checkOutDate" class="form-control form-control-lg" required min="@DateTime.Now.AddDays(1).ToString("yyyy-MM-dd")" />
                             </div>
                         </div>
 
@@ -81,3 +81,24 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Dynamically force Check-Out date to be AT LEAST 1 day after Check-In date
+        document.getElementById('checkInDate').addEventListener('change', function () {
+            var checkIn = new Date(this.value);
+            if (!isNaN(checkIn.getTime())) {
+                checkIn.setDate(checkIn.getDate() + 1); // Add 1 day
+                var minOut = checkIn.toISOString().split('T')[0];
+                
+                var checkOutInput = document.getElementById('checkOutDate');
+                checkOutInput.min = minOut; // Update the HTML5 min attribute
+                
+                // If the user already selected an invalid checkout date, reset it
+                if (new Date(checkOutInput.value) <= new Date(this.value)) {
+                    checkOutInput.value = minOut;
+                }
+            }
+        });
+    </script>
+}

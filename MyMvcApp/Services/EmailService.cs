@@ -32,6 +32,7 @@ namespace MyMvcApp.Services
         }
 
         // --- NEW METHOD FOR PROPERTY BOOKING QR EMAIL ---
+        // --- UPDATED METHOD FOR PROPERTY BOOKING QR EMAIL ---
         public async Task SendPropertyAccessPassAsync(string toEmail, PropertyBooking booking, string passCode)
         {
             var senderEmail = _config["AWS:SesSenderEmail"];
@@ -41,21 +42,13 @@ namespace MyMvcApp.Services
             // 1. Generate the verification URL for the guard
             var verificationUrl = $"https://propease.dev/PropertyGuard/Verify?code={passCode}";
 
-            // 2. Generate the QR Code as a Base64 string
-            string qrCodeBase64;
-            using (QRCoder.QRCodeGenerator qrGenerator = new QRCoder.QRCodeGenerator())
-            {
-                QRCoder.QRCodeData qrCodeData = qrGenerator.CreateQrCode(verificationUrl, QRCoder.QRCodeGenerator.ECCLevel.Q);
-                using (QRCoder.PngByteQRCode qrCode = new QRCoder.PngByteQRCode(qrCodeData))
-                {
-                    byte[] qrCodeImage = qrCode.GetGraphic(20);
-                    qrCodeBase64 = Convert.ToBase64String(qrCodeImage);
-                }
-            }
+            // 2. Encode the URL and pass it to a reliable public QR generator
+            var encodedUrl = System.Net.WebUtility.UrlEncode(verificationUrl);
+            var qrImageUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={encodedUrl}";
 
             var subject = $"Stay Confirmed: {booking.Property.PropertyName}";
             
-            // 3. Create the HTML Body
+            // 3. Create the HTML Body (Notice the img src now points to qrImageUrl)
             var htmlBody = $@"
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
                     <h2 style='color: #28a745;'>Stay Confirmed!</h2>
@@ -72,7 +65,7 @@ namespace MyMvcApp.Services
 
                     <div style='text-align: center; margin-top: 30px;'>
                         <p><strong>Scan for Access</strong></p>
-                        <img src='data:image/png;base64,{qrCodeBase64}' alt='Access QR Code' style='max-width: 250px;' />
+                        <img src='{qrImageUrl}' alt='Access QR Code' style='max-width: 250px; border: 1px solid #ccc; padding: 10px; border-radius: 8px;' />
                     </div>
                 </div>";
 
