@@ -41,14 +41,29 @@ namespace MyMvcApp.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateCheckoutSession(int facilityId, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime, string? promoCode, string? guestName, string? guestEmail, string? guestPhone)
         {
+            // --- FIX 1: PostgreSQL requires DateTime to explicitly be UTC ---
+            var utcBookingDate = DateTime.SpecifyKind(bookingDate.Date, DateTimeKind.Utc);
+
             var facility = await _context.Facilities.FindAsync(facilityId);
             if (facility == null) return BadRequest("Facility not found.");
 
-            // 1. Availability Check (First-Come, First-Serve logic)
-            // Ensures the new requested timeslot does not overlap with any Pending or Confirmed bookings
+            // --- FIX 2: Enforce 30-minute granularity (Backend Validation) ---
+            if (startTime.Minutes % 30 != 0 || endTime.Minutes % 30 != 0)
+            {
+                TempData["ErrorMessage"] = "Bookings must be in 30-minute intervals (e.g., 14:00, 14:30).";
+                return RedirectToAction(nameof(Book), new { id = facilityId });
+            }
+
+            if (endTime <= startTime)
+            {
+                TempData["ErrorMessage"] = "End time must be after start time.";
+                return RedirectToAction(nameof(Book), new { id = facilityId });
+            }
+
+            // 1. Availability Check
             bool hasOverlap = await _context.FacilityBookings.AnyAsync(b =>
                 b.FacilityId == facilityId &&
-                b.BookingDate.Date == bookingDate.Date &&
+                b.BookingDate == utcBookingDate && // <-- Use the UTC variable here
                 b.Status != BookingStatus.Cancelled &&
                 (b.StartTime < endTime && b.EndTime > startTime) 
             );
@@ -76,7 +91,7 @@ namespace MyMvcApp.Controllers
                 {
                     appliedPromoId = promo.Id;
                     discountAmount = promo.DiscountPercentage.HasValue 
-                        ? totalAmount * (promo.DiscountPercentage.Value / 100) 
+                        ? totalAmount * (promo.DiscountPercentage.Value / 100m) // Add 'm' for decimal
                         : (promo.FlatDiscount ?? 0);
                 }
             }
@@ -87,7 +102,7 @@ namespace MyMvcApp.Controllers
             int? currentUserId = null;
             if (User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (int.TryParse(userIdClaim, out int uid)) currentUserId = uid;
             }
 
@@ -99,7 +114,7 @@ namespace MyMvcApp.Controllers
                 GuestName = currentUserId == null ? guestName : null,
                 GuestEmail = currentUserId == null ? guestEmail : null,
                 GuestPhone = currentUserId == null ? guestPhone : null,
-                BookingDate = bookingDate.Date,
+                BookingDate = utcBookingDate, // <-- Use the UTC variable here
                 StartTime = startTime,
                 EndTime = endTime,
                 PromoCodeId = appliedPromoId,
@@ -114,24 +129,23 @@ namespace MyMvcApp.Controllers
             await _context.SaveChangesAsync();
 
             // 5. Generate Stripe Checkout
-            // For propease.dev deployment, ensure DOMAIN is set in appsettings.json
             var domain = _configuration["Domain"] ?? $"https://{Request.Host}"; 
             
-            var options = new SessionCreateOptions
+            var options = new Stripe.Checkout.SessionCreateOptions
             {
                 PaymentMethodTypes = new List<string> { "card", "fpx" }, 
-                LineItems = new List<SessionLineItemOptions>
+                LineItems = new List<Stripe.Checkout.SessionLineItemOptions>
                 {
-                    new SessionLineItemOptions
+                    new Stripe.Checkout.SessionLineItemOptions
                     {
-                        PriceData = new SessionLineItemPriceDataOptions
+                        PriceData = new Stripe.Checkout.SessionLineItemPriceDataOptions
                         {
-                            UnitAmount = (long)(finalAmount * 100), // Stripe processes in cents
+                            UnitAmount = (long)(finalAmount * 100), 
                             Currency = "myr",
-                            ProductData = new SessionLineItemPriceDataProductDataOptions
+                            ProductData = new Stripe.Checkout.SessionLineItemPriceDataProductDataOptions
                             {
                                 Name = $"Facility Booking: {facility.Name}",
-                                Description = $"{bookingDate:dd MMM yyyy} ({startTime:hh\\:mm} - {endTime:hh\\:mm})"
+                                Description = $"{utcBookingDate:dd MMM yyyy} ({startTime:hh\\:mm} - {endTime:hh\\:mm})"
                             },
                         },
                         Quantity = 1,
@@ -147,8 +161,8 @@ namespace MyMvcApp.Controllers
                 }
             };
 
-            var service = new SessionService();
-            Session session = await service.CreateAsync(options);
+            var service = new Stripe.Checkout.SessionService();
+            Stripe.Checkout.Session session = await service.CreateAsync(options);
 
             booking.StripeSessionId = session.Id;
             await _context.SaveChangesAsync();
