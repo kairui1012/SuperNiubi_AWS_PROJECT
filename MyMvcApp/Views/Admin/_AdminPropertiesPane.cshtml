@@ -37,6 +37,20 @@
                             <div class="summary-footnote">Live rental assignments</div>
                         </div>
                     </div>
+                    <div class="col-sm-6">
+                        <div class="summary-card">
+                            <div class="summary-label">Pending approval</div>
+                            <div class="summary-value">@Model.PropertyReport.PendingApprovalCount</div>
+                            <div class="summary-footnote">Properties waiting for admin review</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="summary-card">
+                            <div class="summary-label">Approved listings</div>
+                            <div class="summary-value">@Model.PropertyReport.ApprovedCount</div>
+                            <div class="summary-footnote">Properties available to assign tenants</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -60,6 +74,66 @@
                         <div class="activity-meta">Quick actions help move from overview into management with fewer clicks.</div>
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="panel-card">
+                <div class="panel-heading">
+                    <h2 class="panel-title">Property approvals</h2>
+                    <span class="badge admin-count-badge">@Model.PropertyApprovals.Count pending/rejected</span>
+                </div>
+
+                @if (Model.PropertyApprovals.Count == 0)
+                {
+                    <div class="empty-state">No properties are waiting for review.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Landlord</th>
+                                    <th>Status</th>
+                                    <th>Availability</th>
+                                    <th>Rent</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var property in Model.PropertyApprovals)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@property.PropertyName</div>
+                                            <div class="panel-meta">@property.Address</div>
+                                        </td>
+                                        <td>@property.LandlordEmail</td>
+                                        <td><span class="badge badge-soft-warning">@property.ApprovalStatus</span></td>
+                                        <td>@property.AvailabilityStatus</td>
+                                        <td>RM @property.MonthlyRent.ToString("N2")</td>
+                                        <td>
+                                            <div class="table-actions">
+                                                <form asp-action="ApproveProperty" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@property.PropertyId" />
+                                                    <button type="submit" class="btn admin-btn-primary btn-sm">Approve</button>
+                                                </form>
+                                                <form asp-action="RejectProperty" method="post" class="d-inline"
+                                                      onsubmit="return confirm('Reject this property?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@property.PropertyId" />
+                                                    <button type="submit" class="btn admin-btn-danger btn-sm">Reject</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
             </div>
         </div>
     </div>

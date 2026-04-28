@@ -27,6 +27,9 @@
             <a href="/Landlord/Tenants" class="landlord-rail-link">
                 <i class="bi bi-people-fill"></i> Tenants
             </a>
+            <a href="/Landlord/AssignTenant" class="landlord-rail-link">
+                <i class="bi bi-person-plus-fill"></i> Assign Tenant
+            </a>
             <a href="/Landlord/MaintenanceRequests" class="landlord-rail-link">
                 <i class="bi bi-tools"></i> Maintenance
             </a>
@@ -107,11 +110,21 @@
                     @foreach (var property in Model)
                     {
                         <div class="landlord-list-item">
+                            @if (!string.IsNullOrWhiteSpace(property.ImageUrl))
+                            {
+                                <img src="@property.ImageUrl"
+                                     alt="@property.PropertyName"
+                                     style="width: 120px; height: 90px; object-fit: cover; border-radius: 8px; margin-right: 1rem;" />
+                            }
                             <div>
                                 <h4 class="mb-2">@property.PropertyName</h4>
                                 <p class="landlord-sub mb-1">
                                     <strong>Type:</strong> @property.PropertyType |
                                     <strong>Rent:</strong> RM @property.MonthlyRent
+                                </p>
+                                <p class="landlord-sub mb-1">
+                                    <strong>Availability:</strong> @property.AvailabilityStatus |
+                                    <strong>Approval:</strong> @property.ApprovalStatus
                                 </p>
                                 <p class="landlord-sub mb-1">
                                     <strong>Address:</strong> @property.AddressLine1 @property.AddressLine2,
@@ -142,8 +155,8 @@
                                     <input type="hidden" name="id" value="@property.PropertyId" />
                                     <button type="submit"
                                             class="landlord-btn landlord-btn-danger"
-                                            onclick="return confirm('Are you sure you want to delete this property?');">
-                                        Delete
+                                            onclick="return confirm('Archive this property? Properties with active tenants cannot be archived.');">
+                                        Archive
                                     </button>
                                 </form>
                             </div>

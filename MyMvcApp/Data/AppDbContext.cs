@@ -13,6 +13,7 @@ namespace MyMvcApp.Data
         public DbSet<PropertyAmenity> PropertyAmenities { get; set; }
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
+        public DbSet<MaintenanceTimeline> MaintenanceTimelines { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Document> Documents { get; set; }
         public DbSet<CommunityUpdate> CommunityUpdates { get; set; }
@@ -20,6 +21,7 @@ namespace MyMvcApp.Data
         public DbSet<PasswordResetRequest> PasswordResetRequests { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<SystemAnnouncement> SystemAnnouncements { get; set; }
+        public DbSet<LeaseHistory> LeaseHistories { get; set; }
 
         public DbSet<Facility> Facilities { get; set; }
         public DbSet<FacilityBooking> FacilityBookings { get; set; }
@@ -31,6 +33,8 @@ namespace MyMvcApp.Data
         {
             // Store ENUM as String for easier check, if not it will be 1, 2, 3 in db
             modelBuilder.Entity<Property>().Property(p => p.PropertyType).HasConversion<string>();
+            modelBuilder.Entity<Property>().Property(p => p.AvailabilityStatus).HasConversion<string>();
+            modelBuilder.Entity<Property>().Property(p => p.ApprovalStatus).HasConversion<string>();
             modelBuilder.Entity<CommunityUpdate>().Property(c => c.Type).HasConversion<string>();
             modelBuilder.Entity<Tenant>().Property(t => t.DepositStatus).HasConversion<string>();
             modelBuilder.Entity<Tenant>().Property(t => t.LeaseStatus).HasConversion<string>();
@@ -51,6 +55,15 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<AppUser>()
                 .HasIndex(u => u.CreatedAt);
 
+            modelBuilder.Entity<Property>()
+                .HasIndex(p => p.IsDeleted);
+
+            modelBuilder.Entity<Property>()
+                .HasIndex(p => p.ApprovalStatus);
+
+            modelBuilder.Entity<Property>()
+                .HasIndex(p => p.AvailabilityStatus);
+
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(a => a.CreatedAt);
 
@@ -66,6 +79,21 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<SystemAnnouncement>()
                 .HasIndex(a => a.VisibleTo);
 
+            modelBuilder.Entity<LeaseHistory>()
+                .HasIndex(h => h.TenantId);
+
+            modelBuilder.Entity<LeaseHistory>()
+                .HasIndex(h => h.CreatedAt);
+
+            modelBuilder.Entity<LeaseHistory>()
+                .HasIndex(h => h.Action);
+
+            modelBuilder.Entity<MaintenanceTimeline>()
+                .HasIndex(t => t.RequestId);
+
+            modelBuilder.Entity<MaintenanceTimeline>()
+                .HasIndex(t => t.CreatedAt);
+
             // --- AppUser (Landlord) → Property ---
             // Deleting a landlord cascades to their properties
             modelBuilder.Entity<Property>()
@@ -80,6 +108,12 @@ namespace MyMvcApp.Data
                 .HasOne(t => t.User)
                 .WithMany()
                 .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<LeaseHistory>()
+                .HasOne(h => h.Tenant)
+                .WithMany(t => t.LeaseHistories)
+                .HasForeignKey(h => h.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // --- Property ↔ Tenant (one-to-one) ---
@@ -109,6 +143,12 @@ namespace MyMvcApp.Data
                 .HasOne(m => m.Property)
                 .WithMany(p => p.MaintenanceRequests)
                 .HasForeignKey(m => m.PropertyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<MaintenanceTimeline>()
+                .HasOne(t => t.MaintenanceRequest)
+                .WithMany(r => r.Timeline)
+                .HasForeignKey(t => t.RequestId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // --- Tenant → Payment ---

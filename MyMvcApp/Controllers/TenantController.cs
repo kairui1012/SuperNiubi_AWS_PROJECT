@@ -510,6 +510,7 @@ namespace MyMvcApp.Controllers
 
             var requests = await _context.MaintenanceRequests
                 .Include(r => r.Property)
+                .Include(r => r.Timeline)
                 .Where(r => r.TenantId == tenant.TenantId)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
@@ -603,6 +604,7 @@ namespace MyMvcApp.Controllers
             }
 
             _context.MaintenanceRequests.Add(newRequest);
+            AddMaintenanceTimeline(newRequest, "Request submitted", "Tenant submitted the maintenance request.", email);
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Maintenance request submitted.";
@@ -1291,6 +1293,13 @@ namespace MyMvcApp.Controllers
                 ? null
                 : feedbackComment.Trim()[..Math.Min(feedbackComment.Trim().Length, 1000)];
             request.UpdatedAt = DateTime.UtcNow;
+            AddMaintenanceTimeline(
+                request,
+                "Completion confirmed",
+                rating.HasValue
+                    ? $"Tenant confirmed completion with rating {rating}/5."
+                    : "Tenant confirmed completion.",
+                email);
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Completion confirmed. Thank you for your feedback.";
@@ -1307,6 +1316,19 @@ namespace MyMvcApp.Controllers
                 .ToListAsync();
 
             return View(announcements);
+        }
+
+        private void AddMaintenanceTimeline(MaintenanceRequest request, string action, string? details, string actorEmail)
+        {
+            _context.MaintenanceTimelines.Add(new MaintenanceTimeline
+            {
+                MaintenanceRequest = request,
+                RequestId = request.RequestId,
+                Action = action,
+                Details = details,
+                ActorEmail = actorEmail,
+                CreatedAt = DateTime.UtcNow
+            });
         }
     }
 }

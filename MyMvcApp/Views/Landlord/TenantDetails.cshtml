@@ -2,6 +2,12 @@
 
 @{
     ViewData["Title"] = "Tenant Details";
+    var leaseStartValue = Model.LeaseStartDate.ToString("yyyy-MM-dd");
+    var leaseEndValue = Model.LeaseEndDate.ToString("yyyy-MM-dd");
+    var availableProperties = ViewBag.AvailableProperties as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+        ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var leaseHistory = ViewBag.LeaseHistory as List<MyMvcApp.Models.LeaseHistory>
+        ?? new List<MyMvcApp.Models.LeaseHistory>();
 }
 
 <div class="landlord-console">
@@ -48,8 +54,34 @@
                 Tenants
             </a>
 
-            <a href="/Landlord/Announcements" class="landlord-rail-link">
-                <i class="bi bi-megaphone-fill"></i> Announcements
+            <a href="/Landlord/AssignTenant"
+               class="landlord-rail-link">
+                <i class="bi bi-person-plus-fill"></i>
+                Assign Tenant
+            </a>
+
+            <a href="/Landlord/MaintenanceRequests"
+               class="landlord-rail-link">
+                <i class="bi bi-tools"></i>
+                Maintenance
+            </a>
+
+            <a href="/Landlord/Documents"
+               class="landlord-rail-link">
+                <i class="bi bi-file-earmark-text-fill"></i>
+                Documents
+            </a>
+
+            <a href="/Landlord/Payments"
+               class="landlord-rail-link">
+                <i class="bi bi-wallet2"></i>
+                Payments
+            </a>
+
+            <a href="/Landlord/Announcements"
+               class="landlord-rail-link">
+                <i class="bi bi-megaphone-fill"></i>
+                Announcements
             </a>
 
         </nav>
@@ -82,6 +114,20 @@
 
         </div>
 
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <article class="landlord-panel mb-3">
+                <p class="landlord-error mb-0">@TempData["ErrorMessage"]</p>
+            </article>
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <article class="landlord-panel mb-3">
+                <p class="landlord-success mb-0">@TempData["SuccessMessage"]</p>
+            </article>
+        }
 
 
         <!-- Details Panel -->
@@ -176,6 +222,267 @@
 
         </article>
 
+        <article class="landlord-panel mt-4">
+
+            <div class="landlord-panel-head">
+                <h3 class="landlord-panel-title">Lease Management</h3>
+            </div>
+
+            <div class="landlord-lease-grid">
+
+                <form asp-action="RenewLease"
+                      asp-controller="Landlord"
+                      method="post"
+                      class="landlord-lease-tool">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="TenantId" value="@Model.TenantId" />
+
+                    <h4>Renew Lease</h4>
+
+                    <label class="landlord-label" for="renewStart">Start Date</label>
+                    <input id="renewStart"
+                           name="LeaseStartDate"
+                           type="date"
+                           value="@leaseStartValue"
+                           class="landlord-input"
+                           required />
+
+                    <label class="landlord-label" for="renewEnd">End Date</label>
+                    <input id="renewEnd"
+                           name="LeaseEndDate"
+                           type="date"
+                           value="@leaseEndValue"
+                           class="landlord-input"
+                           required />
+
+                    <label class="landlord-label" for="renewNotes">Notes</label>
+                    <textarea id="renewNotes"
+                              name="Notes"
+                              rows="3"
+                              maxlength="1000"
+                              class="landlord-textarea">@Model.Notes</textarea>
+
+                    <button type="submit" class="landlord-btn landlord-btn-primary mt-3">
+                        Renew Lease
+                    </button>
+                </form>
+
+                <form asp-action="AdjustRent"
+                      asp-controller="Landlord"
+                      method="post"
+                      class="landlord-lease-tool">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="TenantId" value="@Model.TenantId" />
+
+                    <h4>Adjust Rent</h4>
+
+                    <label class="landlord-label" for="monthlyRent">Monthly Rent</label>
+                    <input id="monthlyRent"
+                           name="MonthlyRent"
+                           type="number"
+                           min="0.01"
+                           step="0.01"
+                           value="@Model.MonthlyRent"
+                           class="landlord-input"
+                           required />
+
+                    <label class="landlord-label" for="rentDueDay">Rent Due Day</label>
+                    <input id="rentDueDay"
+                           name="RentDueDay"
+                           type="number"
+                           min="1"
+                           max="31"
+                           value="@Model.RentDueDay"
+                           class="landlord-input"
+                           required />
+
+                    <button type="submit" class="landlord-btn landlord-btn-primary mt-3">
+                        Update Rent
+                    </button>
+                </form>
+
+                <form asp-action="ChangeTenantProperty"
+                      asp-controller="Landlord"
+                      method="post"
+                      class="landlord-lease-tool">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="TenantId" value="@Model.TenantId" />
+
+                    <h4>Change Property</h4>
+
+                    <label class="landlord-label" for="propertyId">Property</label>
+                    <select id="propertyId"
+                            name="PropertyId"
+                            class="landlord-select"
+                            required>
+                        @foreach (var property in availableProperties)
+                        {
+                            <option value="@property.Value"
+                                    selected="@(property.Value == Model.PropertyId.ToString() ? "selected" : null)">
+                                @property.Text
+                            </option>
+                        }
+                    </select>
+
+                    <button type="submit" class="landlord-btn landlord-btn-primary mt-3">
+                        Change Property
+                    </button>
+                </form>
+
+                <form asp-action="ChangeDepositStatus"
+                      asp-controller="Landlord"
+                      method="post"
+                      class="landlord-lease-tool">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="TenantId" value="@Model.TenantId" />
+
+                    <h4>Change Deposit Status</h4>
+
+                    <label class="landlord-label" for="depositStatus">Deposit Status</label>
+                    <select id="depositStatus"
+                            name="DepositStatus"
+                            class="landlord-select"
+                            required>
+                        @foreach (var status in Html.GetEnumSelectList<MyMvcApp.Models.DepositStatus>())
+                        {
+                            <option value="@status.Value"
+                                    selected="@(status.Value == ((int)Model.DepositStatus).ToString() ? "selected" : null)">
+                                @status.Text
+                            </option>
+                        }
+                    </select>
+
+                    <label class="landlord-label" for="depositNotes">Notes</label>
+                    <textarea id="depositNotes"
+                              name="Notes"
+                              rows="3"
+                              maxlength="1000"
+                              class="landlord-textarea">@Model.Notes</textarea>
+
+                    <button type="submit" class="landlord-btn landlord-btn-primary mt-3">
+                        Update Deposit
+                    </button>
+                </form>
+
+                <form asp-action="TerminateLease"
+                      asp-controller="Landlord"
+                      method="post"
+                      class="landlord-lease-tool"
+                      onsubmit="return confirm('Terminate this lease?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="TenantId" value="@Model.TenantId" />
+
+                    <h4>Terminate Lease</h4>
+
+                    <label class="landlord-label" for="terminateNotes">Termination Notes</label>
+                    <textarea id="terminateNotes"
+                              name="Notes"
+                              rows="5"
+                              maxlength="1000"
+                              class="landlord-textarea">@Model.Notes</textarea>
+
+                    <button type="submit" class="landlord-btn landlord-btn-danger mt-3">
+                        Terminate Lease
+                    </button>
+                </form>
+
+            </div>
+
+        </article>
+
+        <article class="landlord-panel mt-4">
+
+            <div class="landlord-panel-head">
+                <h3 class="landlord-panel-title">Lease History</h3>
+            </div>
+
+            @if (!leaseHistory.Any())
+            {
+                <div class="landlord-empty">
+                    No lease history recorded yet.
+                </div>
+            }
+            else
+            {
+                <div class="landlord-history-list">
+                    @foreach (var item in leaseHistory)
+                    {
+                        <div class="landlord-history-item">
+                            <div>
+                                <strong>@item.Action</strong>
+                                <p class="landlord-sub mb-1">
+                                    @item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                    by @item.ChangedByEmail
+                                </p>
+
+                                @if (!string.IsNullOrWhiteSpace(item.OldValue))
+                                {
+                                    <p class="landlord-sub mb-1">
+                                        <strong>Before:</strong> @item.OldValue
+                                    </p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(item.NewValue))
+                                {
+                                    <p class="landlord-sub mb-1">
+                                        <strong>After:</strong> @item.NewValue
+                                    </p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(item.Notes))
+                                {
+                                    <p class="landlord-sub mb-0">
+                                        <strong>Notes:</strong> @item.Notes
+                                    </p>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+        </article>
+
     </section>
 
 </div>
+
+<style>
+    .landlord-lease-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .landlord-lease-tool {
+        border: 1px solid var(--landlord-border);
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .landlord-lease-tool h4 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .landlord-history-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .landlord-history-item {
+        border-top: 1px solid var(--landlord-border);
+        padding: 1rem 0;
+    }
+
+    .landlord-history-item:first-child {
+        border-top: 0;
+        padding-top: 0;
+    }
+
+    @@media (max-width: 900px) {
+        .landlord-lease-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
