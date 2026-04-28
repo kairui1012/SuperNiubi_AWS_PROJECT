@@ -48,6 +48,9 @@
             <a href="/Landlord/Announcements" class="landlord-rail-link">
                 <i class="bi bi-megaphone-fill"></i> Announcements
             </a>
+            <a asp-controller="Home" asp-action="Index" class="landlord-rail-link">
+                <i class="bi bi-calendar-event"></i> Community Hub
+            </a>
         </nav>
     </aside>
 
@@ -110,6 +113,9 @@
                         var statusClass =
                             payment.Status == PaymentStatus.Verified ? "badge-success" :
                             payment.Status == PaymentStatus.Rejected ? "badge-danger" :
+                            payment.Status == PaymentStatus.Failed ? "badge-danger" :
+                            payment.Status == PaymentStatus.Cancelled ? "badge-warning" :
+                            payment.Status == PaymentStatus.Refunded ? "badge-primary" :
                             payment.Status == PaymentStatus.Overdue ? "badge-warning" :
                             payment.Status == PaymentStatus.Submitted ? "badge-primary" :
                             "badge-warning";

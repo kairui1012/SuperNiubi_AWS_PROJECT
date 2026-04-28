@@ -335,6 +335,52 @@
   border-color: #334155;
 }
 
+[data-bs-theme="dark"] .app-topbar-shell,
+[data-bs-theme="dark"] .navbar.bg-body-tertiary {
+  background: #0f172a !important;
+  border-color: #1f2a44 !important;
+}
+
+[data-bs-theme="dark"] .app-topbar-shell .nav-link,
+[data-bs-theme="dark"] .app-topbar-shell .navbar-brand,
+[data-bs-theme="dark"] .app-brand-name {
+  color: #e5eef9 !important;
+}
+
+[data-bs-theme="dark"] .app-topbar-shell .nav-link:hover,
+[data-bs-theme="dark"] .app-topbar-shell .nav-link:focus-visible {
+  color: #93c5fd !important;
+}
+
+[data-bs-theme="dark"] .app-brand-mark {
+  background: #111827;
+  box-shadow:
+    0 12px 22px rgba(0, 0, 0, 0.24),
+    inset 0 0 0 1px rgba(148, 163, 184, 0.24);
+}
+
+[data-bs-theme="dark"] .app-account-trigger {
+  border-color: #334155;
+  background: #111827;
+  color: #f8fafc;
+  box-shadow: none;
+}
+
+[data-bs-theme="dark"] .app-account-trigger:hover,
+[data-bs-theme="dark"] .app-account-trigger:focus-visible {
+  border-color: #60a5fa;
+  background: #1e293b;
+  color: #ffffff;
+}
+
+[data-bs-theme="dark"] .navbar-toggler {
+  border-color: #334155;
+}
+
+[data-bs-theme="dark"] .navbar-toggler-icon {
+  filter: brightness(0) invert(1);
+}
+
 @media (max-width: 991.98px) {
   .app-topbar-shell {
     align-items: flex-start;

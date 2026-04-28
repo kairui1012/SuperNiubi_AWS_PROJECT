@@ -4,7 +4,7 @@
 @functions {
     private static string PaymentBadgeClass(PaymentStatus status, bool isComputedOverdue)
     {
-        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected && status != PaymentStatus.Failed && status != PaymentStatus.Cancelled && status != PaymentStatus.Refunded)
             return "badge-soft-danger";
         return status switch
         {
@@ -13,13 +13,16 @@
             PaymentStatus.Verified => "badge-soft-success",
             PaymentStatus.Overdue => "badge-soft-danger",
             PaymentStatus.Rejected => "badge-soft-danger",
+            PaymentStatus.Failed => "badge-soft-danger",
+            PaymentStatus.Cancelled => "badge-soft-warning",
+            PaymentStatus.Refunded => "badge-soft-secondary",
             _ => "badge-soft-secondary"
         };
     }
 
     private static string PaymentStatusLabel(PaymentStatus status, bool isComputedOverdue)
     {
-        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected && status != PaymentStatus.Failed && status != PaymentStatus.Cancelled && status != PaymentStatus.Refunded)
             return "Overdue";
         return status.ToString();
     }
@@ -176,6 +179,28 @@
                                 <span class="metric-value" style="word-break: break-all;">@Model.StripeEventId</span>
                             </div>
                         }
+                        @if (!string.IsNullOrWhiteSpace(Model.StripeRefundId) || Model.RefundAmount.HasValue || Model.RefundDate.HasValue)
+                        {
+                            <div class="metric-row">
+                                <span>Stripe refund ID</span>
+                                <span class="metric-value" style="word-break: break-all;">@(Model.StripeRefundId ?? "—")</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>Refund amount</span>
+                                <span class="metric-value">@(Model.RefundAmount.HasValue ? Model.RefundAmount.Value.ToString("C") : "—")</span>
+                            </div>
+                            <div class="metric-row">
+                                <span>Refund date</span>
+                                <span class="metric-value">@(Model.RefundDate.HasValue ? Model.RefundDate.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm") : "—")</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(Model.RefundReason))
+                            {
+                                <div class="metric-row">
+                                    <span>Refund reason</span>
+                                    <span class="metric-value">@Model.RefundReason</span>
+                                </div>
+                            }
+                        }
                         @if (!string.IsNullOrWhiteSpace(Model.LandlordRemarks))
                         {
                             <div class="metric-row">
@@ -260,6 +285,27 @@
                             <div class="empty-state" style="padding: 1rem 0;">
                                 <i class="bi bi-x-circle-fill text-danger fs-4 d-block mb-1"></i>
                                 This payment has been rejected.
+                            </div>
+                        }
+                        else if (Model.Status == PaymentStatus.Failed)
+                        {
+                            <div class="empty-state" style="padding: 1rem 0;">
+                                <i class="bi bi-exclamation-octagon-fill text-danger fs-4 d-block mb-1"></i>
+                                Stripe reported this payment as failed.
+                            </div>
+                        }
+                        else if (Model.Status == PaymentStatus.Cancelled)
+                        {
+                            <div class="empty-state" style="padding: 1rem 0;">
+                                <i class="bi bi-dash-circle-fill text-warning fs-4 d-block mb-1"></i>
+                                This Stripe checkout was cancelled or expired.
+                            </div>
+                        }
+                        else if (Model.Status == PaymentStatus.Refunded)
+                        {
+                            <div class="empty-state" style="padding: 1rem 0;">
+                                <i class="bi bi-arrow-counterclockwise text-secondary fs-4 d-block mb-1"></i>
+                                This payment has refund tracking recorded.
                             </div>
                         }
                         else if (!string.IsNullOrWhiteSpace(Model.StripeSessionId))

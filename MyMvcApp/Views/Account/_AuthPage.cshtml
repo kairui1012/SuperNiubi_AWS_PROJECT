@@ -10,10 +10,10 @@
 <div class="auth-page auth-page-shell" data-auth-page data-auth-mode="@(isLogin ? "login" : "register")">
     <main class="auth-layout">
         <section class="auth-panel auth-card auth-panel-form">
-            <div class="auth-brand" aria-label="Propease">
+            <a class="auth-brand text-decoration-none" asp-controller="Home" asp-action="Index" aria-label="Propease community events">
                 <span class="auth-brand-mark"><i class="bi bi-buildings"></i></span>
                 <span>Propease</span>
-            </div>
+            </a>
 
             <header class="auth-copy-block">
                 <p class="auth-kicker">Cloud property management</p>
@@ -105,7 +105,6 @@
             <div class="auth-visual-overlay">
                 <div class="auth-visual-content">
                     <span class="auth-visual-kicker">AWS-ready operations</span>
-                    <h2>One calm dashboard for every property workflow.</h2>
                     <p>Coordinate residents, landlords, payments, maintenance, and community updates with a secure cloud foundation built for daily operations.</p>
                     <div class="auth-visual-metrics" aria-label="Platform capabilities">
                         <div>

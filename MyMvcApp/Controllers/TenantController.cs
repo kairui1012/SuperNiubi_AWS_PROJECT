@@ -987,7 +987,7 @@ namespace MyMvcApp.Controllers
 
                 if (payment is not null)
                 {
-                    payment.Status = PaymentStatus.Rejected;
+                    payment.Status = PaymentStatus.Cancelled;
                     payment.LandlordRemarks = "Stripe Checkout was cancelled before payment was completed.";
                     payment.UpdatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();

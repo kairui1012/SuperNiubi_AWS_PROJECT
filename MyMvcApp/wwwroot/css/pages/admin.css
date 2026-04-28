@@ -1668,6 +1668,79 @@ body.admin-cloud-skin .alert-danger {
     border-color: #334155;
 }
 
+[data-bs-theme="dark"] body.admin-cloud-skin .form-control::placeholder,
+[data-bs-theme="dark"] body.admin-cloud-skin textarea::placeholder,
+[data-bs-theme="dark"] body.admin-cloud-skin input::placeholder {
+    color: rgba(226, 232, 240, 0.62);
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .form-control:focus,
+[data-bs-theme="dark"] body.admin-cloud-skin .form-select:focus,
+[data-bs-theme="dark"] body.admin-cloud-skin textarea:focus,
+[data-bs-theme="dark"] body.admin-cloud-skin input:focus,
+[data-bs-theme="dark"] body.admin-cloud-skin select:focus {
+    background: #0f1117;
+    color: #ffffff;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 0.18rem rgba(96, 165, 250, 0.16);
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #e5eef9;
+    --bs-table-border-color: #283044;
+    --bs-table-hover-bg: #111827;
+    --bs-table-hover-color: #ffffff;
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .table td,
+[data-bs-theme="dark"] body.admin-cloud-skin .table th {
+    background-color: transparent;
+    border-color: #283044;
+    color: #e5eef9;
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .table thead th {
+    background-color: #111827;
+    color: #cbd5e1;
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .modal-content,
+[data-bs-theme="dark"] body.admin-cloud-skin .list-group-item,
+[data-bs-theme="dark"] body.admin-cloud-skin .page-link {
+    background: #151925;
+    border-color: #283044;
+    color: #e5eef9;
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .page-link:hover,
+[data-bs-theme="dark"] body.admin-cloud-skin .page-link:focus {
+    background: #172740;
+    color: #dceaff;
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .dropdown-item {
+    color: #e5eef9;
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .dropdown-item:hover,
+[data-bs-theme="dark"] body.admin-cloud-skin .dropdown-item:focus {
+    background: #263149;
+    color: #ffffff;
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .alert-success {
+    background: rgba(34, 197, 94, 0.13);
+    color: #86efac;
+    border-color: rgba(134, 239, 172, 0.24);
+}
+
+[data-bs-theme="dark"] body.admin-cloud-skin .alert-danger {
+    background: rgba(239, 68, 68, 0.13);
+    color: #fca5a5;
+    border-color: rgba(252, 165, 165, 0.24);
+}
+
 [data-bs-theme="dark"] body.admin-cloud-skin .property-health-bar {
     background: #283044;
 }

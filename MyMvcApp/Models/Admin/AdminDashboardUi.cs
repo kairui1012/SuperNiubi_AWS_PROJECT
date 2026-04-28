@@ -42,6 +42,8 @@ namespace MyMvcApp.Models.Admin
                 PaymentStatus.Submitted => "badge-soft-info",
                 PaymentStatus.Verified => "badge-soft-success",
                 PaymentStatus.Overdue => "badge-soft-warning",
+                PaymentStatus.Cancelled => "badge-soft-warning",
+                PaymentStatus.Refunded => "badge-soft-secondary",
                 _ => "badge-soft-danger"
             };
         }

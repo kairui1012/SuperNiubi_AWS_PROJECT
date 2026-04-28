@@ -104,7 +104,8 @@ public class GoogleLoginController : Controller
         {
             new(ClaimTypes.NameIdentifier, normalizedEmail),
             new(ClaimTypes.Name, normalizedEmail),
-            new(ClaimTypes.Email, normalizedEmail)
+            new(ClaimTypes.Email, normalizedEmail),
+            new("email", normalizedEmail)
         };
 
         var displayName = info.Principal.FindFirstValue(ClaimTypes.Name);

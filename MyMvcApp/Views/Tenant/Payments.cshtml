@@ -31,6 +31,7 @@
             <a asp-action="Visitors" class="tenant-rail-link"><i class="bi bi-qr-code-scan"></i> Visitors</a>
             <a asp-action="Documents" class="tenant-rail-link"><i class="bi bi-file-earmark-text-fill"></i> Documents</a>
             <a asp-action="Announcements" class="tenant-rail-link"><i class="bi bi-megaphone-fill"></i> Announcements</a>
+            <a asp-controller="Home" asp-action="Index" class="tenant-rail-link"><i class="bi bi-calendar-event"></i> Community Hub</a>
         </nav>
     </aside>
 
@@ -153,8 +154,12 @@
                                         ? "badge-success"
                                         : payment.Status == PaymentStatus.Submitted
                                             ? "badge-primary"
+                                            : payment.Status == PaymentStatus.Refunded
+                                                ? "badge-primary"
                                             : payment.Status == PaymentStatus.Pending || payment.Status == PaymentStatus.Overdue
                                                 ? "badge-warning"
+                                                : payment.Status == PaymentStatus.Cancelled
+                                                    ? "badge-warning"
                                                 : "badge-danger";
                                     <tr>
                                         <td><strong>@payment.PaymentMonth @payment.PaymentYear</strong></td>

@@ -891,6 +891,126 @@ body.tenant-cloud-skin {
   background: #2563eb;
 }
 
+[data-bs-theme="dark"] .tenant-cloud-skin .form-control,
+[data-bs-theme="dark"] .tenant-cloud-skin .form-select,
+[data-bs-theme="dark"] .tenant-cloud-skin textarea,
+[data-bs-theme="dark"] .tenant-cloud-skin input,
+[data-bs-theme="dark"] .tenant-cloud-skin select {
+  background-color: #0f1117;
+  color: #e8edf7;
+  border-color: #334155;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .form-control::placeholder,
+[data-bs-theme="dark"] .tenant-cloud-skin textarea::placeholder,
+[data-bs-theme="dark"] .tenant-cloud-skin input::placeholder {
+  color: #8a94a8;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .form-control:focus,
+[data-bs-theme="dark"] .tenant-cloud-skin .form-select:focus,
+[data-bs-theme="dark"] .tenant-cloud-skin textarea:focus,
+[data-bs-theme="dark"] .tenant-cloud-skin input:focus,
+[data-bs-theme="dark"] .tenant-cloud-skin select:focus {
+  background-color: #0f1117;
+  color: #ffffff;
+  border-color: #6ea8ff;
+  box-shadow: var(--tenant-ring);
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .table,
+[data-bs-theme="dark"] .tenant-cloud-skin table {
+  --bs-table-bg: transparent;
+  --bs-table-color: #e8edf7;
+  --bs-table-border-color: #283044;
+  --bs-table-hover-bg: #111827;
+  --bs-table-hover-color: #ffffff;
+  color: #e8edf7;
+  border-color: #283044;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .table th,
+[data-bs-theme="dark"] .tenant-cloud-skin .table td,
+[data-bs-theme="dark"] .tenant-cloud-skin table th,
+[data-bs-theme="dark"] .tenant-cloud-skin table td {
+  background-color: transparent;
+  color: #e8edf7;
+  border-color: #283044;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .table thead th,
+[data-bs-theme="dark"] .tenant-cloud-skin table thead th {
+  background-color: #111827;
+  color: #cbd5e1;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .text-muted,
+[data-bs-theme="dark"] .tenant-cloud-skin small,
+[data-bs-theme="dark"] .tenant-cloud-skin label {
+  color: #aab4c8 !important;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .alert-success {
+  background: rgba(34, 197, 94, 0.13);
+  color: #86efac;
+  border-color: rgba(134, 239, 172, 0.24);
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .alert-danger {
+  background: rgba(239, 68, 68, 0.13);
+  color: #fca5a5;
+  border-color: rgba(252, 165, 165, 0.24);
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .drop-zone:hover,
+[data-bs-theme="dark"] .tenant-cloud-skin .drop-zone.dragover,
+[data-bs-theme="dark"] .tenant-cloud-skin .tenant-filter .filter-btn.active,
+[data-bs-theme="dark"] .tenant-cloud-skin .tenant-filter .filter-btn:hover {
+  background: #172740;
+  border-color: #6ea8ff;
+  color: #dceaff;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .tenant-link,
+[data-bs-theme="dark"] .tenant-cloud-skin a:not(.btn):not(.tenant-rail-link) {
+  color: #93c5fd;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .tenant-link:hover,
+[data-bs-theme="dark"] .tenant-cloud-skin a:not(.btn):not(.tenant-rail-link):hover {
+  color: #bfdbfe;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .modal-content,
+[data-bs-theme="dark"] .tenant-cloud-skin .dropdown-menu,
+[data-bs-theme="dark"] .tenant-cloud-skin .list-group-item {
+  background: #151925;
+  border-color: #283044;
+  color: #e8edf7;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .dropdown-item {
+  color: #e8edf7;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .dropdown-item:hover,
+[data-bs-theme="dark"] .tenant-cloud-skin .dropdown-item:focus {
+  background: #263149;
+  color: #ffffff;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .page-link {
+  background: #0f1117;
+  border-color: #334155;
+  color: #93c5fd;
+}
+
+[data-bs-theme="dark"] .tenant-cloud-skin .page-link:hover,
+[data-bs-theme="dark"] .tenant-cloud-skin .page-link:focus {
+  background: #172740;
+  color: #dceaff;
+}
+
 @keyframes tenantFadeIn {
   from {
     opacity: 0;
@@ -931,9 +1051,16 @@ body.tenant-cloud-skin {
   .tenant-rail-nav {
     flex-direction: row;
     flex-wrap: wrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
   }
 
   .tenant-rail-link {
+    flex: 0 0 auto;
+    min-width: 7.25rem;
     justify-content: center;
     text-align: center;
     flex-direction: column;
@@ -971,10 +1098,32 @@ body.tenant-cloud-skin {
 @media (max-width: 640px) {
   .tenant-console {
     margin: 0;
+    overflow-x: hidden;
+  }
+
+  .tenant-rail {
+    padding: 14px 12px 10px;
+  }
+
+  .tenant-rail-brand {
+    margin-bottom: 14px;
+  }
+
+  .tenant-rail-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .tenant-rail-title {
+    font-size: 0.95rem;
+  }
+
+  .tenant-rail-sub {
+    font-size: 0.72rem;
   }
 
   .tenant-workspace {
-    padding: 20px 14px;
+    padding: 18px 12px;
   }
 
   .tenant-toolbar {
@@ -991,7 +1140,15 @@ body.tenant-cloud-skin {
   }
 
   .tenant-rail-nav {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
+  }
+
+  .tenant-rail-link {
+    min-width: 6.25rem;
+    padding: 8px 10px;
+    font-size: 0.72rem;
+    line-height: 1.15;
   }
 
   .tenant-time {
@@ -1004,5 +1161,23 @@ body.tenant-cloud-skin {
   .tenant-plain-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .tenant-heading {
+    font-size: 1.35rem;
+    overflow-wrap: anywhere;
+  }
+
+  .tenant-cloud-skin .table-responsive,
+  .tenant-cloud-skin .tenant-panel,
+  .tenant-cloud-skin .payment-records-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tenant-cloud-skin .table-responsive table,
+  .tenant-cloud-skin .tenant-panel table,
+  .tenant-cloud-skin .payment-records-card table {
+    min-width: 620px;
   }
 }

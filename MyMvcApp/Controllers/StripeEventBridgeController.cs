@@ -55,10 +55,13 @@ namespace MyMvcApp.Controllers
                 return eventType switch
                 {
                     "checkout.session.completed" => await HandleCheckoutSessionCompletedAsync(stripeEvent, eventId),
-                    "checkout.session.async_payment_failed" => await HandleCheckoutSessionRejectedAsync(stripeEvent, eventId, "Stripe async payment failed."),
-                    "checkout.session.expired" => await HandleCheckoutSessionRejectedAsync(stripeEvent, eventId, "Stripe Checkout session expired."),
+                    "checkout.session.async_payment_failed" => await HandleCheckoutSessionRejectedAsync(stripeEvent, eventId, PaymentStatus.Failed, "Stripe async payment failed."),
+                    "checkout.session.expired" => await HandleCheckoutSessionRejectedAsync(stripeEvent, eventId, PaymentStatus.Cancelled, "Stripe Checkout session expired."),
                     "payment_intent.succeeded" => await HandlePaymentIntentSucceededAsync(stripeEvent, eventId),
                     "payment_intent.payment_failed" => await HandlePaymentIntentFailedAsync(stripeEvent, eventId),
+                    "charge.refunded" => await HandleChargeRefundedAsync(stripeEvent, eventId),
+                    "refund.created" => await HandleRefundCreatedAsync(stripeEvent, eventId),
+                    "refund.updated" => await HandleRefundCreatedAsync(stripeEvent, eventId),
                     _ => Ok(new { ignored = true, eventType })
                 };
             }
@@ -264,6 +267,7 @@ namespace MyMvcApp.Controllers
                 payment,
                 eventId,
                 paymentIntentId,
+                PaymentStatus.Failed,
                 string.IsNullOrWhiteSpace(errorMessage)
                     ? "Stripe payment intent failed."
                     : $"Stripe payment intent failed: {errorMessage}");
@@ -271,7 +275,7 @@ namespace MyMvcApp.Controllers
             return Ok(new { processed = true, payment.PaymentId, payment.Status });
         }
 
-        private async Task<IActionResult> HandleCheckoutSessionRejectedAsync(JsonElement stripeEvent, string? eventId, string message)
+        private async Task<IActionResult> HandleCheckoutSessionRejectedAsync(JsonElement stripeEvent, string? eventId, PaymentStatus status, string message)
         {
             var dataObject = GetDataObject(stripeEvent);
             var sessionId = ReadString(dataObject, "id");
@@ -283,20 +287,75 @@ namespace MyMvcApp.Controllers
                 return NotFound("Matching local payment was not found.");
             }
 
-            await RejectPaymentAsync(payment, eventId, paymentIntentId, message);
+            await RejectPaymentAsync(payment, eventId, paymentIntentId, status, message);
             return Ok(new { processed = true, payment.PaymentId, payment.Status });
         }
 
-        private async Task RejectPaymentAsync(Payment payment, string? eventId, string? paymentIntentId, string message)
+        private async Task<IActionResult> HandleChargeRefundedAsync(JsonElement stripeEvent, string? eventId)
+        {
+            var dataObject = GetDataObject(stripeEvent);
+            var paymentIntentId = ReadExpandableString(dataObject, "payment_intent") ?? ReadString(dataObject, "payment_intent");
+            var payment = await FindPaymentAsync(dataObject, null, paymentIntentId);
+
+            if (payment is null)
+            {
+                return NotFound("Matching local payment was not found.");
+            }
+
+            var refundId = ReadString(dataObject, "refunds", "data", "0", "id");
+            var refundReason = ReadString(dataObject, "refunds", "data", "0", "reason");
+            var refundedAmount = ReadDecimalFromMinorUnit(dataObject, "amount_refunded");
+
+            await MarkPaymentRefundedAsync(payment, eventId, refundId, refundedAmount, refundReason);
+            return Ok(new { processed = true, payment.PaymentId, payment.Status });
+        }
+
+        private async Task<IActionResult> HandleRefundCreatedAsync(JsonElement stripeEvent, string? eventId)
+        {
+            var dataObject = GetDataObject(stripeEvent);
+            var paymentIntentId = ReadExpandableString(dataObject, "payment_intent") ?? ReadString(dataObject, "payment_intent");
+            var payment = await FindPaymentAsync(dataObject, null, paymentIntentId);
+
+            if (payment is null)
+            {
+                return NotFound("Matching local payment was not found.");
+            }
+
+            var refundId = ReadString(dataObject, "id");
+            var refundReason = ReadString(dataObject, "reason");
+            var refundedAmount = ReadDecimalFromMinorUnit(dataObject, "amount");
+
+            await MarkPaymentRefundedAsync(payment, eventId, refundId, refundedAmount, refundReason);
+            return Ok(new { processed = true, payment.PaymentId, payment.Status });
+        }
+
+        private async Task RejectPaymentAsync(Payment payment, string? eventId, string? paymentIntentId, PaymentStatus status, string message)
         {
             payment.StripePaymentIntentId ??= paymentIntentId;
             payment.StripeEventId = eventId ?? payment.StripeEventId;
             payment.ReferenceNo = paymentIntentId ?? payment.ReferenceNo;
-            payment.Status = PaymentStatus.Rejected;
+            payment.Status = status;
             payment.LandlordRemarks = message;
             payment.UpdatedAt = DateTime.UtcNow;
 
-            AddAuditLog("StripePaymentRejected", payment.PaymentId, message);
+            AddAuditLog(status == PaymentStatus.Cancelled ? "StripePaymentCancelled" : "StripePaymentFailed", payment.PaymentId, message);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task MarkPaymentRefundedAsync(Payment payment, string? eventId, string? refundId, decimal? refundAmount, string? refundReason)
+        {
+            payment.StripeEventId = eventId ?? payment.StripeEventId;
+            payment.StripeRefundId = refundId ?? payment.StripeRefundId;
+            payment.RefundAmount = refundAmount ?? payment.RefundAmount ?? payment.Amount;
+            payment.RefundDate ??= DateTime.UtcNow;
+            payment.RefundReason = refundReason ?? payment.RefundReason;
+            payment.Status = PaymentStatus.Refunded;
+            payment.LandlordRemarks = string.IsNullOrWhiteSpace(refundReason)
+                ? "Stripe refund recorded through Amazon EventBridge."
+                : $"Stripe refund recorded through Amazon EventBridge. Reason: {refundReason}";
+            payment.UpdatedAt = DateTime.UtcNow;
+
+            AddAuditLog("StripePaymentRefunded", payment.PaymentId, $"Stripe refund recorded. Refund={payment.StripeRefundId}, Amount={payment.RefundAmount:N2}.");
             await _context.SaveChangesAsync();
         }
 
@@ -486,6 +545,12 @@ namespace MyMvcApp.Controllers
         {
             var value = ReadString(dataObject, "metadata", key);
             return int.TryParse(value, out var parsed) ? parsed : null;
+        }
+
+        private static decimal? ReadDecimalFromMinorUnit(JsonElement element, params string[] path)
+        {
+            var value = ReadString(element, path);
+            return decimal.TryParse(value, out var parsed) ? parsed / 100m : null;
         }
 
         private static string? ReadString(JsonElement element, params string[] path)
