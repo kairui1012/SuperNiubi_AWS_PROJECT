@@ -191,6 +191,20 @@
                                             {
                                                 <div class="tenant-sub mt-1"><strong>Landlord:</strong> @req.LandlordRemarks</div>
                                             }
+                                            @if (!string.IsNullOrWhiteSpace(req.AssignedVendor))
+                                            {
+                                                <div class="tenant-sub mt-1"><strong>Vendor:</strong> @req.AssignedVendor</div>
+                                            }
+                                            @if (req.EstimatedRepairCost.HasValue)
+                                            {
+                                                <div class="tenant-sub mt-1"><strong>Estimate:</strong> RM @req.EstimatedRepairCost.Value.ToString("N2")</div>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(req.RepairImageKey))
+                                            {
+                                                <div class="mt-1">
+                                                    <a class="tenant-link" href="@($"/{req.RepairImageKey}")" target="_blank" rel="noopener noreferrer">View repair image</a>
+                                                </div>
+                                            }
                                             @if (req.TenantConfirmedAt.HasValue)
                                             {
                                                 <div class="tenant-sub mt-1">Confirmed by tenant @req.TenantConfirmedAt.Value.ToLocalTime().ToString("dd MMM yyyy")</div>
@@ -198,6 +212,25 @@
                                                 {
                                                     <div class="tenant-sub">Rating: @req.TenantFeedbackRating / 5</div>
                                                 }
+                                            }
+                                            @if (req.Timeline.Any())
+                                            {
+                                                <details class="mt-2">
+                                                    <summary class="tenant-link">View timeline</summary>
+                                                    <div class="tenant-sub mt-2">
+                                                        @foreach (var item in req.Timeline.OrderBy(t => t.CreatedAt))
+                                                        {
+                                                            <div class="mb-2">
+                                                                <strong>@item.Action</strong>
+                                                                <div>@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm") by @item.ActorEmail</div>
+                                                                @if (!string.IsNullOrWhiteSpace(item.Details))
+                                                                {
+                                                                    <div>@item.Details</div>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </details>
                                             }
                                         </td>
                                         <td>

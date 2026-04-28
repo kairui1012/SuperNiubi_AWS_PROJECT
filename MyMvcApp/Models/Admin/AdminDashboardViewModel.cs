@@ -61,6 +61,7 @@ namespace MyMvcApp.Models.Admin
         public List<AdminAuditLogViewModel> AuditLogs { get; set; } = new();
         public AdminAuditSummaryViewModel AuditSummary { get; set; } = new();
         public List<SystemAnnouncement> Announcements { get; set; } = new();
+        public List<AdminPropertyApprovalViewModel> PropertyApprovals { get; set; } = new();
     }
 
     public class AdminOverviewViewModel
@@ -94,6 +95,21 @@ namespace MyMvcApp.Models.Admin
         public int OccupiedProperties { get; set; }
         public int VacantProperties { get; set; }
         public int ActiveTenancies { get; set; }
+        public int PendingApprovalCount { get; set; }
+        public int ApprovedCount { get; set; }
+        public int RejectedCount { get; set; }
+    }
+
+    public class AdminPropertyApprovalViewModel
+    {
+        public int PropertyId { get; set; }
+        public string PropertyName { get; set; } = string.Empty;
+        public string LandlordEmail { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public decimal MonthlyRent { get; set; }
+        public PropertyAvailabilityStatus AvailabilityStatus { get; set; }
+        public PropertyApprovalStatus ApprovalStatus { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 
     public class AdminMaintenanceReportViewModel

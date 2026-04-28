@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
+using MyMvcApp.Services;
 using System.Linq;
 using System.Security.Claims;
 
@@ -13,11 +14,19 @@ namespace MyMvcApp.Controllers
     public class LandlordController : Controller
     {
         private static readonly string[] AllowedAnnouncementAudiences = { "All", "Tenant", "Landlord" };
+        private static readonly string[] AllowedPropertyImageExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+        private static readonly string[] AllowedMaintenanceRepairImageExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+        private const long MaxPropertyImageSizeBytes = 8 * 1024 * 1024;
+        private const long MaxMaintenanceRepairImageSizeBytes = 8 * 1024 * 1024;
         private readonly AppDbContext _dbContext;
+        private readonly IS3ImageService _s3ImageService;
+        private readonly EmailService _emailService;
 
-        public LandlordController(AppDbContext dbContext)
+        public LandlordController(AppDbContext dbContext, IS3ImageService s3ImageService, EmailService emailService)
         {
             _dbContext = dbContext;
+            _s3ImageService = s3ImageService;
+            _emailService = emailService;
         }
 
         public async Task<IActionResult> Dashboard()
@@ -46,7 +55,7 @@ namespace MyMvcApp.Controllers
 
             var propertiesQuery = _dbContext.Properties
                 .AsNoTracking()
-                .Where(p => p.LandlordId == landlord.Id);
+                .Where(p => p.LandlordId == landlord.Id && !p.IsDeleted);
 
             var tenants = await _dbContext.Tenants
                 .AsNoTracking()
@@ -135,7 +144,8 @@ namespace MyMvcApp.Controllers
             }
 
             var properties = _dbContext.Properties
-                .Where(p => p.LandlordId == landlord.Id)
+                .Include(p => p.Tenant)
+                .Where(p => p.LandlordId == landlord.Id && !p.IsDeleted)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToList();
 
@@ -164,7 +174,8 @@ namespace MyMvcApp.Controllers
             }
 
             var property = _dbContext.Properties
-                .FirstOrDefault(p => p.PropertyId == id && p.LandlordId == landlord.Id);
+                .Include(p => p.Amenities)
+                .FirstOrDefault(p => p.PropertyId == id && p.LandlordId == landlord.Id && !p.IsDeleted);
 
             if (property == null)
             {
@@ -183,7 +194,7 @@ namespace MyMvcApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult AddProperty(Property model)
+        public async Task<IActionResult> AddProperty(Property model, IFormFile? PropertyImage, string? AmenitiesText)
         {
             var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
@@ -206,6 +217,8 @@ namespace MyMvcApp.Controllers
             model.LandlordId = landlord.Id;
             model.CreatedAt = DateTime.UtcNow;
             model.UpdatedAt = DateTime.UtcNow;
+            model.ApprovalStatus = PropertyApprovalStatus.Pending;
+            model.IsDeleted = false;
 
             if (!ModelState.IsValid)
             {
@@ -214,10 +227,23 @@ namespace MyMvcApp.Controllers
 
             try
             {
-                _dbContext.Properties.Add(model);
-                _dbContext.SaveChanges();
+                if (PropertyImage != null && PropertyImage.Length > 0)
+                {
+                    var uploadError = ValidatePropertyImage(PropertyImage);
+                    if (uploadError != null)
+                    {
+                        ModelState.AddModelError(string.Empty, uploadError);
+                        return View(model);
+                    }
 
-                TempData["SuccessMessage"] = "Property saved successfully.";
+                    model.ImageUrl = await _s3ImageService.UploadImageAsync(PropertyImage);
+                }
+
+                SyncPropertyAmenities(model, AmenitiesText);
+                _dbContext.Properties.Add(model);
+                await _dbContext.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Property saved successfully and is pending admin approval.";
                 return RedirectToAction("MyProperties");
             }
             catch (Exception ex)
@@ -249,7 +275,8 @@ namespace MyMvcApp.Controllers
             }
 
             var property = _dbContext.Properties
-                .FirstOrDefault(p => p.PropertyId == id && p.LandlordId == landlord.Id);
+                .Include(p => p.Amenities)
+                .FirstOrDefault(p => p.PropertyId == id && p.LandlordId == landlord.Id && !p.IsDeleted);
 
             if (property == null)
             {
@@ -257,12 +284,13 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction("MyProperties");
             }
 
+            ViewBag.AmenitiesText = string.Join(", ", property.Amenities.OrderBy(a => a.AmenityName).Select(a => a.AmenityName));
             return View(property);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult EditProperty(Property model)
+        public async Task<IActionResult> EditProperty(Property model, IFormFile? PropertyImage, string? AmenitiesText)
         {
             var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
@@ -283,7 +311,8 @@ namespace MyMvcApp.Controllers
             }
 
             var existingProperty = _dbContext.Properties
-                .FirstOrDefault(p => p.PropertyId == model.PropertyId && p.LandlordId == landlord.Id);
+                .Include(p => p.Amenities)
+                .FirstOrDefault(p => p.PropertyId == model.PropertyId && p.LandlordId == landlord.Id && !p.IsDeleted);
 
             if (existingProperty == null)
             {
@@ -314,11 +343,27 @@ namespace MyMvcApp.Controllers
                 existingProperty.DepositAmount = model.DepositAmount;
                 existingProperty.ParkingBay = model.ParkingBay;
                 existingProperty.Description = model.Description;
+                existingProperty.AvailabilityStatus = model.AvailabilityStatus;
+                existingProperty.ApprovalStatus = PropertyApprovalStatus.Pending;
                 existingProperty.UpdatedAt = DateTime.UtcNow;
 
-                _dbContext.SaveChanges();
+                if (PropertyImage != null && PropertyImage.Length > 0)
+                {
+                    var uploadError = ValidatePropertyImage(PropertyImage);
+                    if (uploadError != null)
+                    {
+                        ModelState.AddModelError(string.Empty, uploadError);
+                        ViewBag.AmenitiesText = AmenitiesText;
+                        return View(model);
+                    }
 
-                TempData["SuccessMessage"] = "Property updated successfully.";
+                    existingProperty.ImageUrl = await _s3ImageService.UploadImageAsync(PropertyImage);
+                }
+
+                SyncPropertyAmenities(existingProperty, AmenitiesText);
+                await _dbContext.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Property updated successfully and is pending admin approval.";
                 return RedirectToAction("MyProperties");
             }
             catch (Exception ex)
@@ -351,7 +396,8 @@ namespace MyMvcApp.Controllers
             }
 
             var property = _dbContext.Properties
-                .FirstOrDefault(p => p.PropertyId == id && p.LandlordId == landlord.Id);
+                .Include(p => p.Tenant)
+                .FirstOrDefault(p => p.PropertyId == id && p.LandlordId == landlord.Id && !p.IsDeleted);
 
             if (property == null)
             {
@@ -361,7 +407,19 @@ namespace MyMvcApp.Controllers
 
             try
             {
-                _dbContext.Properties.Remove(property);
+                var hasActiveTenant = _dbContext.Tenants.Any(t =>
+                    t.PropertyId == id &&
+                    t.LeaseStatus == LeaseStatus.Active);
+
+                if (hasActiveTenant)
+                {
+                    TempData["ErrorMessage"] = "Cannot delete a property with an active tenant.";
+                    return RedirectToAction("MyProperties");
+                }
+
+                property.IsDeleted = true;
+                property.DeletedAt = DateTime.UtcNow;
+                property.UpdatedAt = DateTime.UtcNow;
                 _dbContext.SaveChanges();
 
                 TempData["SuccessMessage"] = "Property deleted successfully.";
@@ -489,6 +547,8 @@ namespace MyMvcApp.Controllers
             result.Tenant.LeaseEndDate = terminatedAt;
             result.Tenant.Notes = model.Notes;
             result.Tenant.UpdatedAt = DateTime.UtcNow;
+            result.Tenant.Property.AvailabilityStatus = PropertyAvailabilityStatus.Available;
+            result.Tenant.Property.UpdatedAt = DateTime.UtcNow;
             AddLeaseHistory(
                 result.Tenant,
                 "Terminate lease",
@@ -570,6 +630,10 @@ namespace MyMvcApp.Controllers
 
             var oldValue = $"Property: {result.Tenant.Property.PropertyName}";
 
+            result.Tenant.Property.AvailabilityStatus = PropertyAvailabilityStatus.Available;
+            result.Tenant.Property.UpdatedAt = DateTime.UtcNow;
+            property.AvailabilityStatus = PropertyAvailabilityStatus.Occupied;
+            property.UpdatedAt = DateTime.UtcNow;
             result.Tenant.PropertyId = model.PropertyId;
             result.Tenant.UpdatedAt = DateTime.UtcNow;
             AddLeaseHistory(
@@ -669,6 +733,7 @@ namespace MyMvcApp.Controllers
                 .Include(m => m.Property)
                 .Include(m => m.Tenant)
                 .ThenInclude(t => t.User)
+                .Include(m => m.Timeline)
                 .FirstOrDefault(m =>
                     m.RequestId == id &&
                     m.Property.LandlordId == landlord.Id);
@@ -684,7 +749,7 @@ namespace MyMvcApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult EditMaintenanceRequest(MaintenanceRequest model)
+        public async Task<IActionResult> EditMaintenanceRequest(MaintenanceRequest model, IFormFile? RepairImage)
         {
             var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
@@ -706,6 +771,8 @@ namespace MyMvcApp.Controllers
 
             var existingRequest = _dbContext.MaintenanceRequests
                 .Include(m => m.Property)
+                .Include(m => m.Tenant)
+                .ThenInclude(t => t.User)
                 .FirstOrDefault(m =>
                     m.RequestId == model.RequestId &&
                     m.Property.LandlordId == landlord.Id);
@@ -716,10 +783,29 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction("MaintenanceRequests");
             }
 
+            var oldStatus = existingRequest.Status;
+            var oldVendor = existingRequest.AssignedVendor;
+            var oldCost = existingRequest.EstimatedRepairCost;
+
             existingRequest.Priority = model.Priority;
             existingRequest.Status = model.Status;
             existingRequest.LandlordRemarks = model.LandlordRemarks;
+            existingRequest.AssignedVendor = model.AssignedVendor;
+            existingRequest.EstimatedRepairCost = model.EstimatedRepairCost;
             existingRequest.UpdatedAt = DateTime.UtcNow;
+
+            if (RepairImage != null && RepairImage.Length > 0)
+            {
+                var uploadError = ValidateRepairImage(RepairImage);
+                if (uploadError != null)
+                {
+                    TempData["ErrorMessage"] = uploadError;
+                    return RedirectToAction("EditMaintenanceRequest", new { id = model.RequestId });
+                }
+
+                existingRequest.RepairImageKey = await SaveRepairImageAsync(RepairImage, existingRequest);
+                AddMaintenanceTimeline(existingRequest, "Repair image uploaded", "Landlord uploaded a repair image.");
+            }
 
             if (model.Status == MaintenanceStatus.Completed)
             {
@@ -730,9 +816,43 @@ namespace MyMvcApp.Controllers
                 existingRequest.ResolvedDate = null;
             }
 
-            _dbContext.SaveChanges();
+            if (oldStatus != existingRequest.Status)
+            {
+                AddMaintenanceTimeline(existingRequest, "Status changed", $"{oldStatus} -> {existingRequest.Status}");
+            }
+
+            if (!string.Equals(oldVendor, existingRequest.AssignedVendor, StringComparison.Ordinal))
+            {
+                AddMaintenanceTimeline(existingRequest, "Vendor assigned", string.IsNullOrWhiteSpace(existingRequest.AssignedVendor)
+                    ? "Vendor cleared."
+                    : $"Assigned to {existingRequest.AssignedVendor}.");
+            }
+
+            if (oldCost != existingRequest.EstimatedRepairCost)
+            {
+                AddMaintenanceTimeline(existingRequest, "Repair cost estimated", existingRequest.EstimatedRepairCost.HasValue
+                    ? $"Estimated cost: RM {existingRequest.EstimatedRepairCost:N2}."
+                    : "Estimated cost cleared.");
+            }
+
+            await _dbContext.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Maintenance request updated successfully.";
+
+            if (oldStatus != existingRequest.Status)
+            {
+                try
+                {
+                    await _emailService.SendMaintenanceStatusChangedEmailAsync(existingRequest, landlord.Email);
+                    TempData["SuccessMessage"] = "Maintenance request updated successfully and tenant email notification sent.";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Maintenance email failed: {ex.Message}");
+                    TempData["SuccessMessage"] = "Maintenance request updated successfully, but tenant email notification failed to send.";
+                }
+            }
+
             return RedirectToAction("MaintenanceRequests");
         }
 
@@ -908,7 +1028,10 @@ namespace MyMvcApp.Controllers
 
             var selectedProperty = _dbContext.Properties.FirstOrDefault(p =>
                 p.PropertyId == model.PropertyId &&
-                p.LandlordId == landlord.Id);
+                p.LandlordId == landlord.Id &&
+                !p.IsDeleted &&
+                p.ApprovalStatus == PropertyApprovalStatus.Approved &&
+                p.AvailabilityStatus == PropertyAvailabilityStatus.Available);
 
             if (selectedProperty == null)
             {
@@ -958,8 +1081,9 @@ namespace MyMvcApp.Controllers
                     tenant,
                     "Create lease",
                     null,
-                    $"Property: {selectedProperty?.PropertyName}; Start: {tenant.LeaseStartDate:yyyy-MM-dd}; End: {tenant.LeaseEndDate:yyyy-MM-dd}; Monthly rent: RM {tenant.MonthlyRent:N2}; Deposit: {tenant.DepositStatus}",
+                    $"Property: {selectedProperty!.PropertyName}; Start: {tenant.LeaseStartDate:yyyy-MM-dd}; End: {tenant.LeaseEndDate:yyyy-MM-dd}; Monthly rent: RM {tenant.MonthlyRent:N2}; Deposit: {tenant.DepositStatus}",
                     tenant.Notes);
+                selectedProperty.AvailabilityStatus = PropertyAvailabilityStatus.Occupied;
                 _dbContext.SaveChanges();
 
                 TempData["SuccessMessage"] = "Tenant assigned successfully. New TenantId: " + tenant.TenantId;
@@ -996,6 +1120,9 @@ namespace MyMvcApp.Controllers
             model.Properties = _dbContext.Properties
                 .Where(p =>
                     p.LandlordId == landlordId &&
+                    !p.IsDeleted &&
+                    p.ApprovalStatus == PropertyApprovalStatus.Approved &&
+                    p.AvailabilityStatus == PropertyAvailabilityStatus.Available &&
                     !_dbContext.Tenants.Any(t => t.PropertyId == p.PropertyId))
                 .Select(p => new SelectListItem
                 {
@@ -1056,8 +1183,11 @@ namespace MyMvcApp.Controllers
             ViewBag.AvailableProperties = _dbContext.Properties
                 .Where(p =>
                     p.LandlordId == landlordId &&
+                    !p.IsDeleted &&
+                    p.ApprovalStatus == PropertyApprovalStatus.Approved &&
                     (p.PropertyId == currentPropertyId ||
-                        !_dbContext.Tenants.Any(t => t.PropertyId == p.PropertyId)))
+                        (p.AvailabilityStatus == PropertyAvailabilityStatus.Available &&
+                            !_dbContext.Tenants.Any(t => t.PropertyId == p.PropertyId))))
                 .OrderBy(p => p.PropertyName)
                 .Select(p => new SelectListItem
                 {
@@ -1089,6 +1219,87 @@ namespace MyMvcApp.Controllers
                 ChangedByEmail = GetCurrentUserEmail(),
                 CreatedAt = DateTime.UtcNow
             });
+        }
+
+        private static string? ValidatePropertyImage(IFormFile file)
+        {
+            if (file.Length > MaxPropertyImageSizeBytes)
+            {
+                return "Property image must be 8MB or smaller.";
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            return AllowedPropertyImageExtensions.Contains(extension)
+                ? null
+                : "Only JPG, JPEG, PNG, and WEBP property images are allowed.";
+        }
+
+        private static string? ValidateRepairImage(IFormFile file)
+        {
+            if (file.Length > MaxMaintenanceRepairImageSizeBytes)
+            {
+                return "Repair image must be 8MB or smaller.";
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            return AllowedMaintenanceRepairImageExtensions.Contains(extension)
+                ? null
+                : "Only JPG, JPEG, PNG, and WEBP repair images are allowed.";
+        }
+
+        private async Task<string> SaveRepairImageAsync(IFormFile file, MaintenanceRequest request)
+        {
+            var uploadsFolder = Path.Combine("wwwroot", "uploads", "landlord", "maintenance", request.RequestId.ToString());
+            Directory.CreateDirectory(uploadsFolder);
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var savedFileName = $"{Guid.NewGuid():N}{extension}";
+            var physicalPath = Path.Combine(uploadsFolder, savedFileName);
+
+            await using var stream = System.IO.File.Create(physicalPath);
+            await file.CopyToAsync(stream);
+
+            return Path.Combine("uploads", "landlord", "maintenance", request.RequestId.ToString(), savedFileName)
+                .Replace("\\", "/");
+        }
+
+        private void AddMaintenanceTimeline(MaintenanceRequest request, string action, string? details)
+        {
+            _dbContext.MaintenanceTimelines.Add(new MaintenanceTimeline
+            {
+                MaintenanceRequest = request,
+                RequestId = request.RequestId,
+                Action = action,
+                Details = details,
+                ActorEmail = GetCurrentUserEmail(),
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        private void SyncPropertyAmenities(Property property, string? amenitiesText)
+        {
+            property.Amenities.Clear();
+
+            if (string.IsNullOrWhiteSpace(amenitiesText))
+            {
+                return;
+            }
+
+            var amenities = amenitiesText
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(30)
+                .Select(a => new PropertyAmenity
+                {
+                    Property = property,
+                    AmenityName = a.Length > 100 ? a[..100] : a
+                });
+
+            foreach (var amenity in amenities)
+            {
+                property.Amenities.Add(amenity);
+            }
         }
 
         private string GetCurrentUserEmail()
