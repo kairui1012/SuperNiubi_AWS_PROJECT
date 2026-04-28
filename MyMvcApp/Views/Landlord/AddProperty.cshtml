@@ -128,7 +128,8 @@
 
             <form asp-action="AddProperty"
                   asp-controller="Landlord"
-                  method="post">
+                  method="post"
+                  enctype="multipart/form-data">
 
                 @Html.AntiForgeryToken()
 
@@ -164,6 +165,25 @@
                 <span asp-validation-for="PropertyType"
                       class="landlord-error">
                 </span>
+
+                <label asp-for="AvailabilityStatus"
+                       class="landlord-label">
+                </label>
+
+                <select asp-for="AvailabilityStatus"
+                        class="landlord-select"
+                        asp-items="Html.GetEnumSelectList<MyMvcApp.Models.PropertyAvailabilityStatus>()">
+                </select>
+
+                <label class="landlord-label" for="PropertyImage">
+                    Property Image
+                </label>
+
+                <input id="PropertyImage"
+                       name="PropertyImage"
+                       type="file"
+                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                       class="landlord-input" />
 
 
 
@@ -321,6 +341,15 @@
                 <textarea asp-for="Description"
                           class="landlord-textarea">
                 </textarea>
+
+                <label class="landlord-label" for="AmenitiesText">
+                    Amenities
+                </label>
+
+                <input id="AmenitiesText"
+                       name="AmenitiesText"
+                       class="landlord-input"
+                       placeholder="Pool, Gym, Parking, Security" />
 
 
 

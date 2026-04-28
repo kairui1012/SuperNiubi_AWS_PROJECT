@@ -13,6 +13,7 @@ namespace MyMvcApp.Data
         public DbSet<PropertyAmenity> PropertyAmenities { get; set; }
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
+        public DbSet<MaintenanceTimeline> MaintenanceTimelines { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Document> Documents { get; set; }
         public DbSet<CommunityUpdate> CommunityUpdates { get; set; }
@@ -22,12 +23,18 @@ namespace MyMvcApp.Data
         public DbSet<SystemAnnouncement> SystemAnnouncements { get; set; }
         public DbSet<LeaseHistory> LeaseHistories { get; set; }
 
+        public DbSet<Facility> Facilities { get; set; }
+        public DbSet<FacilityBooking> FacilityBookings { get; set; }
+        public DbSet<PromoCode> PromoCodes { get; set; }
+
 
         // Setting rules to store the data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Store ENUM as String for easier check, if not it will be 1, 2, 3 in db
             modelBuilder.Entity<Property>().Property(p => p.PropertyType).HasConversion<string>();
+            modelBuilder.Entity<Property>().Property(p => p.AvailabilityStatus).HasConversion<string>();
+            modelBuilder.Entity<Property>().Property(p => p.ApprovalStatus).HasConversion<string>();
             modelBuilder.Entity<CommunityUpdate>().Property(c => c.Type).HasConversion<string>();
             modelBuilder.Entity<Tenant>().Property(t => t.DepositStatus).HasConversion<string>();
             modelBuilder.Entity<Tenant>().Property(t => t.LeaseStatus).HasConversion<string>();
@@ -42,9 +49,20 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<Document>().Property(d => d.DocumentType).HasConversion<string>();
             modelBuilder.Entity<VisitorPass>().Property(v => v.Status).HasConversion<string>();
             modelBuilder.Entity<PasswordResetRequest>().Property(p => p.Status).HasConversion<string>();
+            modelBuilder.Entity<FacilityBooking>().Property(f => f.Status).HasConversion<string>();
+            modelBuilder.Entity<FacilityBooking>().Property(f => f.PaymentStatus).HasConversion<string>();
 
             modelBuilder.Entity<AppUser>()
                 .HasIndex(u => u.CreatedAt);
+
+            modelBuilder.Entity<Property>()
+                .HasIndex(p => p.IsDeleted);
+
+            modelBuilder.Entity<Property>()
+                .HasIndex(p => p.ApprovalStatus);
+
+            modelBuilder.Entity<Property>()
+                .HasIndex(p => p.AvailabilityStatus);
 
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(a => a.CreatedAt);
@@ -69,6 +87,12 @@ namespace MyMvcApp.Data
 
             modelBuilder.Entity<LeaseHistory>()
                 .HasIndex(h => h.Action);
+
+            modelBuilder.Entity<MaintenanceTimeline>()
+                .HasIndex(t => t.RequestId);
+
+            modelBuilder.Entity<MaintenanceTimeline>()
+                .HasIndex(t => t.CreatedAt);
 
             // --- AppUser (Landlord) → Property ---
             // Deleting a landlord cascades to their properties
@@ -121,6 +145,12 @@ namespace MyMvcApp.Data
                 .HasForeignKey(m => m.PropertyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<MaintenanceTimeline>()
+                .HasOne(t => t.MaintenanceRequest)
+                .WithMany(r => r.Timeline)
+                .HasForeignKey(t => t.RequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // --- Tenant → Payment ---
             modelBuilder.Entity<Payment>()
                 .HasOne(pay => pay.Tenant)
@@ -167,6 +197,28 @@ namespace MyMvcApp.Data
                 .HasOne(p => p.AppUser)
                 .WithMany()
                 .HasForeignKey(p => p.AppUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<FacilityBooking>()
+                .HasOne(b => b.Facility)
+                .WithMany(f => f.Bookings)
+                .HasForeignKey(b => b.FacilityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // --- FacilityBooking -> AppUser ---
+            // If a user is deleted, we keep the booking for financial records but null out the User ID
+            modelBuilder.Entity<FacilityBooking>()
+                .HasOne(b => b.AppUser)
+                .WithMany()
+                .HasForeignKey(b => b.AppUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // --- FacilityBooking -> PromoCode ---
+            // If a promo code is deleted, null it out on the booking record
+            modelBuilder.Entity<FacilityBooking>()
+                .HasOne(b => b.PromoCode)
+                .WithMany()
+                .HasForeignKey(b => b.PromoCodeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
         }

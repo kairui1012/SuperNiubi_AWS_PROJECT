@@ -102,7 +102,8 @@
 
             <form asp-action="EditMaintenanceRequest"
                   asp-controller="Landlord"
-                  method="post">
+                  method="post"
+                  enctype="multipart/form-data">
 
                 @Html.AntiForgeryToken()
 
@@ -132,6 +133,35 @@
                           class="landlord-textarea">
                 </textarea>
 
+                <label asp-for="AssignedVendor" class="landlord-label">Assigned Vendor</label>
+                <input asp-for="AssignedVendor"
+                       class="landlord-input"
+                       maxlength="200"
+                       placeholder="Vendor or contractor name" />
+
+                <label asp-for="EstimatedRepairCost" class="landlord-label">Estimated Repair Cost</label>
+                <input asp-for="EstimatedRepairCost"
+                       class="landlord-input"
+                       type="number"
+                       min="0"
+                       step="0.01" />
+
+                @if (!string.IsNullOrWhiteSpace(Model.RepairImageKey))
+                {
+                    <div class="mt-3">
+                        <a class="landlord-link" href="@($"/{Model.RepairImageKey}")" target="_blank" rel="noopener noreferrer">
+                            View repair image
+                        </a>
+                    </div>
+                }
+
+                <label class="landlord-label" for="RepairImage">Repair Image</label>
+                <input id="RepairImage"
+                       name="RepairImage"
+                       type="file"
+                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                       class="landlord-input" />
+
                 <div class="landlord-actions mt-4">
                     <button type="submit"
                             class="landlord-btn landlord-btn-primary">
@@ -146,6 +176,37 @@
 
             </form>
 
+        </article>
+
+        <article class="landlord-panel mt-4">
+            <div class="landlord-panel-head">
+                <h3 class="landlord-panel-title">Maintenance Timeline</h3>
+            </div>
+
+            @if (!Model.Timeline.Any())
+            {
+                <div class="landlord-empty">No timeline activity yet.</div>
+            }
+            else
+            {
+                <div class="landlord-list">
+                    @foreach (var item in Model.Timeline.OrderByDescending(t => t.CreatedAt))
+                    {
+                        <div class="landlord-list-item">
+                            <div>
+                                <strong>@item.Action</strong>
+                                <p class="landlord-sub mb-1">
+                                    @item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm") by @item.ActorEmail
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(item.Details))
+                                {
+                                    <p class="landlord-sub mb-0">@item.Details</p>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
         </article>
 
     </section>

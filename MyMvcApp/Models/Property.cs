@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 namespace MyMvcApp.Models
 {
     public enum PropertyType { Apartment, House, Condo, Studio, Commercial }
+    public enum PropertyAvailabilityStatus { Available, Occupied, Maintenance, Unavailable }
+    public enum PropertyApprovalStatus { Pending, Approved, Rejected }
 
     public class Property
     {
@@ -54,6 +56,18 @@ namespace MyMvcApp.Models
         public string? ParkingBay { get; set; }
 
         public string? Description { get; set; }
+
+        [MaxLength(1000)]
+        public string? ImageUrl { get; set; }
+
+        public PropertyAvailabilityStatus AvailabilityStatus { get; set; } = PropertyAvailabilityStatus.Available;
+
+        public PropertyApprovalStatus ApprovalStatus { get; set; } = PropertyApprovalStatus.Pending;
+
+        public bool IsDeleted { get; set; } = false;
+
+        public DateTime? DeletedAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

@@ -1,0 +1,87 @@
+@model MyMvcApp.Models.Facility
+
+@{
+    ViewData["Title"] = "Book " + Model.Name;
+}
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Booking Request: @Model.Name</h3>
+                </div>
+                <div class="card-body p-4">
+                    
+                    @* Error Message Banner for Time Overlaps *@
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>@TempData["ErrorMessage"]</div>
+                        </div>
+                    }
+
+                    <div class="mb-4">
+                        <p class="text-muted">@Model.Description</p>
+                        <span class="badge bg-info text-dark fs-6">Rate: RM @Model.HourlyRate.ToString("0.00") / hour</span>
+                    </div>
+
+                    <form asp-controller="FacilityBooking" asp-action="CreateCheckoutSession" method="post">
+                        <input type="hidden" name="facilityId" value="@Model.Id" />
+
+                        @* If visitor is an outsider (Not logged in) *@
+                        @if (!User.Identity.IsAuthenticated)
+                        {
+                            <h5 class="border-bottom pb-2 mb-3 mt-4">Guest Details</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" name="guestName" class="form-control" required placeholder="John Doe" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" name="guestEmail" class="form-control" required placeholder="john@example.com" />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="text" name="guestPhone" class="form-control" required placeholder="+60123456789" />
+                            </div>
+                        }
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Select Schedule</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Booking Date</label>
+                            <input type="date" name="bookingDate" class="form-control" required min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Start Time</label>
+                                <input type="time" name="startTime" class="form-control" step="1800" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">End Time</label>
+                                <input type="time" name="endTime" class="form-control" step="1800" required />
+                            </div>
+                        </div>
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Payment & Discount</h5>
+                        <div class="mb-4">
+                            <label class="form-label">Promo Code (Optional)</label>
+                            <input type="text" name="promoCode" class="form-control text-uppercase" placeholder="e.g. MERDEKA20" />
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                Proceed to Secure Payment
+                            </button>
+                            <a asp-action="Index" class="btn btn-light">Cancel</a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
+using MyMvcApp.Services;
 using Stripe;
 
 namespace MyMvcApp.Controllers
@@ -18,15 +19,18 @@ namespace MyMvcApp.Controllers
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ILogger<StripeEventBridgeController> _logger;
+        private readonly EmailService _emailService;
 
         public StripeEventBridgeController(
             AppDbContext context,
             IConfiguration configuration,
-            ILogger<StripeEventBridgeController> logger)
+            ILogger<StripeEventBridgeController> logger,
+            EmailService emailService)
         {
             _context = context;
             _configuration = configuration;
             _logger = logger;
+            _emailService = emailService;
         }
 
         [HttpPost]
@@ -116,42 +120,97 @@ namespace MyMvcApp.Controllers
 
             var sessionId = ReadString(dataObject, "id");
             var paymentIntentId = ReadExpandableString(dataObject, "payment_intent");
-            var payment = await FindPaymentAsync(dataObject, sessionId, paymentIntentId);
 
-            if (payment is null)
+            // 1. Read the metadata to determine what kind of payment this is
+            var transactionType = ReadString(dataObject, "metadata", "TransactionType");
+
+            if (transactionType == "FacilityBooking")
             {
-                return NotFound("Matching local payment was not found.");
+                // ==========================================
+                // NEW LOGIC: FACILITY BOOKING
+                // ==========================================
+                var bookingIdStr = ReadString(dataObject, "metadata", "BookingId");
+                if (int.TryParse(bookingIdStr, out int bookingId))
+                {
+                    // Notice we are Including the Facility so we have its Name for the email
+                    var booking = await _context.FacilityBookings
+                        .Include(b => b.AppUser)
+                        .Include(b => b.Facility) 
+                        .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+                    if (booking != null)
+                    {
+                        booking.PaymentStatus = BookingPaymentStatus.Paid;
+                        booking.Status = BookingStatus.Confirmed;
+                        booking.StripePaymentIntentId = paymentIntentId;
+                        booking.StripeSessionId = sessionId;
+
+                        // Generate a secure 8-character alphanumeric Pass Code for the guard validation
+                        booking.PassCode = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+
+                        AddAuditLog("StripeFacilityBookingVerified", booking.Id, $"Facility booking {booking.Id} paid via Stripe.");
+                        
+                        await _context.SaveChangesAsync();
+
+                        // --- TRIGGER THE QR EMAIL HERE ---
+                        var recipientEmail = booking.GuestEmail ?? booking.AppUser?.Email;
+                        if (!string.IsNullOrEmpty(recipientEmail))
+                        {
+                            try
+                            {
+                                await _emailService.SendFacilityPassAsync(recipientEmail, booking, booking.PassCode);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, $"Failed to send QR pass email for booking {booking.Id}");
+                            }
+                        }
+                    }
+                }
+                return Ok(new { processed = true, type = "FacilityBooking" });
             }
-
-            payment.StripeSessionId ??= sessionId;
-            payment.StripePaymentIntentId ??= paymentIntentId;
-            payment.StripeEventId = eventId ?? payment.StripeEventId;
-            payment.ReferenceNo = paymentIntentId ?? sessionId ?? payment.ReferenceNo;
-            payment.PaymentDate ??= DateTime.UtcNow;
-
-            var paymentStatus = ReadString(dataObject, "payment_status");
-            payment.Status = string.Equals(paymentStatus, "paid", StringComparison.OrdinalIgnoreCase)
-                ? PaymentStatus.Verified
-                : PaymentStatus.Submitted;
-
-            var receiptUrl = await ResolveReceiptUrlAsync(paymentIntentId, dataObject);
-            if (!string.IsNullOrWhiteSpace(receiptUrl))
+            else
             {
-                payment.StripeReceiptUrl = receiptUrl;
+                // ==========================================
+                // EXISTING LOGIC: RENT / DEPOSIT PAYMENT
+                // ==========================================
+                var payment = await FindPaymentAsync(dataObject, sessionId, paymentIntentId);
+
+                if (payment is null)
+                {
+                    return NotFound("Matching local payment was not found.");
+                }
+
+                payment.StripeSessionId ??= sessionId;
+                payment.StripePaymentIntentId ??= paymentIntentId;
+                payment.StripeEventId = eventId ?? payment.StripeEventId;
+                payment.ReferenceNo = paymentIntentId ?? sessionId ?? payment.ReferenceNo;
+                payment.PaymentDate ??= DateTime.UtcNow;
+
+                var paymentStatus = ReadString(dataObject, "payment_status");
+                payment.Status = string.Equals(paymentStatus, "paid", StringComparison.OrdinalIgnoreCase)
+                    ? PaymentStatus.Verified
+                    : PaymentStatus.Submitted;
+
+                var receiptUrl = await ResolveReceiptUrlAsync(paymentIntentId, dataObject);
+                if (!string.IsNullOrWhiteSpace(receiptUrl))
+                {
+                    payment.StripeReceiptUrl = receiptUrl;
+                }
+
+                payment.LandlordRemarks = payment.Status == PaymentStatus.Verified
+                    ? "Confirmed by Stripe through Amazon EventBridge."
+                    : "Stripe Checkout completed; awaiting final Stripe payment confirmation.";
+                payment.UpdatedAt = DateTime.UtcNow;
+
+                AddAuditLog(
+                    payment.Status == PaymentStatus.Verified ? "StripePaymentVerified" : "StripePaymentSubmitted",
+                    payment.PaymentId,
+                    $"Processed {ReadString(stripeEvent, "type")} from Amazon EventBridge. Session={sessionId}, PaymentIntent={paymentIntentId}.");
+
+                await _context.SaveChangesAsync();
+                return Ok(new { processed = true, payment.PaymentId, payment.Status });
             }
-
-            payment.LandlordRemarks = payment.Status == PaymentStatus.Verified
-                ? "Confirmed by Stripe through Amazon EventBridge."
-                : "Stripe Checkout completed; awaiting final Stripe payment confirmation.";
-            payment.UpdatedAt = DateTime.UtcNow;
-
-            AddAuditLog(
-                payment.Status == PaymentStatus.Verified ? "StripePaymentVerified" : "StripePaymentSubmitted",
-                payment.PaymentId,
-                $"Processed {ReadString(stripeEvent, "type")} from Amazon EventBridge. Session={sessionId}, PaymentIntent={paymentIntentId}.");
-
-            await _context.SaveChangesAsync();
-            return Ok(new { processed = true, payment.PaymentId, payment.Status });
         }
 
         private async Task<IActionResult> HandlePaymentIntentSucceededAsync(JsonElement stripeEvent, string? eventId)

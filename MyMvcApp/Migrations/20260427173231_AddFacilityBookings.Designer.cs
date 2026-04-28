@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyMvcApp.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyMvcApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260427173231_AddFacilityBookings")]
+    partial class AddFacilityBookings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -218,53 +221,6 @@ namespace MyMvcApp.Migrations
                     b.ToTable("Documents");
                 });
 
-            modelBuilder.Entity("MyMvcApp.Models.LeaseHistory", b =>
-                {
-                    b.Property<int>("LeaseHistoryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LeaseHistoryId"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("ChangedByEmail")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("NewValue")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("OldValue")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("LeaseHistoryId");
-
-                    b.HasIndex("Action");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("LeaseHistories");
-                });
-
             modelBuilder.Entity("MyMvcApp.Models.Facility", b =>
                 {
                     b.Property<int>("Id")
@@ -385,10 +341,6 @@ namespace MyMvcApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RequestId"));
 
-                    b.Property<string>("AssignedVendor")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasColumnType("text");
@@ -419,13 +371,6 @@ namespace MyMvcApp.Migrations
 
                     b.Property<DateTime?>("ResolvedDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("EstimatedRepairCost")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("RepairImageKey")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -459,43 +404,6 @@ namespace MyMvcApp.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("MaintenanceRequests");
-                });
-
-            modelBuilder.Entity("MyMvcApp.Models.MaintenanceTimeline", b =>
-                {
-                    b.Property<int>("MaintenanceTimelineId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MaintenanceTimelineId"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("ActorEmail")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Details")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("RequestId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("MaintenanceTimelineId");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("RequestId");
-
-                    b.ToTable("MaintenanceTimelines");
                 });
 
             modelBuilder.Entity("MyMvcApp.Models.PasswordResetRequest", b =>
@@ -672,14 +580,6 @@ namespace MyMvcApp.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<string>("ApprovalStatus")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("AvailabilityStatus")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<int>("Bathrooms")
                         .HasColumnType("integer");
 
@@ -694,9 +594,6 @@ namespace MyMvcApp.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<decimal?>("DepositAmount")
                         .HasColumnType("numeric");
 
@@ -706,13 +603,6 @@ namespace MyMvcApp.Migrations
                     b.Property<string>("FloorNumber")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
-
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("LandlordId")
                         .HasColumnType("integer");
@@ -754,12 +644,6 @@ namespace MyMvcApp.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("PropertyId");
-
-                    b.HasIndex("ApprovalStatus");
-
-                    b.HasIndex("AvailabilityStatus");
-
-                    b.HasIndex("IsDeleted");
 
                     b.HasIndex("LandlordId");
 
@@ -969,17 +853,6 @@ namespace MyMvcApp.Migrations
                     b.Navigation("UploadedByUser");
                 });
 
-            modelBuilder.Entity("MyMvcApp.Models.LeaseHistory", b =>
-                {
-                    b.HasOne("MyMvcApp.Models.Tenant", "Tenant")
-                        .WithMany("LeaseHistories")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("MyMvcApp.Models.FacilityBooking", b =>
                 {
                     b.HasOne("MyMvcApp.Models.AppUser", "AppUser")
@@ -1022,17 +895,6 @@ namespace MyMvcApp.Migrations
                     b.Navigation("Property");
 
                     b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("MyMvcApp.Models.MaintenanceTimeline", b =>
-                {
-                    b.HasOne("MyMvcApp.Models.MaintenanceRequest", "MaintenanceRequest")
-                        .WithMany("Timeline")
-                        .HasForeignKey("RequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MaintenanceRequest");
                 });
 
             modelBuilder.Entity("MyMvcApp.Models.PasswordResetRequest", b =>
@@ -1138,18 +1000,11 @@ namespace MyMvcApp.Migrations
                 {
                     b.Navigation("Documents");
 
-                    b.Navigation("LeaseHistories");
-
                     b.Navigation("MaintenanceRequests");
 
                     b.Navigation("Payments");
 
                     b.Navigation("VisitorPasses");
-                });
-
-            modelBuilder.Entity("MyMvcApp.Models.MaintenanceRequest", b =>
-                {
-                    b.Navigation("Timeline");
                 });
 #pragma warning restore 612, 618
         }
