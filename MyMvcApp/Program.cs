@@ -4,11 +4,16 @@ using MyMvcApp.Extensions;
 using MyMvcApp.Services;
 using Microsoft.AspNetCore.Authentication;
 using QuestPDF.Infrastructure; 
+using Stripe;
+
 
 
 QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
+
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+Console.WriteLine(builder.Configuration["Stripe:SecretKey"]);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

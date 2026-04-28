@@ -1,0 +1,83 @@
+@model MyMvcApp.Models.Property
+
+@{
+    ViewData["Title"] = "Book " + Model.PropertyName;
+}
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white p-4">
+                    <h3 class="mb-0">Secure Your Stay: @Model.PropertyName</h3>
+                </div>
+                <div class="card-body p-4 p-md-5">
+                    
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>@TempData["ErrorMessage"]</div>
+                        </div>
+                    }
+
+                    <div class="mb-4">
+                        <p class="text-muted"><i class="bi bi-geo-alt me-1"></i> @Model.AddressLine1, @Model.City</p>
+                        <div class="d-flex gap-3 mb-3">
+                            <span class="badge bg-info text-dark fs-6"><i class="bi bi-moon-stars"></i> RM @Model.DailyRate?.ToString("0.00") / night</span>
+                            <span class="badge bg-light text-dark border fs-6"><i class="bi bi-door-open"></i> Check-in: 3 PM</span>
+                            <span class="badge bg-light text-dark border fs-6"><i class="bi bi-door-closed"></i> Check-out: 11 AM</span>
+                        </div>
+                        <p>@Model.Description</p>
+                    </div>
+
+                    <form asp-controller="PropertyBooking" asp-action="CreateCheckoutSession" method="post">
+                        <input type="hidden" name="propertyId" value="@Model.PropertyId" />
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4 fw-bold">Guest Details</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label class="form-label text-muted small text-uppercase fw-bold">Full Name</label>
+                                <input type="text" name="guestName" class="form-control form-control-lg" required placeholder="John Doe" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small text-uppercase fw-bold">Email Address</label>
+                                <input type="email" name="guestEmail" class="form-control form-control-lg" required placeholder="john@example.com" />
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Phone Number</label>
+                            <input type="tel" name="guestPhone" class="form-control form-control-lg" required placeholder="+60123456789" />
+                        </div>
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4 fw-bold">Select Dates</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label class="form-label text-muted small text-uppercase fw-bold">Check-in Date</label>
+                                <input type="date" name="checkInDate" class="form-control form-control-lg" required min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small text-uppercase fw-bold">Check-out Date</label>
+                                <input type="date" name="checkOutDate" class="form-control form-control-lg" required min="@DateTime.Now.AddDays(1).ToString("yyyy-MM-dd")" />
+                            </div>
+                        </div>
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4 fw-bold">Payment & Discount</h5>
+                        <div class="mb-5">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Promo Code (Optional)</label>
+                            <input type="text" name="promoCode" class="form-control form-control-lg text-uppercase" placeholder="e.g. MERDEKA20" />
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg py-3 fw-bold fs-5 shadow-sm">
+                                Proceed to Secure Payment <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                            <a asp-action="Index" class="btn btn-link text-muted mt-2">Cancel and browse other properties</a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

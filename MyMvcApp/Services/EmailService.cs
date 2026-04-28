@@ -31,42 +31,42 @@ namespace MyMvcApp.Services
             await client.SendEmailAsync(sendRequest);
         }
 
-        // --- NEW METHOD FOR FACILITY BOOKING QR EMAIL ---
-        public async Task SendFacilityPassAsync(string toEmail, FacilityBooking booking, string passCode)
+        // --- NEW METHOD FOR PROPERTY BOOKING QR EMAIL ---
+        public async Task SendPropertyAccessPassAsync(string toEmail, PropertyBooking booking, string passCode)
         {
-            var senderEmail = GetSesSenderEmail();
-            var region = RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1"); 
-            using var client = new AmazonSimpleEmailServiceClient(region);
+            var senderEmail = _config["AWS:SesSenderEmail"];
+            var region = Amazon.RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1"); 
+            using var client = new Amazon.SimpleEmail.AmazonSimpleEmailServiceClient(region);
 
             // 1. Generate the verification URL for the guard
-            // Adjust "https://propease.dev" if testing locally
-            var verificationUrl = $"https://propease.dev/FacilityGuard/Verify?code={passCode}";
+            var verificationUrl = $"https://propease.dev/PropertyGuard/Verify?code={passCode}";
 
             // 2. Generate the QR Code as a Base64 string
             string qrCodeBase64;
-            using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+            using (QRCoder.QRCodeGenerator qrGenerator = new QRCoder.QRCodeGenerator())
             {
-                QRCodeData qrCodeData = qrGenerator.CreateQrCode(verificationUrl, QRCodeGenerator.ECCLevel.Q);
-                using (PngByteQRCode qrCode = new PngByteQRCode(qrCodeData))
+                QRCoder.QRCodeData qrCodeData = qrGenerator.CreateQrCode(verificationUrl, QRCoder.QRCodeGenerator.ECCLevel.Q);
+                using (QRCoder.PngByteQRCode qrCode = new QRCoder.PngByteQRCode(qrCodeData))
                 {
                     byte[] qrCodeImage = qrCode.GetGraphic(20);
                     qrCodeBase64 = Convert.ToBase64String(qrCodeImage);
                 }
             }
 
-            var subject = $"Booking Confirmed: {booking.Facility.Name}";
+            var subject = $"Stay Confirmed: {booking.Property.PropertyName}";
             
-            // 3. Create the HTML Body embedding the Base64 QR code
+            // 3. Create the HTML Body
             var htmlBody = $@"
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
-                    <h2 style='color: #28a745;'>Booking Confirmed!</h2>
-                    <p>Hello,</p>
-                    <p>Your payment was successful and your facility booking is confirmed. Please present the QR code below to the security guard upon arrival.</p>
+                    <h2 style='color: #28a745;'>Stay Confirmed!</h2>
+                    <p>Hello {booking.GuestName},</p>
+                    <p>Your payment was successful and your stay is confirmed. Please present the QR code below to the security guard upon arrival for full access during your stay.</p>
                     
                     <div style='background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;'>
-                        <h3 style='margin-top: 0;'>{booking.Facility.Name}</h3>
-                        <p><strong>Date:</strong> {booking.BookingDate:dd MMM yyyy}</p>
-                        <p><strong>Time:</strong> {booking.StartTime:hh\:mm} - {booking.EndTime:hh\:mm}</p>
+                        <h3 style='margin-top: 0;'>{booking.Property.PropertyName}</h3>
+                        <p><strong>Address:</strong> {booking.Property.AddressLine1}, {booking.Property.City}</p>
+                        <p><strong>Check-In:</strong> {booking.CheckInDate:dd MMM yyyy} (3:00 PM)</p>
+                        <p><strong>Check-Out:</strong> {booking.CheckOutDate:dd MMM yyyy} (11:00 AM)</p>
                         <p><strong>Pass Code:</strong> <span style='font-size: 1.2em; font-weight: bold; letter-spacing: 2px;'>{passCode}</span></p>
                     </div>
 
@@ -76,7 +76,7 @@ namespace MyMvcApp.Services
                     </div>
                 </div>";
 
-            var textBody = $"Booking Confirmed!\r\nFacility: {booking.Facility.Name}\r\nDate: {booking.BookingDate:dd MMM yyyy}\r\nTime: {booking.StartTime:hh\\:mm} - {booking.EndTime:hh\\:mm}\r\nPass Code: {passCode}\r\nVerification Link: {verificationUrl}";
+            var textBody = $"Stay Confirmed!\r\nProperty: {booking.Property.PropertyName}\r\nCheck-in: {booking.CheckInDate:dd MMM yyyy}\r\nCheck-out: {booking.CheckOutDate:dd MMM yyyy}\r\nPass Code: {passCode}\r\nVerification Link: {verificationUrl}";
 
             var sendRequest = CreateSendEmailRequest(senderEmail, toEmail, subject, htmlBody, textBody);
             await client.SendEmailAsync(sendRequest);

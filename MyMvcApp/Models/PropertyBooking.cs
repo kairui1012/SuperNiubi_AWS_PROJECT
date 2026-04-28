@@ -4,35 +4,29 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace MyMvcApp.Models
 {
+
     public enum BookingStatus { Pending, Confirmed, Cancelled }
     public enum BookingPaymentStatus { Pending, Paid, Failed }
-
-    public class FacilityBooking
+    
+    public class PropertyBooking
     {
         [Key]
         public int Id { get; set; }
 
-        [ForeignKey("Facility")]
-        public int FacilityId { get; set; }
+        [ForeignKey("Property")]
+        public int PropertyId { get; set; }
 
-        // Nullable because visitors might book without an account
-        [ForeignKey("AppUser")]
-        public int? AppUserId { get; set; }
-
-        // Visitor details
-        [MaxLength(100)]
-        public string? GuestName { get; set; }
-        [MaxLength(100)]
-        public string? GuestEmail { get; set; }
-        [MaxLength(20)]
-        public string? GuestPhone { get; set; }
+        [Required, MaxLength(100)]
+        public string GuestName { get; set; } = string.Empty;
+        [Required, MaxLength(100)]
+        public string GuestEmail { get; set; } = string.Empty;
+        [Required, MaxLength(20)]
+        public string GuestPhone { get; set; } = string.Empty;
 
         [Required]
-        public DateTime BookingDate { get; set; }
+        public DateTime CheckInDate { get; set; } // Implicitly 15:00 (3 PM)
         [Required]
-        public TimeSpan StartTime { get; set; }
-        [Required]
-        public TimeSpan EndTime { get; set; }
+        public DateTime CheckOutDate { get; set; } // Implicitly 11:00 (11 AM)
 
         [ForeignKey("PromoCode")]
         public int? PromoCodeId { get; set; }
@@ -49,22 +43,16 @@ namespace MyMvcApp.Models
         [Required]
         public BookingPaymentStatus PaymentStatus { get; set; } = BookingPaymentStatus.Pending;
 
-        // Stripe tracking
         public string? StripeSessionId { get; set; }
         public string? StripePaymentIntentId { get; set; }
-
-        // Digital Pass Code for the Guard
+        
+        // Multi-day access pass for the guard
         public string? PassCode { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation properties
         [ValidateNever]
-        public Facility Facility { get; set; } = null!;
-
-        [ValidateNever]
-        public AppUser? AppUser { get; set; }
-
+        public Property Property { get; set; } = null!;
         [ValidateNever]
         public PromoCode? PromoCode { get; set; }
     }

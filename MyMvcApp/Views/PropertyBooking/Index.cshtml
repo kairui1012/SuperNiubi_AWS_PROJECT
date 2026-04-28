@@ -1,0 +1,52 @@
+@model IEnumerable<MyMvcApp.Models.Property>
+
+@{
+    ViewData["Title"] = "Book a Stay";
+}
+
+<div class="container mt-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold">Find Your Next Stay</h1>
+        <p class="lead text-muted">Browse our premium short-term rental properties.</p>
+    </div>
+
+    <div class="row">
+        @if (!Model.Any())
+        {
+            <div class="col-12 text-center text-muted">
+                <i class="bi bi-house-x display-1 d-block mb-3"></i>
+                <p>No properties are currently available for short-term stays. Please check back later!</p>
+            </div>
+        }
+
+        @foreach (var property in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm border-0">
+                    @if (!string.IsNullOrEmpty(property.ImageUrl))
+                    {
+                        <img src="@property.ImageUrl" class="card-img-top" alt="@property.PropertyName" style="height: 200px; object-fit: cover;">
+                    }
+                    else
+                    {
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="bi bi-house text-secondary" style="font-size: 4rem;"></i>
+                        </div>
+                    }
+                    <div class="card-body d-flex flex-column">
+                        <h4 class="card-title text-primary">@property.PropertyName</h4>
+                        <p class="card-text text-muted mb-1"><i class="bi bi-geo-alt-fill me-1"></i> @property.City, @property.State</p>
+                        <p class="card-text small text-muted mb-3">@property.Bedrooms Bed • @property.Bathrooms Bath</p>
+                        
+                        <div class="mt-auto">
+                            <h5 class="mb-3 fw-bold">RM @property.DailyRate?.ToString("0.00") <small class="text-muted fw-normal fs-6">/ night</small></h5>
+                            <a asp-controller="PropertyBooking" asp-action="Book" asp-route-id="@property.PropertyId" class="btn btn-outline-primary w-100">
+                                View & Book
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

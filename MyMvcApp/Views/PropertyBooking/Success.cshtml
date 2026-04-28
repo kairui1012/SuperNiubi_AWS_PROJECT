@@ -1,0 +1,14 @@
+@{ ViewData["Title"] = "Stay Confirmed"; }
+<div class="container mt-5 text-center">
+    <div class="card shadow-sm border-0 p-5 mx-auto" style="max-width: 600px;">
+        <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+        <h1 class="display-5 fw-bold text-dark mt-3">Stay Confirmed!</h1>
+        <p class="lead mt-3 text-muted">Your payment was successful and your dates are locked in.</p>
+        <div class="alert alert-success mt-4 text-start">
+            <i class="bi bi-envelope-check me-2"></i> <strong>Check your email!</strong> We've sent you a digital access pass. Please present the QR code to the security guard upon arrival for full access during your stay.
+        </div>
+        <div class="mt-4">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg px-5 rounded-pill shadow-sm">Return Home</a>
+        </div>
+    </div>
+</div>

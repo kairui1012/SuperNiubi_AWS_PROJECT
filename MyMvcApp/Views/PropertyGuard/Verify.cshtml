@@ -1,0 +1,65 @@
+@model MyMvcApp.Models.PropertyBooking
+
+@{
+    ViewData["Title"] = "Verify Property Guest Pass";
+    Layout = "_Layout"; 
+}
+
+<div class="container mt-5 mb-5" style="max-width: 500px;">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">Guest Scanner</h2>
+        <p class="text-muted">Enter the 8-character pass code or scan the QR.</p>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body p-4">
+            <form method="get" asp-action="Verify">
+                <div class="input-group input-group-lg">
+                    <input type="text" name="code" class="form-control text-uppercase text-center fw-bold bg-light" placeholder="E.G. A1B2C3D4" value="@Context.Request.Query["code"]" required maxlength="8">
+                    <button class="btn btn-primary px-4 fw-bold" type="submit">Verify</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (ViewBag.Status != null)
+    {
+        <div class="card shadow border-0 overflow-hidden">
+            @if (ViewBag.Status == "Valid")
+            {
+                <div class="bg-success text-white text-center py-5">
+                    <i class="bi bi-check-circle-fill" style="font-size: 5rem;"></i>
+                    <h3 class="mt-3 mb-0 fw-bold">ACTIVE GUEST</h3>
+                </div>
+            }
+            else if (ViewBag.Status == "Invalid")
+            {
+                <div class="bg-danger text-white text-center py-5">
+                    <i class="bi bi-x-octagon-fill" style="font-size: 5rem;"></i>
+                    <h3 class="mt-3 mb-0 fw-bold">INVALID PASS</h3>
+                </div>
+            }
+            else
+            {
+                <div class="bg-warning text-dark text-center py-5">
+                    <i class="bi bi-clock-history" style="font-size: 5rem;"></i>
+                    <h3 class="mt-3 mb-0 fw-bold">@ViewBag.Status.ToUpper()</h3>
+                </div>
+            }
+
+            <div class="card-body text-center p-4">
+                <h5 class="text-muted mb-4 fw-bold">@ViewBag.Message</h5>
+
+                @if (Model != null)
+                {
+                    <div class="bg-light p-3 rounded-3 text-start">
+                        <p class="mb-2"><span class="text-muted">Property:</span> <strong class="float-end">@Model.Property.PropertyName</strong></p>
+                        <p class="mb-2"><span class="text-muted">Guest:</span> <strong class="float-end">@Model.GuestName</strong></p>
+                        <p class="mb-2"><span class="text-muted">Check-In:</span> <strong class="float-end">@Model.CheckInDate.ToString("dd MMM") (3 PM)</strong></p>
+                        <p class="mb-0"><span class="text-muted">Check-Out:</span> <strong class="float-end">@Model.CheckOutDate.ToString("dd MMM") (11 AM)</strong></p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

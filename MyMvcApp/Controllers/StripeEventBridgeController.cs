@@ -127,18 +127,14 @@ namespace MyMvcApp.Controllers
             // 1. Read the metadata to determine what kind of payment this is
             var transactionType = ReadString(dataObject, "metadata", "TransactionType");
 
-            if (transactionType == "FacilityBooking")
+            // Change "FacilityBooking" to "PropertyBooking"
+            if (transactionType == "PropertyBooking")
             {
-                // ==========================================
-                // NEW LOGIC: FACILITY BOOKING
-                // ==========================================
                 var bookingIdStr = ReadString(dataObject, "metadata", "BookingId");
                 if (int.TryParse(bookingIdStr, out int bookingId))
                 {
-                    // Notice we are Including the Facility so we have its Name for the email
-                    var booking = await _context.FacilityBookings
-                        .Include(b => b.AppUser)
-                        .Include(b => b.Facility) 
+                    var booking = await _context.PropertyBookings
+                        .Include(b => b.Property) 
                         .FirstOrDefaultAsync(b => b.Id == bookingId);
 
                     if (booking != null)
@@ -148,29 +144,22 @@ namespace MyMvcApp.Controllers
                         booking.StripePaymentIntentId = paymentIntentId;
                         booking.StripeSessionId = sessionId;
 
-                        // Generate a secure 8-character alphanumeric Pass Code for the guard validation
+                        // Generate secure 8-character pass
                         booking.PassCode = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
-
-                        AddAuditLog("StripeFacilityBookingVerified", booking.Id, $"Facility booking {booking.Id} paid via Stripe.");
                         
                         await _context.SaveChangesAsync();
 
-                        // --- TRIGGER THE QR EMAIL HERE ---
-                        var recipientEmail = booking.GuestEmail ?? booking.AppUser?.Email;
-                        if (!string.IsNullOrEmpty(recipientEmail))
+                        if (!string.IsNullOrEmpty(booking.GuestEmail))
                         {
-                            try
-                            {
-                                await _emailService.SendFacilityPassAsync(recipientEmail, booking, booking.PassCode);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, $"Failed to send QR pass email for booking {booking.Id}");
+                            try {
+                                await _emailService.SendPropertyAccessPassAsync(booking.GuestEmail, booking, booking.PassCode);
+                            } catch (Exception ex) {
+                                _logger.LogError(ex, $"Failed to send QR pass email for property booking {booking.Id}");
                             }
                         }
                     }
                 }
-                return Ok(new { processed = true, type = "FacilityBooking" });
+                return Ok(new { processed = true, type = "PropertyBooking" });
             }
             else
             {

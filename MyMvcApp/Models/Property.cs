@@ -52,6 +52,10 @@ namespace MyMvcApp.Models
 
         public decimal? DepositAmount { get; set; }
 
+        // --- Short-Term Rental (Airbnb) Fields ---
+        public decimal? DailyRate { get; set; }
+        public bool AllowShortTerm { get; set; } = false;
+
         [MaxLength(20)]
         public string? ParkingBay { get; set; }
 
