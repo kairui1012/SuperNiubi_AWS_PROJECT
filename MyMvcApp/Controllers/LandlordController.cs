@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
@@ -16,22 +17,30 @@ namespace MyMvcApp.Controllers
         private static readonly string[] AllowedAnnouncementAudiences = { "All", "Tenant", "Landlord" };
         private static readonly string[] AllowedPropertyImageExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
         private static readonly string[] AllowedMaintenanceRepairImageExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+        private static readonly string[] AllowedDocumentExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".txt", ".xlsx", ".xls" };
         private const long MaxPropertyImageSizeBytes = 8 * 1024 * 1024;
         private const long MaxMaintenanceRepairImageSizeBytes = 8 * 1024 * 1024;
+        private const long MaxDocumentSizeBytes = 10 * 1024 * 1024;
         private readonly AppDbContext _dbContext;
         private readonly IS3ImageService _s3ImageService;
         private readonly EmailService _emailService;
+        private readonly IWebHostEnvironment _environment;
 
-        public LandlordController(AppDbContext dbContext, IS3ImageService s3ImageService, EmailService emailService)
+        public LandlordController(
+            AppDbContext dbContext,
+            IS3ImageService s3ImageService,
+            EmailService emailService,
+            IWebHostEnvironment environment)
         {
             _dbContext = dbContext;
             _s3ImageService = s3ImageService;
             _emailService = emailService;
+            _environment = environment;
         }
 
         public async Task<IActionResult> Dashboard()
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -125,7 +134,7 @@ namespace MyMvcApp.Controllers
 
         public IActionResult MyProperties()
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -155,7 +164,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult PropertyDetails(int id)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -196,7 +205,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddProperty(Property model, IFormFile? PropertyImage, string? AmenitiesText)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -256,7 +265,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult EditProperty(int id)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -292,7 +301,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditProperty(Property model, IFormFile? PropertyImage, string? AmenitiesText)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -377,7 +386,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult DeleteProperty(int id)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -434,7 +443,7 @@ namespace MyMvcApp.Controllers
 
         public IActionResult Tenants()
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -679,7 +688,7 @@ namespace MyMvcApp.Controllers
 
         public IActionResult MaintenanceRequests()
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -711,7 +720,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult EditMaintenanceRequest(int id)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -751,7 +760,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditMaintenanceRequest(MaintenanceRequest model, IFormFile? RepairImage)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -858,7 +867,7 @@ namespace MyMvcApp.Controllers
 
         public IActionResult Payments()
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -886,6 +895,203 @@ namespace MyMvcApp.Controllers
                 .ToList();
 
             return View(payments);
+        }
+
+        public async Task<IActionResult> Documents()
+        {
+            var landlord = GetCurrentLandlord();
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return View(new LandlordDocumentsViewModel());
+            }
+
+            return View(await BuildLandlordDocumentsViewModelAsync(landlord.Id));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadDocument(LandlordDocumentsViewModel model)
+        {
+            var landlord = GetCurrentLandlord();
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return RedirectToAction(nameof(Documents));
+            }
+
+            if (model.NewDocument.PropertyId == null && model.NewDocument.TenantId == null)
+            {
+                ModelState.AddModelError("NewDocument.PropertyId", "Please select a property or tenant.");
+            }
+
+            Tenant? tenant = null;
+            Property? property = null;
+
+            if (model.NewDocument.TenantId.HasValue)
+            {
+                tenant = await _dbContext.Tenants
+                    .Include(t => t.Property)
+                    .Include(t => t.User)
+                    .FirstOrDefaultAsync(t =>
+                        t.TenantId == model.NewDocument.TenantId.Value &&
+                        t.Property.LandlordId == landlord.Id);
+
+                if (tenant == null)
+                {
+                    ModelState.AddModelError("NewDocument.TenantId", "Selected tenant is invalid.");
+                }
+                else
+                {
+                    property = tenant.Property;
+                }
+            }
+
+            if (model.NewDocument.PropertyId.HasValue)
+            {
+                var selectedProperty = await _dbContext.Properties
+                    .FirstOrDefaultAsync(p =>
+                        p.PropertyId == model.NewDocument.PropertyId.Value &&
+                        p.LandlordId == landlord.Id &&
+                        !p.IsDeleted);
+
+                if (selectedProperty == null)
+                {
+                    ModelState.AddModelError("NewDocument.PropertyId", "Selected property is invalid.");
+                }
+                else if (property != null && selectedProperty.PropertyId != property.PropertyId)
+                {
+                    ModelState.AddModelError("NewDocument.PropertyId", "Selected property does not match the tenant.");
+                }
+                else
+                {
+                    property = selectedProperty;
+                }
+            }
+
+            var file = model.NewDocument.File;
+            if (file is null || file.Length <= 0)
+            {
+                ModelState.AddModelError("NewDocument.File", "Please choose a valid file.");
+            }
+            else
+            {
+                var validationError = ValidateDocumentFile(file);
+                if (validationError != null)
+                {
+                    ModelState.AddModelError("NewDocument.File", validationError);
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var invalidModel = await BuildLandlordDocumentsViewModelAsync(landlord.Id, model.NewDocument);
+                return View(nameof(Documents), invalidModel);
+            }
+
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "landlord", landlord.Id.ToString(), "documents");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var extension = Path.GetExtension(file!.FileName).ToLowerInvariant();
+            var savedFileName = $"{Guid.NewGuid():N}{extension}";
+            var physicalPath = Path.Combine(uploadsFolder, savedFileName);
+
+            await using (var stream = System.IO.File.Create(physicalPath))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var fileKey = Path.Combine("uploads", "landlord", landlord.Id.ToString(), "documents", savedFileName)
+                .Replace("\\", "/");
+
+            var document = new Document
+            {
+                UploadedBy = landlord.Id,
+                PropertyId = property?.PropertyId,
+                TenantId = tenant?.TenantId,
+                DocumentName = model.NewDocument.DocumentName.Trim(),
+                DocumentType = model.NewDocument.DocumentType ?? DocumentType.Others,
+                FileKey = fileKey,
+                FileSize = (int)Math.Min(file.Length, int.MaxValue),
+                FileType = file.ContentType,
+                S3Url = "/" + fileKey,
+                Notes = model.NewDocument.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dbContext.Documents.Add(document);
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Document uploaded successfully.";
+            return RedirectToAction(nameof(Documents));
+        }
+
+        public async Task<IActionResult> DownloadDocument(int id)
+        {
+            var landlord = GetCurrentLandlord();
+
+            if (landlord == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var document = await GetManagedDocumentAsync(id, landlord.Id);
+
+            if (document == null)
+            {
+                return NotFound();
+            }
+
+            if (!string.IsNullOrWhiteSpace(document.S3Url) && Uri.IsWellFormedUriString(document.S3Url, UriKind.Absolute))
+            {
+                return Redirect(document.S3Url);
+            }
+
+            var relativeFileKey = document.FileKey.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var physicalPath = Path.Combine(_environment.WebRootPath, relativeFileKey);
+
+            if (!System.IO.File.Exists(physicalPath))
+            {
+                return NotFound();
+            }
+
+            var provider = new FileExtensionContentTypeProvider();
+            var contentType = provider.TryGetContentType(document.FileKey, out var detected)
+                ? detected
+                : "application/octet-stream";
+
+            return PhysicalFile(physicalPath, contentType, enableRangeProcessing: true);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDocument(int id)
+        {
+            var landlord = GetCurrentLandlord();
+
+            if (landlord == null)
+            {
+                TempData["ErrorMessage"] = "Landlord account not found.";
+                return RedirectToAction(nameof(Documents));
+            }
+
+            var document = await GetManagedDocumentAsync(id, landlord.Id);
+
+            if (document == null)
+            {
+                TempData["ErrorMessage"] = "Document not found.";
+                return RedirectToAction(nameof(Documents));
+            }
+
+            document.IsDeleted = true;
+            document.UpdatedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Document moved to archive.";
+            return RedirectToAction(nameof(Documents));
         }
 
         [Authorize(Roles = "Landlord")]
@@ -955,7 +1161,7 @@ namespace MyMvcApp.Controllers
         [HttpGet]
         public IActionResult AssignTenant()
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -983,7 +1189,7 @@ namespace MyMvcApp.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult AssignTenant(AssignTenantViewModel model)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+            var userEmail = GetCurrentUserEmail();
 
             if (string.IsNullOrEmpty(userEmail))
             {
@@ -1221,6 +1427,83 @@ namespace MyMvcApp.Controllers
             });
         }
 
+        private async Task<LandlordDocumentsViewModel> BuildLandlordDocumentsViewModelAsync(
+            int landlordId,
+            CreateLandlordDocumentViewModel? newDocument = null)
+        {
+            var documents = await _dbContext.Documents
+                .AsNoTracking()
+                .Include(d => d.Property)
+                .Include(d => d.Tenant)
+                .ThenInclude(t => t!.User)
+                .Include(d => d.UploadedByUser)
+                .Where(d => !d.IsDeleted &&
+                    ((d.Property != null && d.Property.LandlordId == landlordId) ||
+                     (d.Tenant != null && d.Tenant.Property.LandlordId == landlordId) ||
+                     d.UploadedBy == landlordId))
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            var properties = await _dbContext.Properties
+                .AsNoTracking()
+                .Where(p => p.LandlordId == landlordId && !p.IsDeleted)
+                .OrderBy(p => p.PropertyName)
+                .Select(p => new SelectListItem
+                {
+                    Value = p.PropertyId.ToString(),
+                    Text = p.PropertyName
+                })
+                .ToListAsync();
+
+            var tenants = await _dbContext.Tenants
+                .AsNoTracking()
+                .Include(t => t.User)
+                .Include(t => t.Property)
+                .Where(t => t.Property.LandlordId == landlordId)
+                .OrderBy(t => t.User.Email)
+                .Select(t => new SelectListItem
+                {
+                    Value = t.TenantId.ToString(),
+                    Text = $"{t.User.Email} - {t.Property.PropertyName}"
+                })
+                .ToListAsync();
+
+            return new LandlordDocumentsViewModel
+            {
+                Documents = documents,
+                NewDocument = newDocument ?? new CreateLandlordDocumentViewModel(),
+                PropertyOptions = properties,
+                TenantOptions = tenants
+            };
+        }
+
+        private async Task<Document?> GetManagedDocumentAsync(int documentId, int landlordId)
+        {
+            return await _dbContext.Documents
+                .Include(d => d.Property)
+                .Include(d => d.Tenant)
+                .ThenInclude(t => t!.Property)
+                .FirstOrDefaultAsync(d =>
+                    d.DocumentId == documentId &&
+                    !d.IsDeleted &&
+                    ((d.Property != null && d.Property.LandlordId == landlordId) ||
+                     (d.Tenant != null && d.Tenant.Property.LandlordId == landlordId) ||
+                     d.UploadedBy == landlordId));
+        }
+
+        private static string? ValidateDocumentFile(IFormFile file)
+        {
+            if (file.Length > MaxDocumentSizeBytes)
+            {
+                return "File size must not exceed 10MB.";
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            return AllowedDocumentExtensions.Contains(extension)
+                ? null
+                : "Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX, TXT, XLS, XLSX.";
+        }
+
         private static string? ValidatePropertyImage(IFormFile file)
         {
             if (file.Length > MaxPropertyImageSizeBytes)
@@ -1311,3 +1594,4 @@ namespace MyMvcApp.Controllers
         }
     }
 }
+

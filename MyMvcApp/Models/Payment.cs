@@ -5,7 +5,7 @@ using MyMvcApp.Models;
 namespace MyMvcApp.Models
 {
     public enum PaymentMethod { OnlineTransfer, Cash, Cheque, DuitNow, Others }
-    public enum PaymentStatus { Pending, Submitted, Verified, Overdue, Rejected }
+    public enum PaymentStatus { Pending, Submitted, Verified, Overdue, Rejected, Failed, Cancelled, Refunded }
 
     public class Payment
     {
@@ -51,6 +51,16 @@ namespace MyMvcApp.Models
 
         [MaxLength(200)]
         public string? StripeEventId { get; set; }
+
+        [MaxLength(200)]
+        public string? StripeRefundId { get; set; }
+
+        public decimal? RefundAmount { get; set; }
+
+        public DateTime? RefundDate { get; set; }
+
+        [MaxLength(500)]
+        public string? RefundReason { get; set; }
 
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
         public string? LandlordRemarks { get; set; }

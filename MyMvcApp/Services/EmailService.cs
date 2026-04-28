@@ -18,7 +18,7 @@ namespace MyMvcApp.Services
 
         public async Task SendApprovalEmailAsync(string toEmail)
         {
-            var senderEmail = _config["AWS:SesSenderEmail"];
+            var senderEmail = GetSesSenderEmail();
             var region = RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1"); 
             using var client = new AmazonSimpleEmailServiceClient(region);
 
@@ -34,7 +34,7 @@ namespace MyMvcApp.Services
         // --- NEW METHOD FOR FACILITY BOOKING QR EMAIL ---
         public async Task SendFacilityPassAsync(string toEmail, FacilityBooking booking, string passCode)
         {
-            var senderEmail = _config["AWS:SesSenderEmail"];
+            var senderEmail = GetSesSenderEmail();
             var region = RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1"); 
             using var client = new AmazonSimpleEmailServiceClient(region);
 
@@ -155,12 +155,7 @@ namespace MyMvcApp.Services
 
         private async Task SendEmailAsync(string toEmail, string subject, string htmlBody, string textBody)
         {
-            var senderEmail = _config["AWS:SesSenderEmail"];
-
-            if (string.IsNullOrWhiteSpace(senderEmail))
-            {
-                throw new InvalidOperationException("AWS SES sender email is not configured.");
-            }
+            var senderEmail = GetSesSenderEmail();
 
             var region = RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1");
             using var client = new AmazonSimpleEmailServiceClient(region);
@@ -196,6 +191,18 @@ namespace MyMvcApp.Services
             };
 
             await client.SendEmailAsync(sendRequest);
+        }
+
+        private string GetSesSenderEmail()
+        {
+            var senderEmail = _config["AWS:SesSenderEmail"];
+
+            if (string.IsNullOrWhiteSpace(senderEmail))
+            {
+                throw new InvalidOperationException("AWS SES sender email is not configured.");
+            }
+
+            return senderEmail;
         }
     }
 }

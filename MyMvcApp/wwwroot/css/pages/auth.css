@@ -92,6 +92,7 @@ body:has(.auth-page-shell) main[role="main"] {
     font-weight: 800;
     line-height: 1.08;
     letter-spacing: 0;
+    min-height: 2.9rem;
 }
 
 .auth-subtitle {
@@ -99,6 +100,7 @@ body:has(.auth-page-shell) main[role="main"] {
     color: var(--propease-muted, #64748b);
     font-size: 0.98rem;
     line-height: 1.65;
+    min-height: 3.25rem;
 }
 
 .auth-mode-switch {
@@ -162,6 +164,7 @@ body:has(.auth-page-shell) main[role="main"] {
 .auth-form-stack {
     width: 100%;
     max-width: 25.5rem;
+    min-height: 19rem;
 }
 
 .auth-form {

@@ -1,12 +1,34 @@
 @model MyMvcApp.Models.CommunityUpdate
 @{
     ViewData["Title"] = Model.Title;
+    string? dashboardUrl = null;
+
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        dashboardUrl = User.IsInRole("Admin")
+            ? Url.Action("Dashboard", "Admin")
+            : User.IsInRole("Landlord")
+                ? Url.Action("Dashboard", "Landlord")
+                : Url.Action("Dashboard", "Tenant");
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/home.css" asp-append-version="true" />
 }
 
 <div class="container py-5" style="max-width: 800px;">
-    <a asp-action="Index" class="text-decoration-none text-muted mb-4 d-inline-block">
-        <i class="bi bi-arrow-left me-1"></i> Back to Hub
-    </a>
+    <div class="community-detail-actions">
+        <a asp-action="Index" class="community-dashboard-link">
+            <i class="bi bi-arrow-left"></i> Back to Hub
+        </a>
+        @if (!string.IsNullOrEmpty(dashboardUrl))
+        {
+            <a href="@dashboardUrl" class="community-dashboard-link">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard
+            </a>
+        }
+    </div>
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         @if (!string.IsNullOrEmpty(Model.ImageUrl))

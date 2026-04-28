@@ -3,6 +3,16 @@
     ViewData["Title"] = "Community Hub";
     var updates = Model?.ToList() ?? new List<MyMvcApp.Models.CommunityUpdate>();
     var activeCount = updates.Count(m => m.EndDate >= DateTime.UtcNow);
+    string? dashboardUrl = null;
+
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        dashboardUrl = User.IsInRole("Admin")
+            ? Url.Action("Dashboard", "Admin")
+            : User.IsInRole("Landlord")
+                ? Url.Action("Dashboard", "Landlord")
+                : Url.Action("Dashboard", "Tenant");
+    }
 }
 
 @section Styles {
@@ -15,6 +25,13 @@
             <p class="community-kicker">Propease Community Hub</p>
             <h1>Community Events</h1>
             <p class="community-subtitle">Stay updated with property announcements, community activities, and important notices.</p>
+            @if (!string.IsNullOrEmpty(dashboardUrl))
+            {
+                <a href="@dashboardUrl" class="community-dashboard-link">
+                    <i class="bi bi-arrow-left"></i>
+                    Back to Dashboard
+                </a>
+            }
         </div>
         <div class="community-summary" aria-label="Community update summary">
             <div>

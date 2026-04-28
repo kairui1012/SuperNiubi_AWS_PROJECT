@@ -26,13 +26,15 @@ namespace MyMvcApp.Services
 
             if (mainIdentity != null && mainIdentity.IsAuthenticated)
             {
-                var email = clone.FindFirst(ClaimTypes.Email)?.Value;
+                var email = clone.FindFirst(ClaimTypes.Email)?.Value
+                    ?? clone.FindFirst("email")?.Value;
+                var normalizedEmail = email?.Trim().ToLowerInvariant();
 
                 Console.WriteLine($"\n[DEBUG] --> Attempting to authorize user by Email: '{email}'");
 
-                if (!string.IsNullOrEmpty(email))
+                if (!string.IsNullOrEmpty(normalizedEmail))
                 {
-                    var user = _dbContext.Users.FirstOrDefault(u => u.Email == email);
+                    var user = _dbContext.Users.FirstOrDefault(u => u.Email.ToLower() == normalizedEmail);
                     
                     if (user != null)
                     {
@@ -43,6 +45,8 @@ namespace MyMvcApp.Services
                         // Passing a string ("NeonDbAuth") forces IsAuthenticated = true!
                         var roleIdentity = new ClaimsIdentity("NeonDbAuth", ClaimTypes.Name, ClaimTypes.Role);
                         roleIdentity.AddClaim(new Claim(ClaimTypes.Role, cleanRole));
+                        roleIdentity.AddClaim(new Claim(ClaimTypes.Email, user.Email));
+                        roleIdentity.AddClaim(new Claim("email", user.Email));
                         roleIdentity.AddClaim(new Claim("NeonDbRoleStamped", "true"));
 
                         clone.AddIdentity(roleIdentity);

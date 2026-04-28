@@ -51,7 +51,7 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm bg-body-tertiary border-bottom box-shadow mb-4 py-2 app-topbar-shell">
             <div class="container">
-                <a class="navbar-brand app-brand-link" href="@currentUrl" aria-label="PropEase home">
+                <a class="navbar-brand app-brand-link" asp-controller="Home" asp-action="Index" aria-label="PropEase community events">
                     <span class="app-brand-mark">
                         <img class="app-brand-emblem" src="~/images/auth-side.png" alt="" />
                     </span>
@@ -63,14 +63,14 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
-                <li class="nav-item">
-                    <a class="nav-link text-dark" asp-area="" asp-controller="FacilityBooking" asp-action="Index">
-                        </i> Book Facilities
-                    </a>
-                </li>
-                
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1"></ul>
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="FacilityBooking" asp-action="Index">
+                                Book Facilities
+                            </a>
+                        </li>
+                    </ul>
                     
                     <div class="d-flex align-items-center gap-3 mt-3 mt-sm-0 app-topbar-actions">
                         <button id="theme-toggle" class="btn p-2 app-page-theme-toggle" aria-label="Toggle theme">
@@ -82,40 +82,26 @@
                             var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? User.Identity.Name;
 
                             <div class="dropdown app-account-menu">
-                                <button type="button" class="app-account-trigger" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button type="button"
+                                        class="app-account-trigger"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        aria-label="Open account menu">
                                     <span class="app-account-avatar"><i class="bi bi-person"></i></span>
                                     <span class="app-account-email">@userEmail</span>
                                     <i class="bi bi-chevron-down app-account-chevron"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end app-account-dropdown mt-2" aria-labelledby="userMenuDropdown">
-                                    
-                                    @if (User.IsInRole("Admin"))
-                                    {
-                                        <li><a class="dropdown-item app-account-item" asp-controller="Admin" asp-action="Dashboard"><i class="bi bi-shield-lock"></i><span>Admin Dashboard</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
-                                        <li><a class="dropdown-item app-account-item" asp-controller="CommunityAdmin" asp-action="Index"><i class="bi bi-megaphone"></i><span>Community Hub</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
-                                    }
-                                    else if (User.IsInRole("Landlord"))
-                                    {
-                                        <li><a class="dropdown-item app-account-item" asp-controller="Landlord" asp-action="Dashboard"><i class="bi bi-speedometer2"></i><span>Landlord Dashboard</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
-                                    }
-                                    else if (User.IsInRole("Tenant"))
-                                    {
-                                        <li><a class="dropdown-item app-account-item" asp-controller="Tenant" asp-action="Dashboard"><i class="bi bi-grid-1x2-fill"></i><span>Tenant Dashboard</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
-                                    }
-                                    <li><a class="dropdown-item app-account-item" asp-controller="Home" asp-action="Index"><i class="bi bi-calendar-event"></i><span>Community Events</span><i class="bi bi-chevron-right ms-auto"></i></a></li>
-                                    <li><hr class="dropdown-divider app-account-divider"></li>
-                                    
-                                    <li>
-                                        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0 p-0">
-                                            <button type="submit" class="dropdown-item app-account-item app-account-item-danger">
-                                                <i class="bi bi-box-arrow-right"></i><span>Log Out</span>
-                                            </button>
-                                        </form>
-                                    </li>
-                                </ul>
+                                <div class="dropdown-menu dropdown-menu-end app-account-dropdown">
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                        <button type="submit" class="app-account-item app-account-item-danger">
+                                            <i class="bi bi-box-arrow-right"></i>
+                                            Logout
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         }
-                        else
+                        else if (!isAuthPage)
                         {
                             <a class="btn btn-primary px-4 rounded-pill fw-medium shadow-sm" asp-controller="Account" asp-action="Login">
                                 Login

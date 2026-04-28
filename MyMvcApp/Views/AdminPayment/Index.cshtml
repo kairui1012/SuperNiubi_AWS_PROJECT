@@ -4,7 +4,7 @@
 @functions {
     private static string PaymentBadgeClass(PaymentStatus status, bool isComputedOverdue)
     {
-        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected && status != PaymentStatus.Failed && status != PaymentStatus.Cancelled && status != PaymentStatus.Refunded)
             return "badge-soft-danger";
         return status switch
         {
@@ -13,13 +13,16 @@
             PaymentStatus.Verified => "badge-soft-success",
             PaymentStatus.Overdue => "badge-soft-danger",
             PaymentStatus.Rejected => "badge-soft-danger",
+            PaymentStatus.Failed => "badge-soft-danger",
+            PaymentStatus.Cancelled => "badge-soft-warning",
+            PaymentStatus.Refunded => "badge-soft-secondary",
             _ => "badge-soft-secondary"
         };
     }
 
     private static string PaymentStatusLabel(PaymentStatus status, bool isComputedOverdue)
     {
-        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected)
+        if (isComputedOverdue && status != PaymentStatus.Verified && status != PaymentStatus.Rejected && status != PaymentStatus.Failed && status != PaymentStatus.Cancelled && status != PaymentStatus.Refunded)
             return "Overdue";
         return status.ToString();
     }
@@ -188,6 +191,102 @@
                 </div>
             </div>
 
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="panel-card py-3">
+                        <div class="panel-meta mb-1">Current Month Revenue</div>
+                        <div class="fw-bold fs-4" style="color: var(--bs-success)">@Model.CurrentMonthRevenue.ToString("C")</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="panel-card py-3">
+                        <div class="panel-meta mb-1">Previous Month Revenue</div>
+                        <div class="fw-bold fs-4">@Model.PreviousMonthRevenue.ToString("C")</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="panel-card py-3">
+                        <div class="panel-meta mb-1">Failed / Cancelled / Refunded</div>
+                        <div class="fw-bold fs-4">@Model.FailedCount / @Model.CancelledCount / @Model.RefundedCount</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-xl-4">
+                    <div class="panel-card h-100">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Monthly revenue</h2>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table admin-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Gross</th>
+                                        <th>Refunded</th>
+                                        <th>Net</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.MonthlyRevenueReport)
+                                    {
+                                        <tr>
+                                            <td class="panel-meta">@item.MonthLabel</td>
+                                            <td>@item.VerifiedAmount.ToString("C")</td>
+                                            <td>@item.RefundedAmount.ToString("C")</td>
+                                            <td class="fw-semibold">@item.NetRevenue.ToString("C")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4">
+                    <div class="panel-card h-100">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Overdue tenants</h2>
+                        </div>
+                        @if (Model.OverdueTenantReport.Count == 0)
+                        {
+                            <div class="empty-state py-3">No overdue tenants.</div>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.OverdueTenantReport)
+                            {
+                                <div class="metric-row">
+                                    <span style="word-break: break-all;">@item.TenantEmail<br /><small>@item.PropertyName</small></span>
+                                    <span class="metric-value">@item.OverdueCount overdue<br /><small>@item.OverdueAmount.ToString("C")</small></span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="col-xl-4">
+                    <div class="panel-card h-100">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Tenant reliability</h2>
+                        </div>
+                        @if (Model.TenantReliabilityReport.Count == 0)
+                        {
+                            <div class="empty-state py-3">No tenant payment records yet.</div>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.TenantReliabilityReport)
+                            {
+                                <div class="metric-row">
+                                    <span style="word-break: break-all;">@item.TenantEmail<br /><small>@item.PropertyName</small></span>
+                                    <span class="metric-value">@item.ReliabilityScore.ToString("N1")%<br /><small>@item.LateOrProblemPayments problem</small></span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
             @* Filter bar *@
             <div class="panel-card mb-4">
                 <form asp-controller="AdminPayment" asp-action="Index" method="get" class="admin-filter-bar" style="flex-wrap: wrap; gap: 0.75rem;">
@@ -213,6 +312,9 @@
                             <option value="Verified" selected="@(f.Status == "Verified" ? "selected" : null)">Verified</option>
                             <option value="Overdue" selected="@(f.Status == "Overdue" ? "selected" : null)">Overdue</option>
                             <option value="Rejected" selected="@(f.Status == "Rejected" ? "selected" : null)">Rejected</option>
+                            <option value="Failed" selected="@(f.Status == "Failed" ? "selected" : null)">Failed</option>
+                            <option value="Cancelled" selected="@(f.Status == "Cancelled" ? "selected" : null)">Cancelled</option>
+                            <option value="Refunded" selected="@(f.Status == "Refunded" ? "selected" : null)">Refunded</option>
                         </select>
                     </div>
 
