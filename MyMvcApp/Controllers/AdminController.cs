@@ -7,8 +7,6 @@ using MyMvcApp.Models.Admin;
 using MyMvcApp.Services;
 using Amazon.CognitoIdentityProvider; // ADD THIS
 using Amazon.CognitoIdentityProvider.Model; // ADD THIS
-using Amazon.XRay;
-using Amazon.XRay.Model;
 using System.Globalization;
 using System.Security.Claims;
 
@@ -19,7 +17,7 @@ namespace MyMvcApp.Controllers
     {
         private static readonly string[] AllowedRoles = { "Tenant", "Landlord", "Admin" };
         private static readonly string[] AllowedStatuses = { "Pending", "Approved", "Disabled" };
-        private static readonly string[] AllowedAdminPanes = { "dashboard", "users", "properties", "maintenance", "payments", "audit", "announcements", "xray" };
+        private static readonly string[] AllowedAdminPanes = { "dashboard", "users", "properties", "maintenance", "payments", "audit", "announcements" };
         private static readonly string[] AllowedMaintenanceStatuses = { "Pending", "Approved", "InProgress", "Completed", "Rejected" };
         private static readonly string[] AllowedMaintenancePriorities = { "High", "Medium", "Low" };
         private static readonly string[] AllowedVisibleTo = { "All", "Tenant", "Landlord" };
@@ -44,16 +42,14 @@ namespace MyMvcApp.Controllers
         private readonly AppDbContext _dbContext;
         private readonly EmailService _emailService;
         private readonly IAmazonCognitoIdentityProvider _cognitoClient;
-        private readonly IAmazonXRay _xrayClient;
         private readonly IConfiguration _config;
 
         // Inject the Cognito Client and Configuration
-        public AdminController(AppDbContext dbContext, EmailService emailService, IAmazonCognitoIdentityProvider cognitoClient, IAmazonXRay xrayClient, IConfiguration config)
+        public AdminController(AppDbContext dbContext, EmailService emailService, IAmazonCognitoIdentityProvider cognitoClient, IConfiguration config)
         {
             _dbContext = dbContext;
             _emailService = emailService;
             _cognitoClient = cognitoClient;
-            _xrayClient = xrayClient;
             _config = config;
         }
 
@@ -210,6 +206,7 @@ namespace MyMvcApp.Controllers
             var activePropertiesQuery = _dbContext.Properties.AsNoTracking().Where(p => !p.IsDeleted);
             var totalProperties = await activePropertiesQuery.CountAsync();
             var occupiedProperties = await _dbContext.Tenants.AsNoTracking()
+                .Where(t => !t.Property.IsDeleted)
                 .Select(t => t.PropertyId)
                 .Distinct()
                 .CountAsync();
@@ -217,7 +214,7 @@ namespace MyMvcApp.Controllers
             var monthlyRentRoll = await _dbContext.Tenants.AsNoTracking()
                 .Where(t => t.LeaseStatus == LeaseStatus.Active)
                 .SumAsync(t => (decimal?)t.MonthlyRent) ?? 0m;
-            var averageListedRent = await _dbContext.Properties.AsNoTracking()
+            var averageListedRent = await activePropertiesQuery
                 .AverageAsync(p => (decimal?)p.MonthlyRent) ?? 0m;
 
             var totalUsers = await _dbContext.Users.AsNoTracking().CountAsync();
@@ -236,7 +233,7 @@ namespace MyMvcApp.Controllers
             var totalDocuments = await _dbContext.Documents.AsNoTracking().CountAsync(d => !d.IsDeleted);
             var overduePayments = await _dbContext.Payments.AsNoTracking().CountAsync(p => p.Status == PaymentStatus.Overdue);
 
-            var propertyDirectoryQuery = _dbContext.Properties.AsNoTracking().AsQueryable();
+            var propertyDirectoryQuery = activePropertiesQuery;
 
             if (!string.IsNullOrWhiteSpace(normalizedPropertySearch))
             {
@@ -523,6 +520,32 @@ namespace MyMvcApp.Controllers
                         CreatedAt = p.CreatedAt
                     })
                     .ToListAsync(),
+                PaymentRecords = await _dbContext.Payments.AsNoTracking()
+                    .OrderByDescending(p => p.DueDate)
+                    .ThenByDescending(p => p.CreatedAt)
+                    .Take(50)
+                    .Select(p => new PaymentListItemViewModel
+                    {
+                        PaymentId = p.PaymentId,
+                        TenantEmail = p.Tenant.User.Email,
+                        PropertyName = p.Property.PropertyName,
+                        UnitNumber = p.Property.UnitNumber,
+                        LandlordEmail = p.Property.Landlord != null ? p.Property.Landlord.Email : null,
+                        Amount = p.Amount,
+                        Status = p.Status,
+                        IsComputedOverdue = p.DueDate < utcNow
+                            && p.Status != PaymentStatus.Verified
+                            && p.Status != PaymentStatus.Rejected,
+                        DueDate = p.DueDate,
+                        SubmittedDate = p.PaymentDate,
+                        VerifiedDate = p.Status == PaymentStatus.Verified ? p.UpdatedAt : (DateTime?)null,
+                        PaymentMethod = p.PaymentMethod,
+                        ReferenceNo = p.ReferenceNo,
+                        StripeSessionId = p.StripeSessionId,
+                        StripePaymentIntentId = p.StripePaymentIntentId,
+                        PaymentPeriod = p.PaymentMonth + " " + p.PaymentYear
+                    })
+                    .ToListAsync(),
                 PropertySnapshots = await propertyDirectoryQuery
                     .OrderBy(p => p.PropertyName)
                     .ThenBy(p => p.UnitNumber)
@@ -615,67 +638,10 @@ namespace MyMvcApp.Controllers
                         ApprovalStatus = p.ApprovalStatus,
                         UpdatedAt = p.UpdatedAt
                     })
-                    .ToListAsync(),
-                XRayReport = await BuildXRayReportAsync(utcNow)
+                    .ToListAsync()
             };
 
             return View("Admin", model);
-        }
-
-        private async Task<AdminXRayReportViewModel> BuildXRayReportAsync(DateTime utcNow)
-        {
-            var windowStart = utcNow.AddMinutes(-15);
-            var report = new AdminXRayReportViewModel
-            {
-                ServiceName = "PropEase",
-                Region = _config["AWS:Region"] ?? Environment.GetEnvironmentVariable("AWS_REGION") ?? "Not configured",
-                DaemonAddress = Environment.GetEnvironmentVariable("AWS_XRAY_DAEMON_ADDRESS") ?? "127.0.0.1:2000",
-                EnvironmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
-                SamplingRuleManifest = _config["XRay:SamplingRuleManifest"] ?? "sampling-rules.json",
-                WindowStart = windowStart,
-                WindowEnd = utcNow,
-                LastCheckedAt = utcNow
-            };
-
-            try
-            {
-                var response = await _xrayClient.GetTraceSummariesAsync(new GetTraceSummariesRequest
-                {
-                    StartTime = windowStart,
-                    EndTime = utcNow
-                });
-
-                var traceSummaries = response.TraceSummaries ?? new List<TraceSummary>();
-
-                report.IsAvailable = true;
-                report.TotalTraces = traceSummaries.Count;
-                report.ErrorCount = traceSummaries.Count(t => t.HasError.GetValueOrDefault());
-                report.FaultCount = traceSummaries.Count(t => t.HasFault.GetValueOrDefault());
-                report.ThrottleCount = traceSummaries.Count(t => t.HasThrottle.GetValueOrDefault());
-                report.SlowestDuration = traceSummaries.Count == 0
-                    ? 0
-                    : traceSummaries.Max(t => t.Duration.GetValueOrDefault());
-                report.RecentTraces = traceSummaries
-                    .OrderByDescending(t => t.StartTime)
-                    .Take(12)
-                    .Select(t => new AdminXRayTraceItemViewModel
-                    {
-                        TraceId = t.Id ?? string.Empty,
-                        Duration = t.Duration.GetValueOrDefault(),
-                        HasError = t.HasError.GetValueOrDefault(),
-                        HasFault = t.HasFault.GetValueOrDefault(),
-                        HasThrottle = t.HasThrottle.GetValueOrDefault(),
-                        StartTime = t.StartTime
-                    })
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                report.IsAvailable = false;
-                report.ErrorMessage = ex.Message;
-            }
-
-            return report;
         }
 
         [HttpPost]

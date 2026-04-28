@@ -324,6 +324,37 @@
             form?.submit();
         });
 
+        const paymentRows = Array.from(document.querySelectorAll('[data-payment-row]'));
+        const paymentVisibleCount = document.querySelector('[data-payment-visible-count]');
+        const paymentRecords = document.getElementById('adminPaymentRecords');
+
+        document.querySelectorAll('[data-payment-filter]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const filter = button.dataset.paymentFilter || 'All';
+                let visible = 0;
+
+                paymentRows.forEach((row) => {
+                    const show = filter === 'All' || row.dataset.paymentStatus === filter;
+                    row.classList.toggle('d-none', !show);
+                    if (show) {
+                        visible += 1;
+                    }
+                });
+
+                if (paymentVisibleCount) {
+                    paymentVisibleCount.textContent = `${visible} shown`;
+                }
+
+                document.querySelectorAll('[data-payment-filter]').forEach((filterButton) => {
+                    const active = filterButton.dataset.paymentFilter === filter;
+                    filterButton.classList.toggle('admin-btn-primary', active);
+                    filterButton.classList.toggle('admin-btn-secondary', !active);
+                });
+
+                paymentRecords?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
         setPane(page?.dataset.adminDefault || 'users');
     })();
 

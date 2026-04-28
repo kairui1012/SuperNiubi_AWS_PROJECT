@@ -442,7 +442,7 @@ README 和 Tenant 页面中都提到：
 
 ### 4.6 Operational Monitoring
 
-README 提到 CloudWatch 和 X-Ray。  
+README 提到 CloudWatch。  
 如果要像企业系统，Admin 可以显示一些运营状态：
 
 - 最近错误数量
@@ -518,8 +518,7 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
 2. S3 upload status
 3. SNS email notification logs
 4. Lambda trigger status
-5. X-Ray trace reference
-6. System health page
+5. System health page
 
 这样可以更好地配合 AWS 项目主题。
 
@@ -575,7 +574,7 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
 3. Admin 目前很多模块还是 overview，不是 full management
 4. 报表还没有导出、复杂筛选和 drill-down 分析
 5. 安全治理还可以进一步加强，例如所有 Admin POST 都应有 anti-forgery protection
-6. CloudWatch / X-Ray 等 AWS operational monitoring 还没有真正显示在 Admin 页面
+6. CloudWatch 等 AWS operational monitoring 还没有真正显示在 Admin 页面
 
 建议最终目标：
 
@@ -737,11 +736,6 @@ Register → Admin Approves User → Admin Assigns Tenant → Tenant Uses System
    - Cognito status
    - S3 upload status
    - email service status
-
-3. **X-Ray / Trace Reference**
-   - recent trace id
-   - slow request summary
-   - failed operation trace reference
 
 ---
 

@@ -134,8 +134,6 @@ The system is enhanced with serverless and cloud services:
    AWS SNS
 - CloudWatch
    CloudWatch
-- AWS X-Ray
-   AWS X-Ray
 
 ---
 
@@ -218,8 +216,6 @@ Main tables include:
    AWS SNS
 - AWS CloudWatch
    AWS CloudWatch
-- AWS X-Ray
-   AWS X-Ray
 
 ---
 
@@ -248,8 +244,6 @@ Main tables include:
 监控
 - CloudWatch is used to monitor system performance
    CloudWatch 用于监控系统性能
-- X-Ray is used for tracing API requests and debugging
-   X-Ray 用于追踪 API 请求和调试
 
 ---
 

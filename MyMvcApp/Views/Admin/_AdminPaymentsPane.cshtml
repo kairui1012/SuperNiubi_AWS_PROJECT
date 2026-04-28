@@ -105,21 +105,24 @@
                     </span>
                 </div>
                 <div class="mt-4 d-flex flex-column gap-2">
-                    <a asp-controller="AdminPayment" asp-action="Index"
-                       class="btn admin-btn-primary w-100">
+                    <button type="button"
+                            class="btn admin-btn-primary w-100"
+                            data-payment-filter="All">
                         <i class="bi bi-table me-1"></i>
                         Manage all payments
-                    </a>
-                    <a asp-controller="AdminPayment" asp-action="Index" asp-route-status="Submitted"
-                       class="btn admin-btn-secondary w-100">
+                    </button>
+                    <button type="button"
+                            class="btn admin-btn-secondary w-100"
+                            data-payment-filter="Submitted">
                         <i class="bi bi-clock me-1"></i>
                         Review submitted
-                    </a>
-                    <a asp-controller="AdminPayment" asp-action="Index" asp-route-status="Overdue"
-                       class="btn admin-btn-secondary w-100">
+                    </button>
+                    <button type="button"
+                            class="btn admin-btn-secondary w-100"
+                            data-payment-filter="Overdue">
                         <i class="bi bi-exclamation-triangle me-1"></i>
                         View overdue
-                    </a>
+                    </button>
                     <a asp-controller="AdminPayment" asp-action="ExportCsv"
                        class="btn admin-btn-secondary w-100">
                         <i class="bi bi-download me-1"></i>
@@ -128,5 +131,86 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="panel-card payment-records-card" id="adminPaymentRecords">
+        <div class="panel-heading">
+            <div>
+                <h2 class="panel-title">Payment records</h2>
+                <span class="panel-meta">Latest 50 records stay inside this Admin dashboard</span>
+            </div>
+            <span class="badge admin-count-badge" data-payment-visible-count>@Model.PaymentRecords.Count shown</span>
+        </div>
+
+        @if (Model.PaymentRecords.Count == 0)
+        {
+            <div class="empty-state">No payment records found.</div>
+        }
+        else
+        {
+            <div class="payment-filter-strip" aria-label="Payment record filters">
+                <button type="button" class="btn admin-btn-primary btn-sm" data-payment-filter="All">All</button>
+                <button type="button" class="btn admin-btn-secondary btn-sm" data-payment-filter="Pending">Pending</button>
+                <button type="button" class="btn admin-btn-secondary btn-sm" data-payment-filter="Submitted">Submitted</button>
+                <button type="button" class="btn admin-btn-secondary btn-sm" data-payment-filter="Overdue">Overdue</button>
+                <button type="button" class="btn admin-btn-secondary btn-sm" data-payment-filter="Verified">Verified</button>
+                <button type="button" class="btn admin-btn-secondary btn-sm" data-payment-filter="Rejected">Rejected</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table admin-table payment-record-table">
+                    <thead>
+                        <tr>
+                            <th>Tenant</th>
+                            <th>Property</th>
+                            <th>Period</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Due</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in Model.PaymentRecords)
+                        {
+                            var displayStatus = payment.IsComputedOverdue ? "Overdue" : payment.Status.ToString();
+                            <tr data-payment-row data-payment-status="@displayStatus">
+                                <td>
+                                    <div class="fw-semibold text-break">@payment.TenantEmail</div>
+                                    <div class="panel-meta">Ref: @(string.IsNullOrWhiteSpace(payment.ReferenceNo) ? "-" : payment.ReferenceNo)</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@payment.PropertyName</div>
+                                    <div class="panel-meta">
+                                        @(string.IsNullOrWhiteSpace(payment.UnitNumber) ? "No unit" : $"Unit {payment.UnitNumber}")
+                                        @if (!string.IsNullOrWhiteSpace(payment.LandlordEmail))
+                                        {
+                                            <span>&bull; @payment.LandlordEmail</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>@payment.PaymentPeriod</td>
+                                <td>@payment.Amount.ToString("C")</td>
+                                <td>
+                                    <span class="badge @AdminDashboardUi.GetPaymentBadgeClass(payment.IsComputedOverdue ? PaymentStatus.Overdue : payment.Status)">
+                                        @displayStatus
+                                    </span>
+                                </td>
+                                <td>@payment.DueDate.ToLocalTime().ToString("dd MMM yyyy")</td>
+                                <td>
+                                    <a asp-controller="AdminPayment"
+                                       asp-action="Detail"
+                                       asp-route-id="@payment.PaymentId"
+                                       asp-route-returnUrl="@Url.Action("Dashboard", "Admin", new { activePane = "payments" })"
+                                       class="btn admin-btn-secondary btn-sm">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </div>
 </section>

@@ -52,19 +52,19 @@
                         <div class="summary-value">@Model.PropertyReport.ActiveTenancies</div>
                         <div class="summary-footnote">Live lease assignments</div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="summary-card">
-                            <div class="summary-label">Pending approval</div>
-                            <div class="summary-value">@Model.PropertyReport.PendingApprovalCount</div>
-                            <div class="summary-footnote">Properties waiting for admin review</div>
-                        </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="summary-card">
+                        <div class="summary-label">Pending approval</div>
+                        <div class="summary-value">@Model.PropertyReport.PendingApprovalCount</div>
+                        <div class="summary-footnote">Properties waiting for admin review</div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="summary-card">
-                            <div class="summary-label">Approved listings</div>
-                            <div class="summary-value">@Model.PropertyReport.ApprovedCount</div>
-                            <div class="summary-footnote">Properties available to assign tenants</div>
-                        </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="summary-card">
+                        <div class="summary-label">Approved listings</div>
+                        <div class="summary-value">@Model.PropertyReport.ApprovedCount</div>
+                        <div class="summary-footnote">Properties available to assign tenants</div>
                     </div>
                 </div>
             </div>
@@ -97,9 +97,9 @@
                         <small>@Model.PropertyReport.OpenMaintenanceCount request(s) need tracking</small>
                     </span>
                 </a>
-                <a asp-controller="AdminPayment"
-                   asp-action="Index"
-                   asp-route-status="Overdue"
+                <a asp-controller="Admin"
+                   asp-action="Dashboard"
+                   asp-route-activePane="payments"
                    class="property-action-link">
                     <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                     <span>
@@ -171,22 +171,20 @@
                 </div>
             </form>
 
-                @if (Model.PropertySnapshots.Count == 0)
-                {
-                    <div class="empty-state">No property records matched the current search.</div>
-                }
-                else
-                {
-                    <div class="property-record-list">
-                        @foreach (var property in Model.PropertySnapshots)
-                        {
-                            <details class="property-record-item">
-                                <summary class="property-record-summary">
-                                    <span class="property-record-main">
-                                        <span class="property-record-title">
-                                            <strong>@property.PropertyName</strong>
-                                            <span class="badge @(property.IsOccupied ? "badge-soft-success" : "badge-soft-warning")">@property.LeaseStatus</span>
-                                        </span>
+            @if (Model.PropertySnapshots.Count == 0)
+            {
+                <div class="empty-state">No property records matched the current search.</div>
+            }
+            else
+            {
+                <div class="property-record-list">
+                    @foreach (var property in Model.PropertySnapshots)
+                    {
+                        <details class="property-record-item">
+                            <summary class="property-record-summary">
+                                <span class="property-record-row">
+                                    <span class="property-record-identity">
+                                        <strong>@property.PropertyName</strong>
                                         <span class="activity-meta">
                                             @property.PropertyType
                                             @if (!string.IsNullOrWhiteSpace(property.UnitNumber))
@@ -195,21 +193,29 @@
                                             }
                                             <span>&bull; @property.Location</span>
                                         </span>
-                                        <span class="property-record-sub">
-                                            <span><i class="bi bi-person-badge" aria-hidden="true"></i>@property.LandlordEmail</span>
-                                            <span><i class="bi bi-person" aria-hidden="true"></i>@(property.IsOccupied ? property.TenantEmail : "No tenant assigned")</span>
-                                        </span>
                                     </span>
-                                    <span class="property-record-stats">
-                                        <span>RM @property.MonthlyRent.ToString("N0")</span>
-                                        <small>@property.OpenMaintenanceCount open &bull; @property.DocumentCount docs</small>
+                                    <span class="property-record-badges">
+                                        <span class="badge @(property.IsOccupied ? "badge-soft-success" : "badge-soft-warning")">@property.LeaseStatus</span>
                                     </span>
-                                    <span class="property-record-toggle" aria-hidden="true">
-                                        <i class="bi bi-chevron-down"></i>
+                                    <span class="property-record-contact">
+                                        <i class="bi bi-person-badge" aria-hidden="true"></i>
+                                        <span>@property.LandlordEmail</span>
                                     </span>
-                                </summary>
+                                    <span class="property-record-contact">
+                                        <i class="bi bi-person" aria-hidden="true"></i>
+                                        <span>@(property.IsOccupied ? property.TenantEmail : "No tenant assigned")</span>
+                                    </span>
+                                </span>
+                                <span class="property-record-stats">
+                                    <span>RM @property.MonthlyRent.ToString("N0")</span>
+                                    <small>@property.OpenMaintenanceCount open &bull; @property.DocumentCount docs</small>
+                                </span>
+                                <span class="property-record-toggle" aria-hidden="true">
+                                    <i class="bi bi-chevron-down"></i>
+                                </span>
+                            </summary>
 
-                                <div class="property-detail-grid" aria-label="Property details for @property.PropertyName">
+                            <div class="property-detail-grid" aria-label="Property details for @property.PropertyName">
                                     <div class="property-detail-block">
                                         <span class="property-detail-label">Address</span>
                                         <strong>@property.AddressLine1</strong>
@@ -264,71 +270,69 @@
                                         <span class="property-detail-label">Description</span>
                                         <small>@(string.IsNullOrWhiteSpace(property.Description) ? "No description provided." : property.Description)</small>
                                     </div>
-                                </div>
-                            </details>
-                        }
-                    </div>
-                }
-        </div>
-        <div class="col-12">
-            <div class="panel-card">
-                <div class="panel-heading">
-                    <h2 class="panel-title">Property approvals</h2>
-                    <span class="badge admin-count-badge">@Model.PropertyApprovals.Count pending/rejected</span>
+                            </div>
+                        </details>
+                    }
                 </div>
-
-                @if (Model.PropertyApprovals.Count == 0)
-                {
-                    <div class="empty-state">No properties are waiting for review.</div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Property</th>
-                                    <th>Landlord</th>
-                                    <th>Status</th>
-                                    <th>Availability</th>
-                                    <th>Rent</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var property in Model.PropertyApprovals)
-                                {
-                                    <tr>
-                                        <td>
-                                            <div class="fw-semibold">@property.PropertyName</div>
-                                            <div class="panel-meta">@property.Address</div>
-                                        </td>
-                                        <td>@property.LandlordEmail</td>
-                                        <td><span class="badge badge-soft-warning">@property.ApprovalStatus</span></td>
-                                        <td>@property.AvailabilityStatus</td>
-                                        <td>RM @property.MonthlyRent.ToString("N2")</td>
-                                        <td>
-                                            <div class="table-actions">
-                                                <form asp-action="ApproveProperty" method="post" class="d-inline">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="id" value="@property.PropertyId" />
-                                                    <button type="submit" class="btn admin-btn-primary btn-sm">Approve</button>
-                                                </form>
-                                                <form asp-action="RejectProperty" method="post" class="d-inline"
-                                                      onsubmit="return confirm('Reject this property?')">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="id" value="@property.PropertyId" />
-                                                    <button type="submit" class="btn admin-btn-danger btn-sm">Reject</button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
+            }
+        </div>
+        <div class="panel-card property-approval-card">
+            <div class="panel-heading">
+                <h2 class="panel-title">Property approvals</h2>
+                <span class="badge admin-count-badge">@Model.PropertyApprovals.Count pending/rejected</span>
             </div>
+
+            @if (Model.PropertyApprovals.Count == 0)
+            {
+                <div class="empty-state">No properties are waiting for review.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table admin-table">
+                        <thead>
+                            <tr>
+                                <th>Property</th>
+                                <th>Landlord</th>
+                                <th>Status</th>
+                                <th>Availability</th>
+                                <th>Rent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var property in Model.PropertyApprovals)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@property.PropertyName</div>
+                                        <div class="panel-meta">@property.Address</div>
+                                    </td>
+                                    <td>@property.LandlordEmail</td>
+                                    <td><span class="badge badge-soft-warning">@property.ApprovalStatus</span></td>
+                                    <td>@property.AvailabilityStatus</td>
+                                    <td>RM @property.MonthlyRent.ToString("N2")</td>
+                                    <td>
+                                        <div class="table-actions">
+                                            <form asp-action="ApproveProperty" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@property.PropertyId" />
+                                                <button type="submit" class="btn admin-btn-primary btn-sm">Approve</button>
+                                            </form>
+                                            <form asp-action="RejectProperty" method="post" class="d-inline"
+                                                  onsubmit="return confirm('Reject this property?')">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@property.PropertyId" />
+                                                <button type="submit" class="btn admin-btn-danger btn-sm">Reject</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
     </div>
 </section>

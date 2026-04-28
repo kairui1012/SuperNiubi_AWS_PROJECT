@@ -4,7 +4,6 @@ using MyMvcApp.Extensions;
 using MyMvcApp.Services;
 using Microsoft.AspNetCore.Authentication;
 using QuestPDF.Infrastructure; 
-using Amazon.XRay.Recorder.Handlers.AwsSdk;
 
 
 QuestPDF.Settings.License = LicenseType.Community;
@@ -31,12 +30,9 @@ builder.Services.AddGoogleLogin(builder.Configuration);
 builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIdentityProvider>();
 
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
-builder.Services.AddAWSService<Amazon.XRay.IAmazonXRay>();
 
 // 2. Register your custom S3 Image Service
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();
-
-AWSSDKHandler.RegisterXRayForAllServices();
 
 var app = builder.Build();
 
@@ -47,8 +43,6 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-
-app.UseXRay("PropEase");
 
 // In containerized HTTP deployments (e.g. direct EC2), keep HTTPS redirection optional.
 if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection"))

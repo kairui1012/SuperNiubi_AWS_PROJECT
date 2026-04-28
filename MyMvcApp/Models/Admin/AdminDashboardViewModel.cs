@@ -66,12 +66,12 @@ namespace MyMvcApp.Models.Admin
         public List<AdminMaintenanceQueueItemViewModel> MaintenanceQueueItems { get; set; } = new();
         public List<AdminMaintenanceQueueItemViewModel> MaintenanceHistoryItems { get; set; } = new();
         public List<AdminRecentPaymentViewModel> RecentPayments { get; set; } = new();
+        public List<PaymentListItemViewModel> PaymentRecords { get; set; } = new();
         public List<AdminPropertySnapshotViewModel> PropertySnapshots { get; set; } = new();
         public List<AdminPasswordResetRequestViewModel> PasswordResetRequests { get; set; } = new();
         public List<AdminAuditLogViewModel> AuditLogs { get; set; } = new();
         public AdminAuditSummaryViewModel AuditSummary { get; set; } = new();
         public List<SystemAnnouncement> Announcements { get; set; } = new();
-        public AdminXRayReportViewModel XRayReport { get; set; } = new();
         public List<AdminPropertyApprovalViewModel> PropertyApprovals { get; set; } = new();
     }
 
@@ -272,35 +272,5 @@ namespace MyMvcApp.Models.Admin
         public int EventsLast24Hours { get; set; }
         public int UserManagementEvents { get; set; }
         public int PasswordResetEvents { get; set; }
-    }
-
-    public class AdminXRayReportViewModel
-    {
-        public string ServiceName { get; set; } = "PropEase";
-        public string Region { get; set; } = string.Empty;
-        public string DaemonAddress { get; set; } = string.Empty;
-        public string EnvironmentName { get; set; } = string.Empty;
-        public string SamplingRuleManifest { get; set; } = string.Empty;
-        public bool IsAvailable { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
-        public int TotalTraces { get; set; }
-        public int ErrorCount { get; set; }
-        public int FaultCount { get; set; }
-        public int ThrottleCount { get; set; }
-        public double SlowestDuration { get; set; }
-        public DateTime WindowStart { get; set; }
-        public DateTime WindowEnd { get; set; }
-        public DateTime LastCheckedAt { get; set; }
-        public List<AdminXRayTraceItemViewModel> RecentTraces { get; set; } = new();
-    }
-
-    public class AdminXRayTraceItemViewModel
-    {
-        public string TraceId { get; set; } = string.Empty;
-        public double Duration { get; set; }
-        public bool HasError { get; set; }
-        public bool HasFault { get; set; }
-        public bool HasThrottle { get; set; }
-        public DateTime? StartTime { get; set; }
     }
 }
