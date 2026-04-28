@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Edit Property";
+    var amenitiesText = ViewBag.AmenitiesText as string ?? string.Empty;
 }
 
 <div class="landlord-console">
@@ -120,7 +121,8 @@
 
             <form asp-action="EditProperty"
                   asp-controller="Landlord"
-                  method="post">
+                  method="post"
+                  enctype="multipart/form-data">
 
                 @Html.AntiForgeryToken()
 
@@ -130,6 +132,7 @@
                 <input asp-for="LandlordId" type="hidden" />
                 <input asp-for="CreatedAt" type="hidden" />
                 <input asp-for="UpdatedAt" type="hidden" />
+                <input asp-for="ImageUrl" type="hidden" />
 
 
 
@@ -164,6 +167,38 @@
                 <span asp-validation-for="PropertyType"
                       class="landlord-error">
                 </span>
+
+                <label asp-for="AvailabilityStatus"
+                       class="landlord-label">
+                </label>
+
+                <select asp-for="AvailabilityStatus"
+                        class="landlord-select"
+                        asp-items="Html.GetEnumSelectList<MyMvcApp.Models.PropertyAvailabilityStatus>()">
+                </select>
+
+                <p class="landlord-sub mb-2">
+                    Approval status: <strong>@Model.ApprovalStatus</strong>
+                </p>
+
+                @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+                {
+                    <div class="mb-3">
+                        <img src="@Model.ImageUrl"
+                             alt="@Model.PropertyName"
+                             style="width: 100%; max-height: 240px; object-fit: cover; border-radius: 8px;" />
+                    </div>
+                }
+
+                <label class="landlord-label" for="PropertyImage">
+                    Replace Property Image
+                </label>
+
+                <input id="PropertyImage"
+                       name="PropertyImage"
+                       type="file"
+                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                       class="landlord-input" />
 
 
 
@@ -321,6 +356,16 @@
                 <textarea asp-for="Description"
                           class="landlord-textarea">
                 </textarea>
+
+                <label class="landlord-label" for="AmenitiesText">
+                    Amenities
+                </label>
+
+                <input id="AmenitiesText"
+                       name="AmenitiesText"
+                       value="@amenitiesText"
+                       class="landlord-input"
+                       placeholder="Pool, Gym, Parking, Security" />
 
 
 
