@@ -1,66 +1,260 @@
 @model AdminDashboardViewModel
 
+@{
+    var occupancyRate = Model.PropertyReport.TotalProperties > 0
+        ? Math.Round((double)Model.PropertyReport.OccupiedProperties / Model.PropertyReport.TotalProperties * 100)
+        : 0;
+    var vacancyRate = Model.PropertyReport.TotalProperties > 0
+        ? Math.Round((double)Model.PropertyReport.VacantProperties / Model.PropertyReport.TotalProperties * 100)
+        : 0;
+}
+
 <section class="admin-pane d-none" data-admin-pane="properties">
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="panel-card">
-                <div class="panel-heading">
-                    <h2 class="panel-title">Property overview</h2>
-                    <span class="panel-meta">Occupancy and asset health</span>
+    <div class="property-command-grid">
+        <div class="panel-card property-command-main">
+            <div class="panel-heading property-panel-heading">
+                <div>
+                    <h2 class="panel-title">Portfolio health</h2>
+                    <span class="panel-meta">Occupancy, rent roll, and operational pressure</span>
                 </div>
-                <div class="row g-3">
-                    <div class="col-sm-6">
-                        <div class="summary-card">
-                            <div class="summary-label">Total properties</div>
-                            <div class="summary-value">@Model.PropertyReport.TotalProperties</div>
-                            <div class="summary-footnote">Managed units in the system</div>
-                        </div>
+                <span class="badge admin-count-badge">@occupancyRate% occupied</span>
+            </div>
+
+            <div class="property-health-bar" aria-label="Property occupancy rate">
+                <span style="width: @occupancyRate%;"></span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <div class="summary-card">
+                        <div class="summary-label">Total properties</div>
+                        <div class="summary-value">@Model.PropertyReport.TotalProperties</div>
+                        <div class="summary-footnote">Managed units in system</div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="summary-card">
-                            <div class="summary-label">Occupied properties</div>
-                            <div class="summary-value">@Model.PropertyReport.OccupiedProperties</div>
-                            <div class="summary-footnote">Active rentals currently assigned</div>
-                        </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="summary-card">
+                        <div class="summary-label">Occupied</div>
+                        <div class="summary-value">@Model.PropertyReport.OccupiedProperties</div>
+                        <div class="summary-footnote">Active rentals assigned</div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="summary-card">
-                            <div class="summary-label">Vacant properties</div>
-                            <div class="summary-value">@Model.PropertyReport.VacantProperties</div>
-                            <div class="summary-footnote">Available for new tenants</div>
-                        </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="summary-card">
+                        <div class="summary-label">Vacant</div>
+                        <div class="summary-value">@Model.PropertyReport.VacantProperties</div>
+                        <div class="summary-footnote">@vacancyRate% available capacity</div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="summary-card">
-                            <div class="summary-label">Active tenancies</div>
-                            <div class="summary-value">@Model.PropertyReport.ActiveTenancies</div>
-                            <div class="summary-footnote">Live rental assignments</div>
-                        </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="summary-card">
+                        <div class="summary-label">Active tenancies</div>
+                        <div class="summary-value">@Model.PropertyReport.ActiveTenancies</div>
+                        <div class="summary-footnote">Live lease assignments</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-5">
-            <div class="panel-card h-100">
-                <div class="panel-heading">
-                    <h2 class="panel-title">Platform features</h2>
-                    <span class="panel-meta">New additions</span>
-                </div>
-                <div class="activity-list">
-                    <div class="activity-item">
-                        <div class="activity-title">Documents tracked in cloud</div>
-                        <div class="activity-meta">@Model.Overview.TotalDocuments files are available for review and audit.</div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-title">Occupancy monitoring</div>
-                        <div class="activity-meta">The control panel keeps rental occupancy and vacancies visible at a glance.</div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-title">Property workflow shortcuts</div>
-                        <div class="activity-meta">Quick actions help move from overview into management with fewer clicks.</div>
-                    </div>
+
+        <div class="panel-card property-command-side">
+            <div class="panel-heading property-panel-heading">
+                <div>
+                    <h2 class="panel-title">Admin actions</h2>
+                    <span class="panel-meta">Move quickly into property operations</span>
                 </div>
             </div>
+            <div class="property-action-list">
+                <a asp-action="Dashboard"
+                   asp-route-activePane="users"
+                   asp-route-roleFilter="Landlord"
+                   class="property-action-link">
+                    <i class="bi bi-person-badge" aria-hidden="true"></i>
+                    <span>
+                        <strong>Review landlords</strong>
+                        <small>@Model.UserReport.LandlordCount landlord account(s)</small>
+                    </span>
+                </a>
+                <a asp-action="Dashboard"
+                   asp-route-activePane="maintenance"
+                   class="property-action-link">
+                    <i class="bi bi-tools" aria-hidden="true"></i>
+                    <span>
+                        <strong>Open maintenance</strong>
+                        <small>@Model.PropertyReport.OpenMaintenanceCount request(s) need tracking</small>
+                    </span>
+                </a>
+                <a asp-controller="AdminPayment"
+                   asp-action="Index"
+                   asp-route-status="Overdue"
+                   class="property-action-link">
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                    <span>
+                        <strong>Payment risk</strong>
+                        <small>@Model.PropertyReport.OverduePaymentCount overdue payment(s)</small>
+                    </span>
+                </a>
+                <a asp-action="Dashboard"
+                   asp-route-activePane="users"
+                   asp-route-roleFilter="Tenant"
+                   asp-route-statusFilter="Approved"
+                   class="property-action-link">
+                    <i class="bi bi-person-check" aria-hidden="true"></i>
+                    <span>
+                        <strong>Tenant pool</strong>
+                        <small>Approved tenants ready for assignment</small>
+                    </span>
+                </a>
+            </div>
+        </div>
+
+        <div class="panel-card property-command-side">
+            <div class="panel-heading property-panel-heading">
+                <div>
+                    <h2 class="panel-title">Rent position</h2>
+                    <span class="panel-meta">Portfolio value</span>
+                </div>
+            </div>
+            <div class="metric-row">
+                <span>Active monthly rent roll</span>
+                <span class="metric-value">RM @Model.PropertyReport.MonthlyRentRoll.ToString("N0")</span>
+            </div>
+            <div class="metric-row">
+                <span>Average listed rent</span>
+                <span class="metric-value">RM @Model.PropertyReport.AverageListedRent.ToString("N0")</span>
+            </div>
+            <div class="metric-row">
+                <span>Documents on file</span>
+                <span class="metric-value">@Model.PropertyReport.DocumentCount</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="property-directory-wrap">
+        <div class="panel-card property-directory-card">
+            <div class="panel-heading">
+                <div>
+                    <h2 class="panel-title">Property directory</h2>
+                    <span class="panel-meta">Read-only list of every property and assignment detail</span>
+                </div>
+                <span class="badge admin-count-badge">@Model.PropertySnapshots.Count of @Model.PropertyTotalMatches shown</span>
+            </div>
+
+            <form asp-action="Dashboard" method="get" class="property-search-bar">
+                <input type="hidden" name="activePane" value="properties" />
+                <label class="admin-filter-label" for="propertySearch">Search properties</label>
+                <div class="property-search-controls">
+                    <input type="text"
+                           id="propertySearch"
+                           name="propertySearch"
+                           class="form-control filter-input"
+                           placeholder="Search by property, address, unit, landlord, or tenant"
+                           value="@Model.PropertySearch" />
+                    <button type="submit" class="btn admin-btn-primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        Search
+                    </button>
+                    <a asp-action="Dashboard" asp-route-activePane="properties" class="btn admin-btn-secondary">Reset</a>
+                </div>
+            </form>
+
+                @if (Model.PropertySnapshots.Count == 0)
+                {
+                    <div class="empty-state">No property records matched the current search.</div>
+                }
+                else
+                {
+                    <div class="property-record-list">
+                        @foreach (var property in Model.PropertySnapshots)
+                        {
+                            <details class="property-record-item">
+                                <summary class="property-record-summary">
+                                    <span class="property-record-main">
+                                        <span class="property-record-title">
+                                            <strong>@property.PropertyName</strong>
+                                            <span class="badge @(property.IsOccupied ? "badge-soft-success" : "badge-soft-warning")">@property.LeaseStatus</span>
+                                        </span>
+                                        <span class="activity-meta">
+                                            @property.PropertyType
+                                            @if (!string.IsNullOrWhiteSpace(property.UnitNumber))
+                                            {
+                                                <span>&bull; Unit @property.UnitNumber</span>
+                                            }
+                                            <span>&bull; @property.Location</span>
+                                        </span>
+                                        <span class="property-record-sub">
+                                            <span><i class="bi bi-person-badge" aria-hidden="true"></i>@property.LandlordEmail</span>
+                                            <span><i class="bi bi-person" aria-hidden="true"></i>@(property.IsOccupied ? property.TenantEmail : "No tenant assigned")</span>
+                                        </span>
+                                    </span>
+                                    <span class="property-record-stats">
+                                        <span>RM @property.MonthlyRent.ToString("N0")</span>
+                                        <small>@property.OpenMaintenanceCount open &bull; @property.DocumentCount docs</small>
+                                    </span>
+                                    <span class="property-record-toggle" aria-hidden="true">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </span>
+                                </summary>
+
+                                <div class="property-detail-grid" aria-label="Property details for @property.PropertyName">
+                                    <div class="property-detail-block">
+                                        <span class="property-detail-label">Address</span>
+                                        <strong>@property.AddressLine1</strong>
+                                        @if (!string.IsNullOrWhiteSpace(property.AddressLine2))
+                                        {
+                                            <small>@property.AddressLine2</small>
+                                        }
+                                        <small>@property.Location @property.PostalCode</small>
+                                    </div>
+
+                                    <div class="property-detail-block">
+                                        <span class="property-detail-label">Unit details</span>
+                                        <strong>@property.PropertyType</strong>
+                                        <small>
+                                            Floor @(string.IsNullOrWhiteSpace(property.FloorNumber) ? "-" : property.FloorNumber)
+                                            &bull; Unit @(string.IsNullOrWhiteSpace(property.UnitNumber) ? "-" : property.UnitNumber)
+                                        </small>
+                                        <small>
+                                            @property.Bedrooms bed &bull; @property.Bathrooms bath
+                                            @if (property.SizeSqFt.HasValue)
+                                            {
+                                                <span>&bull; @property.SizeSqFt.Value.ToString("N0") sq ft</span>
+                                            }
+                                        </small>
+                                    </div>
+
+                                    <div class="property-detail-block">
+                                        <span class="property-detail-label">Financials</span>
+                                        <strong>RM @property.MonthlyRent.ToString("N0") / month</strong>
+                                        <small>Deposit: @(property.DepositAmount.HasValue ? $"RM {property.DepositAmount.Value:N0}" : "-")</small>
+                                        <small>Parking: @(string.IsNullOrWhiteSpace(property.ParkingBay) ? "-" : property.ParkingBay)</small>
+                                    </div>
+
+                                    <div class="property-detail-block">
+                                        <span class="property-detail-label">Assignment</span>
+                                        <strong>@(property.IsOccupied ? property.TenantEmail : "Vacant")</strong>
+                                        <small>Landlord: @property.LandlordEmail</small>
+                                        @if (property.LeaseStartDate.HasValue && property.LeaseEndDate.HasValue)
+                                        {
+                                            <small>Lease: @property.LeaseStartDate.Value.ToString("dd MMM yyyy") - @property.LeaseEndDate.Value.ToString("dd MMM yyyy")</small>
+                                        }
+                                    </div>
+
+                                    <div class="property-detail-block">
+                                        <span class="property-detail-label">Operations</span>
+                                        <strong>@property.OpenMaintenanceCount open maintenance</strong>
+                                        <small>@property.DocumentCount document(s) on file</small>
+                                        <small>Updated @property.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</small>
+                                    </div>
+
+                                    <div class="property-detail-block property-detail-description">
+                                        <span class="property-detail-label">Description</span>
+                                        <small>@(string.IsNullOrWhiteSpace(property.Description) ? "No description provided." : property.Description)</small>
+                                    </div>
+                                </div>
+                            </details>
+                        }
+                    </div>
+                }
         </div>
     </div>
 </section>

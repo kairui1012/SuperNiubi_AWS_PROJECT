@@ -10,6 +10,7 @@
         const headingTitle = document.querySelector('[data-admin-heading-title]');
         let chartsInitialized = false;
         let chartInstances = [];
+        let pendingRoleForm = null;
 
         const analyticsData = {
             labels: @Json.Serialize(Model.MonthlyAnalytics.Select(item => item.MonthLabel)),
@@ -285,6 +286,42 @@
                 event.preventDefault();
                 setPane(tab.dataset.adminSwitch);
             });
+        });
+
+        const roleModalElement = document.getElementById('adminRoleConfirmModal');
+        const roleModalMessage = roleModalElement?.querySelector('[data-role-confirm-message]');
+        const roleModalSubmit = roleModalElement?.querySelector('[data-role-confirm-submit]');
+        const roleModal = roleModalElement && window.bootstrap
+            ? new bootstrap.Modal(roleModalElement)
+            : null;
+
+        document.querySelectorAll('[data-role-save]').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+
+                const form = button.closest('form');
+                const roleSelect = form?.querySelector('select[name="newRole"]');
+                const selectedRole = roleSelect?.value || 'the selected role';
+                const userEmail = button.dataset.userEmail || 'this user';
+                pendingRoleForm = form;
+
+                if (roleModal && roleModalMessage) {
+                    roleModalMessage.textContent = `Change ${userEmail}'s role to ${selectedRole}?`;
+                    roleModal.show();
+                    return;
+                }
+
+                if (window.confirm(`Change ${userEmail}'s role to ${selectedRole}?`)) {
+                    pendingRoleForm?.submit();
+                }
+            });
+        });
+
+        roleModalSubmit?.addEventListener('click', () => {
+            const form = pendingRoleForm;
+            pendingRoleForm = null;
+            roleModal?.hide();
+            form?.submit();
         });
 
         setPane(page?.dataset.adminDefault || 'users');

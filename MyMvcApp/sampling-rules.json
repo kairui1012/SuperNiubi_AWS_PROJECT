@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "description": "Trace PropEase web requests",
+      "service_name": "PropEase",
+      "http_method": "*",
+      "url_path": "*",
+      "fixed_target": 1,
+      "rate": 0.5
+    }
+  ],
+  "default": {
+    "fixed_target": 1,
+    "rate": 0.1
+  }
+}

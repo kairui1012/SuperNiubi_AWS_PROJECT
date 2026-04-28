@@ -50,13 +50,13 @@
                 </form>
 
                 <div class="table-responsive admin-users-scroll">
-                    <table class="table admin-table">
+                    <table class="table admin-table admin-user-table">
                         <thead>
                             <tr>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th>Role</th>
-                                <th>Actions</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -79,32 +79,35 @@
                                             <span class="badge @AdminDashboardUi.GetUserStatusBadgeClass(user)">@AdminDashboardUi.GetUserStatusLabel(user)</span>
                                         </td>
                                         <td>
-                                            <form asp-action="ChangeRole" method="post" class="d-flex flex-wrap gap-2 align-items-center">
+                                            <form asp-action="ChangeRole" method="post" class="admin-role-form">
                                                 <input type="hidden" name="id" value="@user.Id" />
                                                 <select name="newRole"
-                                                        class="form-select form-select-sm filter-select"
-                                                        style="width: 150px;"
+                                                        class="form-select form-select-sm filter-select admin-role-select"
                                                         @(user.IsDisabled ? "disabled" : null)>
                                                     <option value="Tenant" selected="@(user.Role == "Tenant" ? "selected" : null)">Tenant</option>
                                                     <option value="Landlord" selected="@(user.Role == "Landlord" ? "selected" : null)">Landlord</option>
                                                     <option value="Admin" selected="@(user.Role == "Admin" ? "selected" : null)">Admin</option>
                                                 </select>
                                                 <button type="submit"
-                                                        class="btn admin-btn-secondary btn-sm"
+                                                        class="btn admin-row-action admin-row-action-neutral"
+                                                        data-role-save
+                                                        data-user-email="@user.Email"
                                                         @(user.IsDisabled ? "disabled" : null)>
-                                                    Save
+                                                    <i class="bi bi-check2" aria-hidden="true"></i>
+                                                    <span>Save</span>
                                                 </button>
                                             </form>
                                         </td>
                                         <td>
-                                            <div class="table-actions">
+                                            <div class="table-actions admin-user-row-actions">
                                                 @if (user.IsDisabled)
                                                 {
-                                                    <form asp-action="EnableUser" method="post" class="d-inline">
+                                                    <form asp-action="EnableUser" method="post" class="admin-action-form">
                                                         <input type="hidden" name="id" value="@user.Id" />
                                                         <button type="submit"
-                                                                class="btn btn-success btn-sm"
+                                                                class="btn admin-row-action admin-row-action-enable"
                                                                 onclick="return confirm('Enable this user account?');">
+                                                            <i class="bi bi-unlock" aria-hidden="true"></i>
                                                             Enable
                                                         </button>
                                                     </form>
@@ -113,17 +116,23 @@
                                                 {
                                                     @if (!user.IsApproved)
                                                     {
-                                                        <form asp-action="ApproveUser" method="post" class="d-inline">
+                                                        <form asp-action="ApproveUser" method="post" class="admin-action-form">
                                                             <input type="hidden" name="id" value="@user.Id" />
-                                                            <button type="submit" class="btn btn-warning btn-sm">Approve & Email</button>
+                                                            <button type="submit"
+                                                                    class="btn admin-row-action admin-row-action-approve"
+                                                                    title="Approve this account and send the approval email.">
+                                                                <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                                                                Approve
+                                                            </button>
                                                         </form>
                                                     }
 
-                                                    <form asp-action="DisableUser" method="post" class="d-inline">
+                                                    <form asp-action="DisableUser" method="post" class="admin-action-form">
                                                         <input type="hidden" name="id" value="@user.Id" />
                                                         <button type="submit"
-                                                                class="btn btn-danger btn-sm"
+                                                                class="btn admin-row-action admin-row-action-danger"
                                                                 onclick="return confirm('Disable this user account?');">
+                                                            <i class="bi bi-slash-circle" aria-hidden="true"></i>
                                                             Disable
                                                         </button>
                                                     </form>
@@ -213,6 +222,24 @@
                         }
                     </div>
                 }
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade admin-confirm-modal" id="adminRoleConfirmModal" tabindex="-1" aria-labelledby="adminRoleConfirmTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="adminRoleConfirmTitle">Confirm role update</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cancel"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" data-role-confirm-message>Save this role change?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn admin-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn admin-btn-primary" data-role-confirm-submit>Yes</button>
+                </div>
             </div>
         </div>
     </div>

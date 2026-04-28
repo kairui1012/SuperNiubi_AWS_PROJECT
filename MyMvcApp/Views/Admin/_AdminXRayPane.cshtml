@@ -1,0 +1,144 @@
+@model AdminDashboardViewModel
+
+@{
+    var report = Model.XRayReport;
+}
+
+<section class="admin-pane d-none" data-admin-pane="xray">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="panel-card">
+                <div class="panel-heading">
+                    <div>
+                        <h2 class="panel-title">AWS X-Ray Monitor</h2>
+                        <span class="panel-meta">Recent website traces, AWS connection details, and runtime diagnostics</span>
+                    </div>
+                    <span class="badge @(report.IsAvailable ? "badge-soft-success" : "badge-soft-warning")">
+                        @(report.IsAvailable ? "Connected" : "Needs setup")
+                    </span>
+                </div>
+
+                @if (!report.IsAvailable && !string.IsNullOrWhiteSpace(report.ErrorMessage))
+                {
+                    <div class="alert alert-warning admin-alert mt-0 mb-3">
+                        X-Ray data could not be loaded: @report.ErrorMessage
+                    </div>
+                }
+
+                <div class="xray-info-grid">
+                    <div class="xray-info-item">
+                        <span>Service</span>
+                        <strong>@report.ServiceName</strong>
+                    </div>
+                    <div class="xray-info-item">
+                        <span>Region</span>
+                        <strong>@report.Region</strong>
+                    </div>
+                    <div class="xray-info-item">
+                        <span>Daemon</span>
+                        <strong>@report.DaemonAddress</strong>
+                    </div>
+                    <div class="xray-info-item">
+                        <span>Environment</span>
+                        <strong>@report.EnvironmentName</strong>
+                    </div>
+                    <div class="xray-info-item">
+                        <span>Sampling</span>
+                        <strong>@report.SamplingRuleManifest</strong>
+                    </div>
+                    <div class="xray-info-item">
+                        <span>Window</span>
+                        <strong>@report.WindowStart.ToLocalTime().ToString("HH:mm") - @report.WindowEnd.ToLocalTime().ToString("HH:mm")</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="summary-card">
+                <div class="summary-label">Total traces</div>
+                <div class="summary-value">@report.TotalTraces</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card">
+                <div class="summary-label">Errors</div>
+                <div class="summary-value">@report.ErrorCount</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card">
+                <div class="summary-label">Faults</div>
+                <div class="summary-value">@report.FaultCount</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card">
+                <div class="summary-label">Slowest request</div>
+                <div class="summary-value">@report.SlowestDuration.ToString("0.00")s</div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="panel-card">
+                <div class="panel-heading">
+                    <div>
+                        <h2 class="panel-title">Recent traces</h2>
+                        <span class="panel-meta">Last checked @report.LastCheckedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
+                    </div>
+                    <span class="badge admin-count-badge">@report.RecentTraces.Count shown</span>
+                </div>
+
+                @if (report.RecentTraces.Count == 0)
+                {
+                    <div class="empty-state">No X-Ray traces found in the selected time window.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table admin-table xray-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Trace ID</th>
+                                    <th scope="col">Duration</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Start time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var trace in report.RecentTraces)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="xray-trace-id">@trace.TraceId</span>
+                                        </td>
+                                        <td>@trace.Duration.ToString("0.00")s</td>
+                                        <td>
+                                            @if (trace.HasFault)
+                                            {
+                                                <span class="badge badge-soft-danger">Fault</span>
+                                            }
+                                            else if (trace.HasError)
+                                            {
+                                                <span class="badge badge-soft-warning">Error</span>
+                                            }
+                                            else if (trace.HasThrottle)
+                                            {
+                                                <span class="badge badge-soft-info">Throttle</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-soft-success">OK</span>
+                                            }
+                                        </td>
+                                        <td>@(trace.StartTime.HasValue ? trace.StartTime.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm:ss") : "-")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

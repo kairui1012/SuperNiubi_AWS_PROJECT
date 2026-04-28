@@ -39,6 +39,13 @@ namespace MyMvcApp.Models.Admin
         public string SearchEmail { get; set; } = string.Empty;
         public string RoleFilter { get; set; } = string.Empty;
         public string StatusFilter { get; set; } = string.Empty;
+        public string PropertySearch { get; set; } = string.Empty;
+        public int PropertyTotalMatches { get; set; }
+        public string MaintenanceSearch { get; set; } = string.Empty;
+        public string MaintenanceStatusFilter { get; set; } = string.Empty;
+        public string MaintenancePriorityFilter { get; set; } = string.Empty;
+        public int MaintenanceTotalMatches { get; set; }
+        public int MaintenanceHistoryTotalMatches { get; set; }
         public string AuditSearch { get; set; } = string.Empty;
         public string AuditActionFilter { get; set; } = string.Empty;
         public DateTime? AuditFromDate { get; set; }
@@ -56,11 +63,15 @@ namespace MyMvcApp.Models.Admin
 
         public List<AdminLatestUserViewModel> LatestUsers { get; set; } = new();
         public List<AdminRecentMaintenanceViewModel> RecentMaintenanceRequests { get; set; } = new();
+        public List<AdminMaintenanceQueueItemViewModel> MaintenanceQueueItems { get; set; } = new();
+        public List<AdminMaintenanceQueueItemViewModel> MaintenanceHistoryItems { get; set; } = new();
         public List<AdminRecentPaymentViewModel> RecentPayments { get; set; } = new();
+        public List<AdminPropertySnapshotViewModel> PropertySnapshots { get; set; } = new();
         public List<AdminPasswordResetRequestViewModel> PasswordResetRequests { get; set; } = new();
         public List<AdminAuditLogViewModel> AuditLogs { get; set; } = new();
         public AdminAuditSummaryViewModel AuditSummary { get; set; } = new();
         public List<SystemAnnouncement> Announcements { get; set; } = new();
+        public AdminXRayReportViewModel XRayReport { get; set; } = new();
     }
 
     public class AdminOverviewViewModel
@@ -94,6 +105,11 @@ namespace MyMvcApp.Models.Admin
         public int OccupiedProperties { get; set; }
         public int VacantProperties { get; set; }
         public int ActiveTenancies { get; set; }
+        public decimal MonthlyRentRoll { get; set; }
+        public decimal AverageListedRent { get; set; }
+        public int OpenMaintenanceCount { get; set; }
+        public int OverduePaymentCount { get; set; }
+        public int DocumentCount { get; set; }
     }
 
     public class AdminMaintenanceReportViewModel
@@ -104,6 +120,9 @@ namespace MyMvcApp.Models.Admin
         public int CompletedCount { get; set; }
         public int RejectedCount { get; set; }
         public int HighPriorityOpenCount { get; set; }
+        public int MediumPriorityOpenCount { get; set; }
+        public int LowPriorityOpenCount { get; set; }
+        public int AwaitingTenantConfirmationCount { get; set; }
     }
 
     public class AdminPaymentReportViewModel
@@ -145,6 +164,30 @@ namespace MyMvcApp.Models.Admin
         public DateTime CreatedAt { get; set; }
     }
 
+    public class AdminMaintenanceQueueItemViewModel
+    {
+        public int RequestId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public MaintenanceCategory Category { get; set; }
+        public MaintenancePriority Priority { get; set; }
+        public MaintenanceStatus Status { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public string PropertyName { get; set; } = string.Empty;
+        public string TenantEmail { get; set; } = string.Empty;
+        public string LandlordEmail { get; set; } = string.Empty;
+        public string UnitNumber { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public DateTime? PreferredDate { get; set; }
+        public DateTime? ResolvedDate { get; set; }
+        public string LandlordRemarks { get; set; } = string.Empty;
+        public bool HasIssueImage { get; set; }
+        public DateTime? TenantConfirmedAt { get; set; }
+        public int? TenantFeedbackRating { get; set; }
+        public string TenantFeedbackComment { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
+
     public class AdminRecentPaymentViewModel
     {
         public int PaymentId { get; set; }
@@ -155,6 +198,36 @@ namespace MyMvcApp.Models.Admin
         public decimal Amount { get; set; }
         public PaymentStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class AdminPropertySnapshotViewModel
+    {
+        public int PropertyId { get; set; }
+        public string PropertyName { get; set; } = string.Empty;
+        public string PropertyType { get; set; } = string.Empty;
+        public string AddressLine1 { get; set; } = string.Empty;
+        public string AddressLine2 { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string UnitNumber { get; set; } = string.Empty;
+        public string FloorNumber { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string LandlordEmail { get; set; } = string.Empty;
+        public string TenantEmail { get; set; } = string.Empty;
+        public bool IsOccupied { get; set; }
+        public string LeaseStatus { get; set; } = string.Empty;
+        public DateTime? LeaseStartDate { get; set; }
+        public DateTime? LeaseEndDate { get; set; }
+        public decimal MonthlyRent { get; set; }
+        public decimal? DepositAmount { get; set; }
+        public decimal? SizeSqFt { get; set; }
+        public int Bedrooms { get; set; }
+        public int Bathrooms { get; set; }
+        public string ParkingBay { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int OpenMaintenanceCount { get; set; }
+        public int DocumentCount { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 
     public class AdminPasswordResetRequestViewModel
@@ -183,5 +256,35 @@ namespace MyMvcApp.Models.Admin
         public int EventsLast24Hours { get; set; }
         public int UserManagementEvents { get; set; }
         public int PasswordResetEvents { get; set; }
+    }
+
+    public class AdminXRayReportViewModel
+    {
+        public string ServiceName { get; set; } = "PropEase";
+        public string Region { get; set; } = string.Empty;
+        public string DaemonAddress { get; set; } = string.Empty;
+        public string EnvironmentName { get; set; } = string.Empty;
+        public string SamplingRuleManifest { get; set; } = string.Empty;
+        public bool IsAvailable { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public int TotalTraces { get; set; }
+        public int ErrorCount { get; set; }
+        public int FaultCount { get; set; }
+        public int ThrottleCount { get; set; }
+        public double SlowestDuration { get; set; }
+        public DateTime WindowStart { get; set; }
+        public DateTime WindowEnd { get; set; }
+        public DateTime LastCheckedAt { get; set; }
+        public List<AdminXRayTraceItemViewModel> RecentTraces { get; set; } = new();
+    }
+
+    public class AdminXRayTraceItemViewModel
+    {
+        public string TraceId { get; set; } = string.Empty;
+        public double Duration { get; set; }
+        public bool HasError { get; set; }
+        public bool HasFault { get; set; }
+        public bool HasThrottle { get; set; }
+        public DateTime? StartTime { get; set; }
     }
 }

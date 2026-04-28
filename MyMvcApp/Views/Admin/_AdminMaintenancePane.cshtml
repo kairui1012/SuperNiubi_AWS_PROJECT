@@ -1,62 +1,318 @@
 @model AdminDashboardViewModel
 
+@{
+    var openCount = Model.MaintenanceReport.PendingCount
+        + Model.MaintenanceReport.ApprovedCount
+        + Model.MaintenanceReport.InProgressCount;
+}
+
 <section class="admin-pane d-none" data-admin-pane="maintenance">
-    <div class="row g-4">
-        <div class="col-lg-5">
-            <div class="panel-card h-100">
-                <div class="panel-heading">
-                    <h2 class="panel-title">Maintenance queue</h2>
-                    <span class="panel-meta">Request pipeline</span>
+    <div class="maintenance-command-grid">
+        <div class="panel-card maintenance-command-main">
+            <div class="panel-heading maintenance-panel-heading">
+                <div>
+                    <h2 class="panel-title">Maintenance operations</h2>
+                    <span class="panel-meta">Queue pressure, status movement, and tenant follow-up</span>
                 </div>
-                <div class="metric-row">
+                <span class="badge admin-count-badge">@openCount open</span>
+            </div>
+
+            <div class="maintenance-status-grid">
+                <div class="maintenance-status-card">
                     <span>Pending</span>
-                    <span class="metric-value">@Model.MaintenanceReport.PendingCount</span>
+                    <strong>@Model.MaintenanceReport.PendingCount</strong>
                 </div>
-                <div class="metric-row">
+                <div class="maintenance-status-card">
                     <span>Approved</span>
-                    <span class="metric-value">@Model.MaintenanceReport.ApprovedCount</span>
+                    <strong>@Model.MaintenanceReport.ApprovedCount</strong>
                 </div>
-                <div class="metric-row">
+                <div class="maintenance-status-card">
                     <span>In progress</span>
-                    <span class="metric-value">@Model.MaintenanceReport.InProgressCount</span>
+                    <strong>@Model.MaintenanceReport.InProgressCount</strong>
                 </div>
-                <div class="metric-row">
+                <div class="maintenance-status-card">
                     <span>Completed</span>
-                    <span class="metric-value">@Model.MaintenanceReport.CompletedCount</span>
+                    <strong>@Model.MaintenanceReport.CompletedCount</strong>
                 </div>
-                <div class="metric-row">
-                    <span>High priority open</span>
-                    <span class="metric-value">@Model.MaintenanceReport.HighPriorityOpenCount</span>
+                <div class="maintenance-status-card">
+                    <span>Rejected</span>
+                    <strong>@Model.MaintenanceReport.RejectedCount</strong>
                 </div>
             </div>
         </div>
-        <div class="col-lg-7">
-            <div class="panel-card h-100">
-                <div class="panel-heading">
-                    <h2 class="panel-title">Recent maintenance</h2>
-                    <span class="panel-meta">Latest requests submitted</span>
+
+        <div class="panel-card maintenance-command-side">
+            <div class="panel-heading maintenance-panel-heading">
+                <div>
+                    <h2 class="panel-title">Priority load</h2>
+                    <span class="panel-meta">Open requests by urgency</span>
                 </div>
-                @if (Model.RecentMaintenanceRequests.Count == 0)
-                {
-                    <div class="empty-state">No maintenance requests found.</div>
-                }
-                else
-                {
-                    <div class="activity-list">
-                        @foreach (var item in Model.RecentMaintenanceRequests)
-                        {
-                            <div class="activity-item">
-                                <div class="activity-title">@item.Title</div>
-                                <div class="activity-meta">@item.PropertyName • @item.TenantEmail</div>
-                                <div class="activity-meta mt-2">
-                                    <span class="badge @AdminDashboardUi.GetMaintenanceBadgeClass(item.Status)">@item.Status</span>
-                                    <span class="badge @AdminDashboardUi.GetPriorityBadgeClass(item.Priority)">@item.Priority priority</span>
-                                    <span>@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</span>
-                                </div>
-                            </div>
-                        }
+            </div>
+            <div class="metric-row">
+                <span>High priority open</span>
+                <span class="metric-value">
+                    <span class="badge badge-soft-danger">@Model.MaintenanceReport.HighPriorityOpenCount</span>
+                </span>
+            </div>
+            <div class="metric-row">
+                <span>Medium priority open</span>
+                <span class="metric-value">
+                    <span class="badge badge-soft-warning">@Model.MaintenanceReport.MediumPriorityOpenCount</span>
+                </span>
+            </div>
+            <div class="metric-row">
+                <span>Low priority open</span>
+                <span class="metric-value">
+                    <span class="badge badge-soft-secondary">@Model.MaintenanceReport.LowPriorityOpenCount</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="panel-card maintenance-command-side">
+            <div class="panel-heading maintenance-panel-heading">
+                <div>
+                    <h2 class="panel-title">Follow-up</h2>
+                    <span class="panel-meta">Admin read-only signals</span>
+                </div>
+            </div>
+            <div class="metric-row">
+                <span>Awaiting tenant confirmation</span>
+                <span class="metric-value">@Model.MaintenanceReport.AwaitingTenantConfirmationCount</span>
+            </div>
+            <div class="metric-row">
+                <span>Total requests</span>
+                <span class="metric-value">@Model.Overview.TotalMaintenanceRequests</span>
+            </div>
+            <div class="metric-row">
+                <span>Filtered queue</span>
+                <span class="metric-value">@Model.MaintenanceQueueItems.Count</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="maintenance-directory-wrap">
+        <div class="panel-card maintenance-directory-card">
+            <div class="panel-heading">
+                <div>
+                    <h2 class="panel-title">Request directory</h2>
+                    <span class="panel-meta">Read-only queue across tenants, landlords, and properties</span>
+                </div>
+                <span class="badge admin-count-badge">@Model.MaintenanceQueueItems.Count of @Model.MaintenanceTotalMatches shown</span>
+            </div>
+
+            <form asp-action="Dashboard" method="get" class="maintenance-filter-bar">
+                <input type="hidden" name="activePane" value="maintenance" />
+                <div class="maintenance-filter-field maintenance-filter-search">
+                    <label class="admin-filter-label" for="maintenanceSearch">Search requests</label>
+                    <input type="text"
+                           id="maintenanceSearch"
+                           name="maintenanceSearch"
+                           class="form-control filter-input"
+                           placeholder="Search title, description, property, tenant, landlord"
+                           value="@Model.MaintenanceSearch" />
+                </div>
+                <div class="maintenance-filter-field">
+                    <label class="admin-filter-label" for="maintenanceStatusFilter">Status</label>
+                    <select id="maintenanceStatusFilter" name="maintenanceStatusFilter" class="form-select filter-select">
+                        <option value="">All status</option>
+                        <option value="Pending" selected="@(Model.MaintenanceStatusFilter == "Pending" ? "selected" : null)">Pending</option>
+                        <option value="Approved" selected="@(Model.MaintenanceStatusFilter == "Approved" ? "selected" : null)">Approved</option>
+                        <option value="InProgress" selected="@(Model.MaintenanceStatusFilter == "InProgress" ? "selected" : null)">In progress</option>
+                        <option value="Completed" selected="@(Model.MaintenanceStatusFilter == "Completed" ? "selected" : null)">Completed</option>
+                        <option value="Rejected" selected="@(Model.MaintenanceStatusFilter == "Rejected" ? "selected" : null)">Rejected</option>
+                    </select>
+                </div>
+                <div class="maintenance-filter-field">
+                    <label class="admin-filter-label" for="maintenancePriorityFilter">Priority</label>
+                    <select id="maintenancePriorityFilter" name="maintenancePriorityFilter" class="form-select filter-select">
+                        <option value="">All priority</option>
+                        <option value="High" selected="@(Model.MaintenancePriorityFilter == "High" ? "selected" : null)">High</option>
+                        <option value="Medium" selected="@(Model.MaintenancePriorityFilter == "Medium" ? "selected" : null)">Medium</option>
+                        <option value="Low" selected="@(Model.MaintenancePriorityFilter == "Low" ? "selected" : null)">Low</option>
+                    </select>
+                </div>
+                <div class="maintenance-filter-actions">
+                    <button type="submit" class="btn admin-btn-primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        Search
+                    </button>
+                    <a asp-action="Dashboard" asp-route-activePane="maintenance" class="btn admin-btn-secondary">Reset</a>
+                </div>
+            </form>
+
+            <div class="maintenance-lists-grid">
+                <section class="maintenance-list-panel" aria-labelledby="maintenanceQueueTitle">
+                    <div class="maintenance-list-heading">
+                        <div>
+                            <h3 id="maintenanceQueueTitle">Request directory</h3>
+                            <span>Active queue: pending, approved, and in progress</span>
+                        </div>
+                        <span class="badge admin-count-badge">@Model.MaintenanceQueueItems.Count of @Model.MaintenanceTotalMatches</span>
                     </div>
-                }
+
+                    @if (Model.MaintenanceQueueItems.Count == 0)
+                    {
+                        <div class="empty-state">No active maintenance requests matched the current filter.</div>
+                    }
+                    else
+                    {
+                        <div class="maintenance-request-list maintenance-scroll-list">
+                            @foreach (var item in Model.MaintenanceQueueItems)
+                            {
+                                var ageDays = Math.Max(0, (DateTime.UtcNow - item.CreatedAt).Days);
+                                <details class="maintenance-request-item">
+                                    <summary class="maintenance-request-summary">
+                                        <span class="maintenance-request-row">
+                                            <span class="maintenance-request-identity">
+                                                <strong>#@item.RequestId @item.Title</strong>
+                                                <span class="activity-meta">
+                                                    @item.Category &bull; @item.PropertyName
+                                                    @if (!string.IsNullOrWhiteSpace(item.UnitNumber))
+                                                    {
+                                                        <span>&bull; Unit @item.UnitNumber</span>
+                                                    }
+                                                    <span>&bull; @item.Location</span>
+                                                </span>
+                                            </span>
+                                            <span class="maintenance-request-badges">
+                                                <span class="badge @AdminDashboardUi.GetMaintenanceBadgeClass(item.Status)">@item.Status</span>
+                                                <span class="badge @AdminDashboardUi.GetPriorityBadgeClass(item.Priority)">@item.Priority</span>
+                                            </span>
+                                            <span class="maintenance-request-contact">
+                                                <i class="bi bi-person" aria-hidden="true"></i>
+                                                <span>@item.TenantEmail</span>
+                                            </span>
+                                            <span class="maintenance-request-contact">
+                                                <i class="bi bi-person-badge" aria-hidden="true"></i>
+                                                <span>@item.LandlordEmail</span>
+                                            </span>
+                                        </span>
+                                        <span class="maintenance-request-stats">
+                                            <span>@ageDays day(s)</span>
+                                            <small>Created @item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</small>
+                                        </span>
+                                        <span class="maintenance-request-toggle" aria-hidden="true">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </span>
+                                    </summary>
+
+                                    <div class="maintenance-detail-grid" aria-label="Maintenance request details for @item.Title">
+                                        <div class="maintenance-detail-block maintenance-detail-description">
+                                            <span class="maintenance-detail-label">Description</span>
+                                            <small>@item.Description</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Schedule</span>
+                                            <strong>Preferred: @(item.PreferredDate.HasValue ? item.PreferredDate.Value.ToString("dd MMM yyyy") : "-")</strong>
+                                            <small>Resolved: @(item.ResolvedDate.HasValue ? item.ResolvedDate.Value.ToString("dd MMM yyyy") : "-")</small>
+                                            <small>Updated @item.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Evidence</span>
+                                            <strong>@(item.HasIssueImage ? "Issue image attached" : "No issue image")</strong>
+                                            <small>Tenant confirmation: @(item.TenantConfirmedAt.HasValue ? item.TenantConfirmedAt.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm") : "-")</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Landlord remarks</span>
+                                            <small>@(string.IsNullOrWhiteSpace(item.LandlordRemarks) ? "No remarks provided." : item.LandlordRemarks)</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Tenant feedback</span>
+                                            <strong>@(item.TenantFeedbackRating.HasValue ? $"{item.TenantFeedbackRating}/5" : "-")</strong>
+                                            <small>@(string.IsNullOrWhiteSpace(item.TenantFeedbackComment) ? "No feedback comment." : item.TenantFeedbackComment)</small>
+                                        </div>
+                                    </div>
+                                </details>
+                            }
+                        </div>
+                    }
+                </section>
+
+                <section class="maintenance-list-panel" aria-labelledby="maintenanceHistoryTitle">
+                    <div class="maintenance-list-heading">
+                        <div>
+                            <h3 id="maintenanceHistoryTitle">Maintenance history</h3>
+                            <span>Completed and rejected requests</span>
+                        </div>
+                        <span class="badge admin-count-badge">@Model.MaintenanceHistoryItems.Count of @Model.MaintenanceHistoryTotalMatches</span>
+                    </div>
+
+                    @if (Model.MaintenanceHistoryItems.Count == 0)
+                    {
+                        <div class="empty-state">No maintenance history matched the current filter.</div>
+                    }
+                    else
+                    {
+                        <div class="maintenance-request-list maintenance-scroll-list">
+                            @foreach (var item in Model.MaintenanceHistoryItems)
+                            {
+                                <details class="maintenance-request-item">
+                                    <summary class="maintenance-request-summary">
+                                        <span class="maintenance-request-row">
+                                            <span class="maintenance-request-identity">
+                                                <strong>#@item.RequestId @item.Title</strong>
+                                                <span class="activity-meta">
+                                                    @item.Category &bull; @item.PropertyName
+                                                    @if (!string.IsNullOrWhiteSpace(item.UnitNumber))
+                                                    {
+                                                        <span>&bull; Unit @item.UnitNumber</span>
+                                                    }
+                                                    <span>&bull; @item.Location</span>
+                                                </span>
+                                            </span>
+                                            <span class="maintenance-request-badges">
+                                                <span class="badge @AdminDashboardUi.GetMaintenanceBadgeClass(item.Status)">@item.Status</span>
+                                                <span class="badge @AdminDashboardUi.GetPriorityBadgeClass(item.Priority)">@item.Priority</span>
+                                            </span>
+                                            <span class="maintenance-request-contact">
+                                                <i class="bi bi-person" aria-hidden="true"></i>
+                                                <span>@item.TenantEmail</span>
+                                            </span>
+                                            <span class="maintenance-request-contact">
+                                                <i class="bi bi-person-badge" aria-hidden="true"></i>
+                                                <span>@item.LandlordEmail</span>
+                                            </span>
+                                        </span>
+                                        <span class="maintenance-request-stats">
+                                            <span>@(item.ResolvedDate.HasValue ? item.ResolvedDate.Value.ToString("dd MMM") : item.UpdatedAt.ToLocalTime().ToString("dd MMM"))</span>
+                                            <small>@(item.TenantConfirmedAt.HasValue ? "Tenant confirmed" : "Awaiting confirmation")</small>
+                                        </span>
+                                        <span class="maintenance-request-toggle" aria-hidden="true">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </span>
+                                    </summary>
+
+                                    <div class="maintenance-detail-grid" aria-label="Maintenance history details for @item.Title">
+                                        <div class="maintenance-detail-block maintenance-detail-description">
+                                            <span class="maintenance-detail-label">Description</span>
+                                            <small>@item.Description</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Schedule</span>
+                                            <strong>Preferred: @(item.PreferredDate.HasValue ? item.PreferredDate.Value.ToString("dd MMM yyyy") : "-")</strong>
+                                            <small>Resolved: @(item.ResolvedDate.HasValue ? item.ResolvedDate.Value.ToString("dd MMM yyyy") : "-")</small>
+                                            <small>Updated @item.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Evidence</span>
+                                            <strong>@(item.HasIssueImage ? "Issue image attached" : "No issue image")</strong>
+                                            <small>Tenant confirmation: @(item.TenantConfirmedAt.HasValue ? item.TenantConfirmedAt.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm") : "-")</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Landlord remarks</span>
+                                            <small>@(string.IsNullOrWhiteSpace(item.LandlordRemarks) ? "No remarks provided." : item.LandlordRemarks)</small>
+                                        </div>
+                                        <div class="maintenance-detail-block">
+                                            <span class="maintenance-detail-label">Tenant feedback</span>
+                                            <strong>@(item.TenantFeedbackRating.HasValue ? $"{item.TenantFeedbackRating}/5" : "-")</strong>
+                                            <small>@(string.IsNullOrWhiteSpace(item.TenantFeedbackComment) ? "No feedback comment." : item.TenantFeedbackComment)</small>
+                                        </div>
+                                    </div>
+                                </details>
+                            }
+                        </div>
+                    }
+                </section>
             </div>
         </div>
     </div>

@@ -7,6 +7,8 @@ using MyMvcApp.Models.Admin;
 using MyMvcApp.Services;
 using Amazon.CognitoIdentityProvider; // ADD THIS
 using Amazon.CognitoIdentityProvider.Model; // ADD THIS
+using Amazon.XRay;
+using Amazon.XRay.Model;
 using System.Globalization;
 using System.Security.Claims;
 
@@ -17,7 +19,9 @@ namespace MyMvcApp.Controllers
     {
         private static readonly string[] AllowedRoles = { "Tenant", "Landlord", "Admin" };
         private static readonly string[] AllowedStatuses = { "Pending", "Approved", "Disabled" };
-        private static readonly string[] AllowedAdminPanes = { "dashboard", "users", "properties", "maintenance", "payments", "audit", "announcements" };
+        private static readonly string[] AllowedAdminPanes = { "dashboard", "users", "properties", "maintenance", "payments", "audit", "announcements", "xray" };
+        private static readonly string[] AllowedMaintenanceStatuses = { "Pending", "Approved", "InProgress", "Completed", "Rejected" };
+        private static readonly string[] AllowedMaintenancePriorities = { "High", "Medium", "Low" };
         private static readonly string[] AllowedVisibleTo = { "All", "Tenant", "Landlord" };
         private static readonly string[] AllowedAuditActions =
         {
@@ -38,14 +42,16 @@ namespace MyMvcApp.Controllers
         private readonly AppDbContext _dbContext;
         private readonly EmailService _emailService;
         private readonly IAmazonCognitoIdentityProvider _cognitoClient;
+        private readonly IAmazonXRay _xrayClient;
         private readonly IConfiguration _config;
 
         // Inject the Cognito Client and Configuration
-        public AdminController(AppDbContext dbContext, EmailService emailService, IAmazonCognitoIdentityProvider cognitoClient, IConfiguration config)
+        public AdminController(AppDbContext dbContext, EmailService emailService, IAmazonCognitoIdentityProvider cognitoClient, IAmazonXRay xrayClient, IConfiguration config)
         {
             _dbContext = dbContext;
             _emailService = emailService;
             _cognitoClient = cognitoClient;
+            _xrayClient = xrayClient;
             _config = config;
         }
 
@@ -53,19 +59,27 @@ namespace MyMvcApp.Controllers
             string? searchEmail,
             string? roleFilter,
             string? statusFilter,
+            string? propertySearch,
+            string? maintenanceSearch,
+            string? maintenanceStatusFilter,
+            string? maintenancePriorityFilter,
             string? activePane,
             string? auditSearch,
             string? auditActionFilter,
             DateTime? auditFromDate,
             DateTime? auditToDate)
         {
-            return Dashboard(searchEmail, roleFilter, statusFilter, activePane, auditSearch, auditActionFilter, auditFromDate, auditToDate);
+            return Dashboard(searchEmail, roleFilter, statusFilter, propertySearch, maintenanceSearch, maintenanceStatusFilter, maintenancePriorityFilter, activePane, auditSearch, auditActionFilter, auditFromDate, auditToDate);
         }
 
         public async Task<IActionResult> Dashboard(
             string? searchEmail,
             string? roleFilter,
             string? statusFilter,
+            string? propertySearch,
+            string? maintenanceSearch,
+            string? maintenanceStatusFilter,
+            string? maintenancePriorityFilter,
             string? activePane,
             string? auditSearch,
             string? auditActionFilter,
@@ -75,14 +89,22 @@ namespace MyMvcApp.Controllers
             var normalizedSearchEmail = searchEmail?.Trim() ?? string.Empty;
             var normalizedRoleFilter = NormalizeFilter(roleFilter, AllowedRoles);
             var normalizedStatusFilter = NormalizeFilter(statusFilter, AllowedStatuses);
+            var normalizedPropertySearch = propertySearch?.Trim() ?? string.Empty;
+            var normalizedMaintenanceSearch = maintenanceSearch?.Trim() ?? string.Empty;
+            var normalizedMaintenanceStatusFilter = NormalizeFilter(maintenanceStatusFilter, AllowedMaintenanceStatuses);
+            var normalizedMaintenancePriorityFilter = NormalizeFilter(maintenancePriorityFilter, AllowedMaintenancePriorities);
             var normalizedAuditSearch = auditSearch?.Trim() ?? string.Empty;
             var normalizedAuditActionFilter = NormalizeFilter(auditActionFilter, AllowedAuditActions);
             var hasAuditFilter = !string.IsNullOrWhiteSpace(normalizedAuditSearch)
                 || !string.IsNullOrWhiteSpace(normalizedAuditActionFilter)
                 || auditFromDate.HasValue
                 || auditToDate.HasValue;
+            var hasPropertyFilter = !string.IsNullOrWhiteSpace(normalizedPropertySearch);
+            var hasMaintenanceFilter = !string.IsNullOrWhiteSpace(normalizedMaintenanceSearch)
+                || !string.IsNullOrWhiteSpace(normalizedMaintenanceStatusFilter)
+                || !string.IsNullOrWhiteSpace(normalizedMaintenancePriorityFilter);
             var normalizedActivePane = NormalizeFilter(activePane, AllowedAdminPanes)
-                ?? (hasAuditFilter ? "audit" : "dashboard");
+                ?? (hasAuditFilter ? "audit" : hasMaintenanceFilter ? "maintenance" : hasPropertyFilter ? "properties" : "dashboard");
 
             var usersQuery = _dbContext.Users.AsNoTracking().AsQueryable();
 
@@ -189,6 +211,11 @@ namespace MyMvcApp.Controllers
                 .Distinct()
                 .CountAsync();
             var vacantProperties = Math.Max(totalProperties - occupiedProperties, 0);
+            var monthlyRentRoll = await _dbContext.Tenants.AsNoTracking()
+                .Where(t => t.LeaseStatus == LeaseStatus.Active)
+                .SumAsync(t => (decimal?)t.MonthlyRent) ?? 0m;
+            var averageListedRent = await _dbContext.Properties.AsNoTracking()
+                .AverageAsync(p => (decimal?)p.MonthlyRent) ?? 0m;
 
             var totalUsers = await _dbContext.Users.AsNoTracking().CountAsync();
             var approvedUsers = await _dbContext.Users.AsNoTracking().CountAsync(u => u.IsApproved && !u.IsDisabled);
@@ -205,6 +232,63 @@ namespace MyMvcApp.Controllers
                     || m.Status == MaintenanceStatus.InProgress);
             var totalDocuments = await _dbContext.Documents.AsNoTracking().CountAsync(d => !d.IsDeleted);
             var overduePayments = await _dbContext.Payments.AsNoTracking().CountAsync(p => p.Status == PaymentStatus.Overdue);
+
+            var propertyDirectoryQuery = _dbContext.Properties.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(normalizedPropertySearch))
+            {
+                propertyDirectoryQuery = propertyDirectoryQuery.Where(p =>
+                    p.PropertyName.Contains(normalizedPropertySearch)
+                    || p.AddressLine1.Contains(normalizedPropertySearch)
+                    || (p.AddressLine2 != null && p.AddressLine2.Contains(normalizedPropertySearch))
+                    || p.City.Contains(normalizedPropertySearch)
+                    || p.State.Contains(normalizedPropertySearch)
+                    || p.PostalCode.Contains(normalizedPropertySearch)
+                    || (p.UnitNumber != null && p.UnitNumber.Contains(normalizedPropertySearch))
+                    || (p.FloorNumber != null && p.FloorNumber.Contains(normalizedPropertySearch))
+                    || (p.Landlord != null && p.Landlord.Email.Contains(normalizedPropertySearch))
+                    || (p.Tenant != null && p.Tenant.User.Email.Contains(normalizedPropertySearch)));
+            }
+
+            var propertyTotalMatches = await propertyDirectoryQuery.CountAsync();
+
+            var maintenanceQueueQuery = _dbContext.MaintenanceRequests.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(normalizedMaintenanceSearch))
+            {
+                maintenanceQueueQuery = maintenanceQueueQuery.Where(m =>
+                    m.Title.Contains(normalizedMaintenanceSearch)
+                    || m.Description.Contains(normalizedMaintenanceSearch)
+                    || m.Property.PropertyName.Contains(normalizedMaintenanceSearch)
+                    || m.Property.City.Contains(normalizedMaintenanceSearch)
+                    || m.Property.State.Contains(normalizedMaintenanceSearch)
+                    || (m.Property.UnitNumber != null && m.Property.UnitNumber.Contains(normalizedMaintenanceSearch))
+                    || m.Tenant.User.Email.Contains(normalizedMaintenanceSearch)
+                    || (m.Property.Landlord != null && m.Property.Landlord.Email.Contains(normalizedMaintenanceSearch))
+                    || (m.LandlordRemarks != null && m.LandlordRemarks.Contains(normalizedMaintenanceSearch)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedMaintenanceStatusFilter)
+                && Enum.TryParse<MaintenanceStatus>(normalizedMaintenanceStatusFilter, out var maintenanceStatus))
+            {
+                maintenanceQueueQuery = maintenanceQueueQuery.Where(m => m.Status == maintenanceStatus);
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedMaintenancePriorityFilter)
+                && Enum.TryParse<MaintenancePriority>(normalizedMaintenancePriorityFilter, out var maintenancePriority))
+            {
+                maintenanceQueueQuery = maintenanceQueueQuery.Where(m => m.Priority == maintenancePriority);
+            }
+
+            var activeMaintenanceQuery = maintenanceQueueQuery.Where(m =>
+                m.Status == MaintenanceStatus.Pending
+                || m.Status == MaintenanceStatus.Approved
+                || m.Status == MaintenanceStatus.InProgress);
+            var maintenanceHistoryQuery = maintenanceQueueQuery.Where(m =>
+                m.Status == MaintenanceStatus.Completed
+                || m.Status == MaintenanceStatus.Rejected);
+            var maintenanceTotalMatches = await activeMaintenanceQuery.CountAsync();
+            var maintenanceHistoryTotalMatches = await maintenanceHistoryQuery.CountAsync();
 
             var auditQuery = _dbContext.AuditLogs.AsNoTracking().AsQueryable();
 
@@ -243,6 +327,13 @@ namespace MyMvcApp.Controllers
                 SearchEmail = normalizedSearchEmail,
                 RoleFilter = normalizedRoleFilter ?? string.Empty,
                 StatusFilter = normalizedStatusFilter ?? string.Empty,
+                PropertySearch = normalizedPropertySearch,
+                PropertyTotalMatches = propertyTotalMatches,
+                MaintenanceSearch = normalizedMaintenanceSearch,
+                MaintenanceStatusFilter = normalizedMaintenanceStatusFilter ?? string.Empty,
+                MaintenancePriorityFilter = normalizedMaintenancePriorityFilter ?? string.Empty,
+                MaintenanceTotalMatches = maintenanceTotalMatches,
+                MaintenanceHistoryTotalMatches = maintenanceHistoryTotalMatches,
                 AuditSearch = normalizedAuditSearch,
                 AuditActionFilter = normalizedAuditActionFilter ?? string.Empty,
                 AuditFromDate = auditFromDate,
@@ -282,7 +373,12 @@ namespace MyMvcApp.Controllers
                     TotalProperties = totalProperties,
                     OccupiedProperties = occupiedProperties,
                     VacantProperties = vacantProperties,
-                    ActiveTenancies = activeTenancies
+                    ActiveTenancies = activeTenancies,
+                    MonthlyRentRoll = monthlyRentRoll,
+                    AverageListedRent = averageListedRent,
+                    OpenMaintenanceCount = openMaintenanceRequests,
+                    OverduePaymentCount = overduePayments,
+                    DocumentCount = totalDocuments
                 },
                 MaintenanceReport = new AdminMaintenanceReportViewModel
                 {
@@ -295,7 +391,19 @@ namespace MyMvcApp.Controllers
                         .CountAsync(m => m.Priority == MaintenancePriority.High
                             && (m.Status == MaintenanceStatus.Pending
                                 || m.Status == MaintenanceStatus.Approved
-                                || m.Status == MaintenanceStatus.InProgress))
+                                || m.Status == MaintenanceStatus.InProgress)),
+                    MediumPriorityOpenCount = await _dbContext.MaintenanceRequests.AsNoTracking()
+                        .CountAsync(m => m.Priority == MaintenancePriority.Medium
+                            && (m.Status == MaintenanceStatus.Pending
+                                || m.Status == MaintenanceStatus.Approved
+                                || m.Status == MaintenanceStatus.InProgress)),
+                    LowPriorityOpenCount = await _dbContext.MaintenanceRequests.AsNoTracking()
+                        .CountAsync(m => m.Priority == MaintenancePriority.Low
+                            && (m.Status == MaintenanceStatus.Pending
+                                || m.Status == MaintenanceStatus.Approved
+                                || m.Status == MaintenanceStatus.InProgress)),
+                    AwaitingTenantConfirmationCount = await _dbContext.MaintenanceRequests.AsNoTracking()
+                        .CountAsync(m => m.Status == MaintenanceStatus.Completed && !m.TenantConfirmedAt.HasValue)
                 },
                 PaymentReport = new AdminPaymentReportViewModel
                 {
@@ -340,6 +448,60 @@ namespace MyMvcApp.Controllers
                         CreatedAt = m.CreatedAt
                     })
                     .ToListAsync(),
+                MaintenanceQueueItems = await activeMaintenanceQuery
+                    .OrderBy(m => m.Priority == MaintenancePriority.High ? 0 : m.Priority == MaintenancePriority.Medium ? 1 : 2)
+                    .ThenByDescending(m => m.CreatedAt)
+                    .Select(m => new AdminMaintenanceQueueItemViewModel
+                    {
+                        RequestId = m.RequestId,
+                        Title = m.Title,
+                        Category = m.Category,
+                        Priority = m.Priority,
+                        Status = m.Status,
+                        Description = m.Description,
+                        PropertyName = m.Property.PropertyName,
+                        TenantEmail = m.Tenant.User.Email,
+                        LandlordEmail = m.Property.Landlord != null ? m.Property.Landlord.Email : "Unassigned landlord",
+                        UnitNumber = m.Property.UnitNumber ?? string.Empty,
+                        Location = m.Property.City + ", " + m.Property.State,
+                        PreferredDate = m.PreferredDate,
+                        ResolvedDate = m.ResolvedDate,
+                        LandlordRemarks = m.LandlordRemarks ?? string.Empty,
+                        HasIssueImage = !string.IsNullOrWhiteSpace(m.IssueImageKey),
+                        TenantConfirmedAt = m.TenantConfirmedAt,
+                        TenantFeedbackRating = m.TenantFeedbackRating,
+                        TenantFeedbackComment = m.TenantFeedbackComment ?? string.Empty,
+                        CreatedAt = m.CreatedAt,
+                        UpdatedAt = m.UpdatedAt
+                    })
+                    .ToListAsync(),
+                MaintenanceHistoryItems = await maintenanceHistoryQuery
+                    .OrderByDescending(m => m.ResolvedDate ?? m.UpdatedAt)
+                    .ThenByDescending(m => m.CreatedAt)
+                    .Select(m => new AdminMaintenanceQueueItemViewModel
+                    {
+                        RequestId = m.RequestId,
+                        Title = m.Title,
+                        Category = m.Category,
+                        Priority = m.Priority,
+                        Status = m.Status,
+                        Description = m.Description,
+                        PropertyName = m.Property.PropertyName,
+                        TenantEmail = m.Tenant.User.Email,
+                        LandlordEmail = m.Property.Landlord != null ? m.Property.Landlord.Email : "Unassigned landlord",
+                        UnitNumber = m.Property.UnitNumber ?? string.Empty,
+                        Location = m.Property.City + ", " + m.Property.State,
+                        PreferredDate = m.PreferredDate,
+                        ResolvedDate = m.ResolvedDate,
+                        LandlordRemarks = m.LandlordRemarks ?? string.Empty,
+                        HasIssueImage = !string.IsNullOrWhiteSpace(m.IssueImageKey),
+                        TenantConfirmedAt = m.TenantConfirmedAt,
+                        TenantFeedbackRating = m.TenantFeedbackRating,
+                        TenantFeedbackComment = m.TenantFeedbackComment ?? string.Empty,
+                        CreatedAt = m.CreatedAt,
+                        UpdatedAt = m.UpdatedAt
+                    })
+                    .ToListAsync(),
                 RecentPayments = await _dbContext.Payments.AsNoTracking()
                     .OrderByDescending(p => p.CreatedAt)
                     .Take(5)
@@ -353,6 +515,42 @@ namespace MyMvcApp.Controllers
                         Amount = p.Amount,
                         Status = p.Status,
                         CreatedAt = p.CreatedAt
+                    })
+                    .ToListAsync(),
+                PropertySnapshots = await propertyDirectoryQuery
+                    .OrderBy(p => p.PropertyName)
+                    .ThenBy(p => p.UnitNumber)
+                    .Select(p => new AdminPropertySnapshotViewModel
+                    {
+                        PropertyId = p.PropertyId,
+                        PropertyName = p.PropertyName,
+                        PropertyType = p.PropertyType.ToString(),
+                        AddressLine1 = p.AddressLine1,
+                        AddressLine2 = p.AddressLine2 ?? string.Empty,
+                        PostalCode = p.PostalCode,
+                        UnitNumber = p.UnitNumber ?? string.Empty,
+                        FloorNumber = p.FloorNumber ?? string.Empty,
+                        Location = p.City + ", " + p.State,
+                        LandlordEmail = p.Landlord != null ? p.Landlord.Email : "Unassigned landlord",
+                        TenantEmail = p.Tenant != null ? p.Tenant.User.Email : string.Empty,
+                        IsOccupied = p.Tenant != null,
+                        LeaseStatus = p.Tenant != null ? p.Tenant.LeaseStatus.ToString() : "Vacant",
+                        LeaseStartDate = p.Tenant != null ? p.Tenant.LeaseStartDate : null,
+                        LeaseEndDate = p.Tenant != null ? p.Tenant.LeaseEndDate : null,
+                        MonthlyRent = p.Tenant != null ? p.Tenant.MonthlyRent : p.MonthlyRent,
+                        DepositAmount = p.DepositAmount,
+                        SizeSqFt = p.SizeSqFt,
+                        Bedrooms = p.Bedrooms,
+                        Bathrooms = p.Bathrooms,
+                        ParkingBay = p.ParkingBay ?? string.Empty,
+                        Description = p.Description ?? string.Empty,
+                        OpenMaintenanceCount = p.MaintenanceRequests.Count(m =>
+                            m.Status == MaintenanceStatus.Pending
+                            || m.Status == MaintenanceStatus.Approved
+                            || m.Status == MaintenanceStatus.InProgress),
+                        DocumentCount = p.Documents.Count(d => !d.IsDeleted),
+                        CreatedAt = p.CreatedAt,
+                        UpdatedAt = p.UpdatedAt
                     })
                     .ToListAsync(),
                 PasswordResetRequests = await _dbContext.PasswordResetRequests.AsNoTracking()
@@ -394,10 +592,67 @@ namespace MyMvcApp.Controllers
                     .ToListAsync(),
                 Announcements = await _dbContext.SystemAnnouncements.AsNoTracking()
                     .OrderByDescending(a => a.CreatedAt)
-                    .ToListAsync()
+                    .ToListAsync(),
+                XRayReport = await BuildXRayReportAsync(utcNow)
             };
 
             return View("Admin", model);
+        }
+
+        private async Task<AdminXRayReportViewModel> BuildXRayReportAsync(DateTime utcNow)
+        {
+            var windowStart = utcNow.AddMinutes(-15);
+            var report = new AdminXRayReportViewModel
+            {
+                ServiceName = "PropEase",
+                Region = _config["AWS:Region"] ?? Environment.GetEnvironmentVariable("AWS_REGION") ?? "Not configured",
+                DaemonAddress = Environment.GetEnvironmentVariable("AWS_XRAY_DAEMON_ADDRESS") ?? "127.0.0.1:2000",
+                EnvironmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
+                SamplingRuleManifest = _config["XRay:SamplingRuleManifest"] ?? "sampling-rules.json",
+                WindowStart = windowStart,
+                WindowEnd = utcNow,
+                LastCheckedAt = utcNow
+            };
+
+            try
+            {
+                var response = await _xrayClient.GetTraceSummariesAsync(new GetTraceSummariesRequest
+                {
+                    StartTime = windowStart,
+                    EndTime = utcNow
+                });
+
+                var traceSummaries = response.TraceSummaries ?? new List<TraceSummary>();
+
+                report.IsAvailable = true;
+                report.TotalTraces = traceSummaries.Count;
+                report.ErrorCount = traceSummaries.Count(t => t.HasError.GetValueOrDefault());
+                report.FaultCount = traceSummaries.Count(t => t.HasFault.GetValueOrDefault());
+                report.ThrottleCount = traceSummaries.Count(t => t.HasThrottle.GetValueOrDefault());
+                report.SlowestDuration = traceSummaries.Count == 0
+                    ? 0
+                    : traceSummaries.Max(t => t.Duration.GetValueOrDefault());
+                report.RecentTraces = traceSummaries
+                    .OrderByDescending(t => t.StartTime)
+                    .Take(12)
+                    .Select(t => new AdminXRayTraceItemViewModel
+                    {
+                        TraceId = t.Id ?? string.Empty,
+                        Duration = t.Duration.GetValueOrDefault(),
+                        HasError = t.HasError.GetValueOrDefault(),
+                        HasFault = t.HasFault.GetValueOrDefault(),
+                        HasThrottle = t.HasThrottle.GetValueOrDefault(),
+                        StartTime = t.StartTime
+                    })
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                report.IsAvailable = false;
+                report.ErrorMessage = ex.Message;
+            }
+
+            return report;
         }
 
         [HttpPost]
@@ -606,13 +861,13 @@ namespace MyMvcApp.Controllers
                 if (string.IsNullOrWhiteSpace(normalizedRole))
                 {
                     TempData["ErrorMessage"] = "Invalid role selected.";
-                    return RedirectToAction(nameof(Dashboard));
+                    return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
                 }
 
                 if (IsCurrentUser(user.Email) && !string.Equals(normalizedRole, "Admin", StringComparison.OrdinalIgnoreCase))
                 {
                     TempData["ErrorMessage"] = "You cannot remove your own admin role.";
-                    return RedirectToAction(nameof(Dashboard));
+                    return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
                 }
 
                 var previousRole = user.Role;
@@ -627,7 +882,7 @@ namespace MyMvcApp.Controllers
                 TempData["SuccessMessage"] = $"Role updated to {normalizedRole}.";
             }
 
-            return RedirectToAction(nameof(Dashboard));
+            return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
         [HttpPost]
