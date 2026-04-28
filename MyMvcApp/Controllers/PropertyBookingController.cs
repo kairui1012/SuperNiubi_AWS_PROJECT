@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Stripe.Checkout;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
+using MyMvcApp.Services;
 
 namespace MyMvcApp.Controllers
 {
@@ -10,11 +11,13 @@ namespace MyMvcApp.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly MyMvcApp.Services.EmailService _emailService;
 
-        public PropertyBookingController(AppDbContext context, IConfiguration configuration)
+        public PropertyBookingController(AppDbContext context, IConfiguration configuration, MyMvcApp.Services.EmailService emailService)
         {
             _context = context;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         public async Task<IActionResult> Index()
@@ -142,7 +145,6 @@ namespace MyMvcApp.Controllers
 
             return Redirect(session.Url);
         }
-        // --- ADD THESE TWO METHODS ---
 
         public IActionResult Success()
         {
@@ -152,6 +154,30 @@ namespace MyMvcApp.Controllers
         public IActionResult Cancel()
         {
             return View();
+        }
+        // Paste this right above the final closing brackets of the controller
+        public async Task<IActionResult> ForceTestEmail(int id)
+        {
+            // Find the booking
+            var booking = await _context.PropertyBookings
+                .Include(b => b.Property)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (booking == null) return Content("Booking not found. Check the ID.");
+
+            // Generate a fake pass code if it doesn't have one
+            booking.PassCode ??= "TEST1234";
+
+            try
+            {
+                // FORCE the email to send
+                await _emailService.SendPropertyAccessPassAsync(booking.GuestEmail, booking, booking.PassCode);
+                return Content("SUCCESS! Email triggered. Check your terminal for [QR DEBUG] and check your inbox.");
+            }
+            catch (Exception ex)
+            {
+                return Content($"FAILED: {ex.Message}");
+            }
         }
     }
 }
