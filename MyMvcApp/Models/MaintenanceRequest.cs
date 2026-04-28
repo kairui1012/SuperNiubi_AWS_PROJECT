@@ -34,8 +34,13 @@ namespace MyMvcApp.Models
         public DateTime? PreferredDate { get; set; }
         public DateTime? ResolvedDate { get; set; }
         public string? LandlordRemarks { get; set; }
+        [MaxLength(200)]
+        public string? AssignedVendor { get; set; }
+        public decimal? EstimatedRepairCost { get; set; }
         [MaxLength(500)]
         public string? IssueImageKey { get; set; }
+        [MaxLength(500)]
+        public string? RepairImageKey { get; set; }
         public DateTime? TenantConfirmedAt { get; set; }
         [Range(1, 5)]
         public int? TenantFeedbackRating { get; set; }
@@ -47,5 +52,28 @@ namespace MyMvcApp.Models
         // Navigation
         public Tenant Tenant { get; set; } = null!;
         public Property Property { get; set; } = null!;
+        public ICollection<MaintenanceTimeline> Timeline { get; set; } = new List<MaintenanceTimeline>();
+    }
+
+    public class MaintenanceTimeline
+    {
+        [Key]
+        public int MaintenanceTimelineId { get; set; }
+
+        [ForeignKey("MaintenanceRequest")]
+        public int RequestId { get; set; }
+
+        [Required, MaxLength(100)]
+        public string Action { get; set; } = string.Empty;
+
+        [MaxLength(1000)]
+        public string? Details { get; set; }
+
+        [Required, MaxLength(256)]
+        public string ActorEmail { get; set; } = string.Empty;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public MaintenanceRequest MaintenanceRequest { get; set; } = null!;
     }
 }

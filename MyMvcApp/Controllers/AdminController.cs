@@ -32,7 +32,9 @@ namespace MyMvcApp.Controllers
             "DeleteAnnouncement",
             "VerifyPayment",
             "RejectPayment",
-            "ExportPaymentReport"
+            "ExportPaymentReport",
+            "ApproveProperty",
+            "RejectProperty"
         };
 
         private readonly AppDbContext _dbContext;
@@ -183,7 +185,8 @@ namespace MyMvcApp.Controllers
                 })
                 .ToList();
 
-            var totalProperties = await _dbContext.Properties.AsNoTracking().CountAsync();
+            var activePropertiesQuery = _dbContext.Properties.AsNoTracking().Where(p => !p.IsDeleted);
+            var totalProperties = await activePropertiesQuery.CountAsync();
             var occupiedProperties = await _dbContext.Tenants.AsNoTracking()
                 .Select(t => t.PropertyId)
                 .Distinct()
@@ -282,7 +285,10 @@ namespace MyMvcApp.Controllers
                     TotalProperties = totalProperties,
                     OccupiedProperties = occupiedProperties,
                     VacantProperties = vacantProperties,
-                    ActiveTenancies = activeTenancies
+                    ActiveTenancies = activeTenancies,
+                    PendingApprovalCount = await activePropertiesQuery.CountAsync(p => p.ApprovalStatus == PropertyApprovalStatus.Pending),
+                    ApprovedCount = await activePropertiesQuery.CountAsync(p => p.ApprovalStatus == PropertyApprovalStatus.Approved),
+                    RejectedCount = await activePropertiesQuery.CountAsync(p => p.ApprovalStatus == PropertyApprovalStatus.Rejected)
                 },
                 MaintenanceReport = new AdminMaintenanceReportViewModel
                 {
@@ -394,10 +400,83 @@ namespace MyMvcApp.Controllers
                     .ToListAsync(),
                 Announcements = await _dbContext.SystemAnnouncements.AsNoTracking()
                     .OrderByDescending(a => a.CreatedAt)
+                    .ToListAsync(),
+                PropertyApprovals = await _dbContext.Properties.AsNoTracking()
+                    .Include(p => p.Landlord)
+                    .Where(p => !p.IsDeleted && p.ApprovalStatus != PropertyApprovalStatus.Approved)
+                    .OrderBy(p => p.ApprovalStatus)
+                    .ThenByDescending(p => p.UpdatedAt)
+                    .Select(p => new AdminPropertyApprovalViewModel
+                    {
+                        PropertyId = p.PropertyId,
+                        PropertyName = p.PropertyName,
+                        LandlordEmail = p.Landlord != null ? p.Landlord.Email : "-",
+                        Address = p.AddressLine1 + " " + (p.AddressLine2 ?? "") + ", " + p.City + ", " + p.State,
+                        MonthlyRent = p.MonthlyRent,
+                        AvailabilityStatus = p.AvailabilityStatus,
+                        ApprovalStatus = p.ApprovalStatus,
+                        UpdatedAt = p.UpdatedAt
+                    })
                     .ToListAsync()
             };
 
             return View("Admin", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveProperty(int id)
+        {
+            var property = await _dbContext.Properties
+                .Include(p => p.Landlord)
+                .FirstOrDefaultAsync(p => p.PropertyId == id && !p.IsDeleted);
+
+            if (property == null)
+            {
+                TempData["ErrorMessage"] = "Property not found.";
+                return RedirectToAction(nameof(Dashboard), new { activePane = "properties" });
+            }
+
+            property.ApprovalStatus = PropertyApprovalStatus.Approved;
+            property.UpdatedAt = DateTime.UtcNow;
+            AddAuditLog(
+                "ApproveProperty",
+                "Property",
+                property.PropertyId,
+                property.Landlord?.Email,
+                $"Approved property '{property.PropertyName}'.");
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Property approved.";
+            return RedirectToAction(nameof(Dashboard), new { activePane = "properties" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectProperty(int id)
+        {
+            var property = await _dbContext.Properties
+                .Include(p => p.Landlord)
+                .FirstOrDefaultAsync(p => p.PropertyId == id && !p.IsDeleted);
+
+            if (property == null)
+            {
+                TempData["ErrorMessage"] = "Property not found.";
+                return RedirectToAction(nameof(Dashboard), new { activePane = "properties" });
+            }
+
+            property.ApprovalStatus = PropertyApprovalStatus.Rejected;
+            property.UpdatedAt = DateTime.UtcNow;
+            AddAuditLog(
+                "RejectProperty",
+                "Property",
+                property.PropertyId,
+                property.Landlord?.Email,
+                $"Rejected property '{property.PropertyName}'.");
+            await _dbContext.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Property rejected.";
+            return RedirectToAction(nameof(Dashboard), new { activePane = "properties" });
         }
 
         [HttpPost]
