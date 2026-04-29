@@ -28,7 +28,7 @@ namespace MyMvcApp.Services
             var region = RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1"); 
             using var client = new AmazonSimpleEmailServiceClient(region);
 
-            var loginUrl = "http://localhost:5051/"; 
+            var loginUrl = "https://propease.dev/Account/Login"; 
             var subject = "Your Account Has Been Approved!";
             var htmlBody = $"<h3>Hello,</h3><p>Your account has been approved by the system administrator.</p><br><a href='{loginUrl}' style='display:inline-block; padding:12px 24px; background-color:#D9C5B2; color:#14110F; text-decoration:none; border-radius:50px; font-weight:bold;'>Login to Your Account</a>";
             var textBody = $"Hello,\r\n\r\nYour account has been approved by the system administrator.\r\n\r\nLogin to Your Account here: {loginUrl}";
