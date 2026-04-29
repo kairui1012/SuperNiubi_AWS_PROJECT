@@ -1,4 +1,17 @@
+version: '3.8'
+
 services:
+  # AWS X-Ray Daemon Service
+  xray-daemon:
+    image: amazon/aws-xray-daemon:latest
+    container_name: xray-daemon
+    ports:
+      - "2000:2000/udp"
+    environment:
+      - AWS_REGION=ap-southeast-1
+    restart: unless-stopped
+
+  # Your Main Application Service
   mymvcapp:
     build:
       context: ./MyMvcApp
@@ -11,10 +24,14 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       EnableHttpsRedirection: "false"
 
-      # ✅ ADD THESE
-
+      # AWS Credentials
       AWS__UserPoolClientSecret: ${AWS_USER_POOL_CLIENT_SECRET}
       AWS__AccessKey: ${AWS_ACCESS_KEY}
       AWS__SecretKey: ${AWS_SECRET_KEY}
+      
+      # AWS X-Ray Link
+      AWS_XRAY_DAEMON_ADDRESS: xray-daemon:2000
 
+    depends_on:
+      - xray-daemon
     restart: unless-stopped
