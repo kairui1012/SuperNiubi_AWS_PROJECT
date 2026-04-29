@@ -5,12 +5,15 @@ using MyMvcApp.Services;
 using Microsoft.AspNetCore.Authentication;
 using QuestPDF.Infrastructure; 
 using Stripe;
-
+using Amazon.XRay.Recorder.Handlers.AwsSdk;
+using Amazon.XRay.Recorder.Core;
 
 
 QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
+
+AWSSDKHandler.RegisterXRayForAllServices();
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 Console.WriteLine(builder.Configuration["Stripe:SecretKey"]);
@@ -19,7 +22,8 @@ Console.WriteLine(builder.Configuration["Stripe:SecretKey"]);
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+        .AddXRayInterceptor(true));
 
 // Add Email Service
 builder.Services.AddScoped<EmailService>();
@@ -40,6 +44,8 @@ builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();
 
 var app = builder.Build();
+
+app.UseXRay("MyMvcApp"); // The string here is the name that will appear in the X-Ray console
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
