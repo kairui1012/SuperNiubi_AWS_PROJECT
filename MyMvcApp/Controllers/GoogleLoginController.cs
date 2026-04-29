@@ -1,3 +1,4 @@
+using Amazon.AspNetCore.Identity.Cognito; // ADDED
 using Amazon.Extensions.CognitoAuthentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -13,11 +14,20 @@ namespace MyMvcApp.Controllers;
 public class GoogleLoginController : Controller
 {
     private readonly SignInManager<CognitoUser> _signInManager;
+    private readonly UserManager<CognitoUser> _userManager; // ADDED
+    private readonly CognitoUserPool _pool; // ADDED
     private readonly AppDbContext _dbContext;
 
-    public GoogleLoginController(SignInManager<CognitoUser> signInManager, AppDbContext dbContext)
+    // ADDED UserManager and CognitoUserPool to the constructor
+    public GoogleLoginController(
+        SignInManager<CognitoUser> signInManager, 
+        UserManager<CognitoUser> userManager, 
+        CognitoUserPool pool, 
+        AppDbContext dbContext)
     {
         _signInManager = signInManager;
+        _userManager = userManager;
+        _pool = pool;
         _dbContext = dbContext;
     }
 
@@ -75,8 +85,26 @@ public class GoogleLoginController : Controller
         var appUser = await _dbContext.Users
             .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
+        // --- FIX START ---
         if (appUser == null)
         {
+            // 1. Create the user in AWS Cognito First
+            var cognitoUser = _pool.GetUser(normalizedEmail);
+            cognitoUser.Attributes.Add("email", normalizedEmail);
+            
+            // Generate a strong random password to satisfy Cognito requirements.
+            // The user will never actually use this password since they login via Google.
+            var randomPassword = Guid.NewGuid().ToString("N") + "Aa1!";
+            var result = await _userManager.CreateAsync(cognitoUser, randomPassword);
+
+            // Handle potential Cognito errors (gracefully ignore if they already exist in Cognito but not DB)
+            if (!result.Succeeded && !result.Errors.Any(e => e.Code == "UsernameExistsException" || e.Description.Contains("already exists")))
+            {
+                TempData["ErrorMessage"] = "Failed to create user in identity provider.";
+                return RedirectToAction(nameof(AccountController.Login), "Account", new { mode = authMode });
+            }
+
+            // 2. Create the user in the Local Database
             _dbContext.Users.Add(new AppUser
             {
                 Email = normalizedEmail,
@@ -88,6 +116,7 @@ public class GoogleLoginController : Controller
 
             return RedirectToAction(nameof(AccountController.PendingApproval), "Account");
         }
+        // --- FIX END ---
 
         if (appUser.IsDisabled)
         {
