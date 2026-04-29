@@ -245,7 +245,7 @@ namespace MyMvcApp.Controllers
                         return View(model);
                     }
 
-                    model.ImageUrl = await _s3ImageService.UploadImageAsync(PropertyImage);
+                    model.ImageUrl = await _s3ImageService.UploadImageAsync(PropertyImage, "landlord-properties");
                 }
 
                 SyncPropertyAmenities(model, AmenitiesText);
@@ -366,7 +366,7 @@ namespace MyMvcApp.Controllers
                         return View(model);
                     }
 
-                    existingProperty.ImageUrl = await _s3ImageService.UploadImageAsync(PropertyImage);
+                    existingProperty.ImageUrl = await _s3ImageService.UploadImageAsync(PropertyImage, "landlord-properties");
                 }
 
                 SyncPropertyAmenities(existingProperty, AmenitiesText);
