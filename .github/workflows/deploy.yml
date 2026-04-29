@@ -38,13 +38,13 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          # 1. Create a custom network so the containers can talk to each other
-          docker network create xray-network || true
-
-          # 2. Stop and remove existing containers
+          # 1. Stop and remove existing containers FIRST
           docker stop mymvcapp xray-daemon || true
           docker rm mymvcapp xray-daemon || true
           docker system prune -f || true
+
+          # 2. Create the custom network AFTER pruning
+          docker network create xray-network || true
 
           # 3. Pull latest app image
           docker pull ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
