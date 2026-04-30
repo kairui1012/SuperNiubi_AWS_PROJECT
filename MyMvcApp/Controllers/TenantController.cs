@@ -1168,7 +1168,7 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Visitors), new { passId = pass.VisitorPassId });
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = "Security")]
         [Route("/ValidateQrPass")]
         //[Route("/Tenant/ValidateVisitorPass")]
         public async Task<IActionResult> ValidateVisitorPass(string? passCode, bool checkedIn = false)
@@ -1216,7 +1216,7 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = "Security")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ValidateVisitorPassAndCheckIn(string passCode)

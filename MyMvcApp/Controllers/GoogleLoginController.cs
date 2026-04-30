@@ -165,6 +165,7 @@ public class GoogleLoginController : Controller
     {
         if (role == "Admin") return RedirectToAction("Dashboard", "Admin");
         if (role == "Landlord") return RedirectToAction("Dashboard", "Landlord");
+        if (role == "Security") return RedirectToAction(nameof(TenantController.ValidateVisitorPass), "Tenant");
         return RedirectToAction("Dashboard", "Tenant");
     }
 }

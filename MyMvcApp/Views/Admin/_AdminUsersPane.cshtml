@@ -29,6 +29,7 @@
                             <option value="">All roles</option>
                             <option value="Tenant" selected="@(Model.RoleFilter == "Tenant" ? "selected" : null)">Tenant</option>
                             <option value="Landlord" selected="@(Model.RoleFilter == "Landlord" ? "selected" : null)">Landlord</option>
+                            <option value="Security" selected="@(Model.RoleFilter == "Security" ? "selected" : null)">Security</option>
                             <option value="Admin" selected="@(Model.RoleFilter == "Admin" ? "selected" : null)">Admin</option>
                         </select>
                     </div>
@@ -86,6 +87,7 @@
                                                         @(user.IsDisabled ? "disabled" : null)>
                                                     <option value="Tenant" selected="@(user.Role == "Tenant" ? "selected" : null)">Tenant</option>
                                                     <option value="Landlord" selected="@(user.Role == "Landlord" ? "selected" : null)">Landlord</option>
+                                                    <option value="Security" selected="@(user.Role == "Security" ? "selected" : null)">Security</option>
                                                     <option value="Admin" selected="@(user.Role == "Admin" ? "selected" : null)">Admin</option>
                                                 </select>
                                                 <button type="submit"

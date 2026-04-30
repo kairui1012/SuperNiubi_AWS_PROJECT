@@ -97,6 +97,7 @@ namespace MyMvcApp.Models.Admin
     {
         public int AdminCount { get; set; }
         public int LandlordCount { get; set; }
+        public int SecurityCount { get; set; }
         public int TenantCount { get; set; }
     }
 

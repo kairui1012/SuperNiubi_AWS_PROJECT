@@ -15,7 +15,7 @@ namespace MyMvcApp.Controllers
     [Authorize(Roles = "Admin")] // Optional: secures this controller
     public class AdminController : Controller
     {
-        private static readonly string[] AllowedRoles = { "Tenant", "Landlord", "Admin" };
+        private static readonly string[] AllowedRoles = { "Tenant", "Landlord", "Security", "Admin" };
         private static readonly string[] AllowedStatuses = { "Pending", "Approved", "Disabled" };
         private static readonly string[] AllowedAdminPanes = { "dashboard", "users", "properties", "maintenance", "payments", "audit", "announcements" };
         private static readonly string[] AllowedMaintenanceStatuses = { "Pending", "Approved", "InProgress", "Completed", "Rejected" };
@@ -366,6 +366,7 @@ namespace MyMvcApp.Controllers
                 {
                     AdminCount = await _dbContext.Users.AsNoTracking().CountAsync(u => u.Role == "Admin"),
                     LandlordCount = await _dbContext.Users.AsNoTracking().CountAsync(u => u.Role == "Landlord"),
+                    SecurityCount = await _dbContext.Users.AsNoTracking().CountAsync(u => u.Role == "Security"),
                     TenantCount = await _dbContext.Users.AsNoTracking().CountAsync(u => u.Role == "Tenant")
                 },
                 PropertyReport = new AdminPropertyReportViewModel

@@ -26,11 +26,12 @@
                 Model.MaintenanceReport.CompletedCount,
                 Model.MaintenanceReport.RejectedCount
             }),
-            userRoleLabels: @Json.Serialize(new[] { "Admin", "Landlord", "Tenant" }),
+            userRoleLabels: @Json.Serialize(new[] { "Admin", "Landlord", "Security", "Tenant" }),
             userRoleCounts: @Json.Serialize(new[]
             {
                 Model.UserReport.AdminCount,
                 Model.UserReport.LandlordCount,
+                Model.UserReport.SecurityCount,
                 Model.UserReport.TenantCount
             })
         };

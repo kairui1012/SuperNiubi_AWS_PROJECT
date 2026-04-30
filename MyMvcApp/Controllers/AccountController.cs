@@ -66,6 +66,7 @@ namespace MyMvcApp.Controllers
                     {
                         if (appUser.Role == "Admin") return RedirectToAction("Dashboard", "Admin");
                         if (appUser.Role == "Landlord") return RedirectToAction("Dashboard", "Landlord");
+                        if (appUser.Role == "Security") return RedirectToAction(nameof(TenantController.ValidateVisitorPass), "Tenant");
                         return RedirectToAction("Dashboard", "Tenant");
                     }
                     ViewBag.LoginError = "Invalid password.";
