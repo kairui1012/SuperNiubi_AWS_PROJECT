@@ -13,57 +13,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Login Docker Hub
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # Build Docker image (IMPORTANT: correct path)
     - name: Build Docker image
       run: |
         docker build -t ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest ./MyMvcApp
 
-    # Push image
     - name: Push Docker image
       run: |
         docker push ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
 
-    # Deploy to EC2
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v0.1.10
+    # NEW: Configure AWS Credentials
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          # 1. Stop and remove existing containers FIRST
-          docker stop mymvcapp xray-daemon || true
-          docker rm mymvcapp xray-daemon || true
-          docker system prune -f || true
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-southeast-1
 
-          # 2. Create the custom network AFTER pruning
-          docker network create xray-network || true
-
-          # 3. Pull latest app image
-          docker pull ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
-          
-          # 4. Pull and Run the AWS X-Ray Daemon
-          docker pull amazon/aws-xray-daemon:latest
-          docker run -d --restart always --name xray-daemon \
-            --network xray-network \
-            -p 2000:2000/udp \
-            -e AWS_REGION=ap-southeast-1 \
-            amazon/aws-xray-daemon:latest
-
-          # 5. Run the Main Application and link it to the daemon
-          docker run -d -p 80:8080 --restart always --name mymvcapp \
-            --network xray-network \
-            -e AWS_XRAY_DAEMON_ADDRESS=xray-daemon:2000 \
-            -e AWS__UserPoolClientSecret="${{ secrets.AWS_USER_POOL_CLIENT_SECRET }}" \
-            -e Stripe__SecretKey="${{ secrets.STRIPE_SECRET_KEY }}" \
-            -e Stripe__PublishableKey="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
-            -e Authentication__Google__ClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
-            -e Authentication__Google__ClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
+    # NEW: Trigger deployment script on all ASG instances via SSM
+    - name: Deploy to Auto Scaling Group via SSM
+      run: |
+        aws ssm send-command \
+          --document-name "AWS-RunShellScript" \
+          --targets "Key=tag:Environment,Values=Production" \
+          --parameters 'commands=["/opt/deploy.sh"]' \
+          --comment "Deploying latest Docker image to ASG"
