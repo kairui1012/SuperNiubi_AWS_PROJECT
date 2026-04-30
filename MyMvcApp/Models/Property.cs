@@ -79,7 +79,7 @@ namespace MyMvcApp.Models
         public AppUser? Landlord { get; set; }
 
         [ValidateNever]
-        public Tenant? Tenant { get; set; }
+        public ICollection<Tenant> Tenants { get; set; } = new List<Tenant>();
 
         [ValidateNever]
         public ICollection<PropertyAmenity> Amenities { get; set; } = new List<PropertyAmenity>();
