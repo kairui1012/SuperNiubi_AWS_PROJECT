@@ -206,7 +206,7 @@ namespace MyMvcApp.Controllers
             var activePropertiesQuery = _dbContext.Properties.AsNoTracking().Where(p => !p.IsDeleted);
             var totalProperties = await activePropertiesQuery.CountAsync();
             var occupiedProperties = await _dbContext.Tenants.AsNoTracking()
-                .Where(t => !t.Property.IsDeleted)
+                .Where(t => !t.Property.IsDeleted && t.LeaseStatus == LeaseStatus.Active)
                 .Select(t => t.PropertyId)
                 .Distinct()
                 .CountAsync();
@@ -247,7 +247,8 @@ namespace MyMvcApp.Controllers
                     || (p.UnitNumber != null && p.UnitNumber.Contains(normalizedPropertySearch))
                     || (p.FloorNumber != null && p.FloorNumber.Contains(normalizedPropertySearch))
                     || (p.Landlord != null && p.Landlord.Email.Contains(normalizedPropertySearch))
-                    || (p.Tenant != null && p.Tenant.User.Email.Contains(normalizedPropertySearch)));
+                    || p.Tenants.Any(t => t.LeaseStatus == LeaseStatus.Active
+                        && t.User.Email.Contains(normalizedPropertySearch)));
             }
 
             var propertyTotalMatches = await propertyDirectoryQuery.CountAsync();
@@ -562,12 +563,27 @@ namespace MyMvcApp.Controllers
                         FloorNumber = p.FloorNumber ?? string.Empty,
                         Location = p.City + ", " + p.State,
                         LandlordEmail = p.Landlord != null ? p.Landlord.Email : "Unassigned landlord",
-                        TenantEmail = p.Tenant != null ? p.Tenant.User.Email : string.Empty,
-                        IsOccupied = p.Tenant != null,
-                        LeaseStatus = p.Tenant != null ? p.Tenant.LeaseStatus.ToString() : "Vacant",
-                        LeaseStartDate = p.Tenant != null ? p.Tenant.LeaseStartDate : null,
-                        LeaseEndDate = p.Tenant != null ? p.Tenant.LeaseEndDate : null,
-                        MonthlyRent = p.Tenant != null ? p.Tenant.MonthlyRent : p.MonthlyRent,
+                        TenantEmail = p.Tenants
+                            .Where(t => t.LeaseStatus == LeaseStatus.Active)
+                            .Select(t => t.User.Email)
+                            .FirstOrDefault() ?? string.Empty,
+                        IsOccupied = p.Tenants.Any(t => t.LeaseStatus == LeaseStatus.Active),
+                        LeaseStatus = p.Tenants
+                            .Where(t => t.LeaseStatus == LeaseStatus.Active)
+                            .Select(t => t.LeaseStatus.ToString())
+                            .FirstOrDefault() ?? "Vacant",
+                        LeaseStartDate = p.Tenants
+                            .Where(t => t.LeaseStatus == LeaseStatus.Active)
+                            .Select(t => (DateTime?)t.LeaseStartDate)
+                            .FirstOrDefault(),
+                        LeaseEndDate = p.Tenants
+                            .Where(t => t.LeaseStatus == LeaseStatus.Active)
+                            .Select(t => (DateTime?)t.LeaseEndDate)
+                            .FirstOrDefault(),
+                        MonthlyRent = p.Tenants
+                            .Where(t => t.LeaseStatus == LeaseStatus.Active)
+                            .Select(t => (decimal?)t.MonthlyRent)
+                            .FirstOrDefault() ?? p.MonthlyRent,
                         DepositAmount = p.DepositAmount,
                         SizeSqFt = p.SizeSqFt,
                         Bedrooms = p.Bedrooms,

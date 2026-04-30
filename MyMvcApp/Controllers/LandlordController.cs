@@ -92,7 +92,8 @@ namespace MyMvcApp.Controllers
                 LandlordEmail = landlord.Email,
                 MyPropertiesCount = await propertiesQuery.CountAsync(),
                 TenantCount = tenants.Count,
-                VacantPropertiesCount = await propertiesQuery.CountAsync(p => p.Tenant == null),
+                VacantPropertiesCount = await propertiesQuery.CountAsync(p =>
+                    !p.Tenants.Any(t => t.LeaseStatus == LeaseStatus.Active)),
                 MonthlyRentalIncome = await _dbContext.Payments
                     .AsNoTracking()
                     .Where(p => p.Property.LandlordId == landlord.Id
@@ -153,7 +154,7 @@ namespace MyMvcApp.Controllers
             }
 
             var properties = _dbContext.Properties
-                .Include(p => p.Tenant)
+                .Include(p => p.Tenants)
                 .Where(p => p.LandlordId == landlord.Id && !p.IsDeleted)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToList();
@@ -405,7 +406,7 @@ namespace MyMvcApp.Controllers
             }
 
             var property = _dbContext.Properties
-                .Include(p => p.Tenant)
+                .Include(p => p.Tenants)
                 .FirstOrDefault(p => p.PropertyId == id && p.LandlordId == landlord.Id && !p.IsDeleted);
 
             if (property == null)
@@ -629,6 +630,7 @@ namespace MyMvcApp.Controllers
 
             var propertyOccupied = _dbContext.Tenants.Any(t =>
                 t.PropertyId == model.PropertyId &&
+                t.LeaseStatus == LeaseStatus.Active &&
                 t.TenantId != model.TenantId);
 
             if (propertyOccupied)
@@ -1237,21 +1239,26 @@ namespace MyMvcApp.Controllers
                 p.LandlordId == landlord.Id &&
                 !p.IsDeleted &&
                 p.ApprovalStatus == PropertyApprovalStatus.Approved &&
-                p.AvailabilityStatus == PropertyAvailabilityStatus.Available);
+                p.AvailabilityStatus != PropertyAvailabilityStatus.Maintenance &&
+                p.AvailabilityStatus != PropertyAvailabilityStatus.Unavailable);
 
             if (selectedProperty == null)
             {
                 ModelState.AddModelError("PropertyId", "Selected property is invalid.");
             }
 
-            var tenantAlreadyAssigned = _dbContext.Tenants.Any(t => t.UserId == model.UserId);
+            var tenantAlreadyAssigned = _dbContext.Tenants.Any(t =>
+                t.UserId == model.UserId &&
+                t.LeaseStatus == LeaseStatus.Active);
 
             if (tenantAlreadyAssigned)
             {
                 ModelState.AddModelError("UserId", "This tenant has already been assigned to a property.");
             }
 
-            var propertyAlreadyAssigned = _dbContext.Tenants.Any(t => t.PropertyId == model.PropertyId);
+            var propertyAlreadyAssigned = _dbContext.Tenants.Any(t =>
+                t.PropertyId == model.PropertyId &&
+                t.LeaseStatus == LeaseStatus.Active);
 
             if (propertyAlreadyAssigned)
             {
@@ -1315,7 +1322,9 @@ namespace MyMvcApp.Controllers
                 .Where(u =>
                     u.Role == "Tenant" &&
                     u.IsApproved &&
-                    !_dbContext.Tenants.Any(t => t.UserId == u.Id))
+                    !_dbContext.Tenants.Any(t =>
+                        t.UserId == u.Id &&
+                        t.LeaseStatus == LeaseStatus.Active))
                 .Select(u => new SelectListItem
                 {
                     Value = u.Id.ToString(),
@@ -1328,8 +1337,11 @@ namespace MyMvcApp.Controllers
                     p.LandlordId == landlordId &&
                     !p.IsDeleted &&
                     p.ApprovalStatus == PropertyApprovalStatus.Approved &&
-                    p.AvailabilityStatus == PropertyAvailabilityStatus.Available &&
-                    !_dbContext.Tenants.Any(t => t.PropertyId == p.PropertyId))
+                    p.AvailabilityStatus != PropertyAvailabilityStatus.Maintenance &&
+                    p.AvailabilityStatus != PropertyAvailabilityStatus.Unavailable &&
+                    !_dbContext.Tenants.Any(t =>
+                        t.PropertyId == p.PropertyId &&
+                        t.LeaseStatus == LeaseStatus.Active))
                 .Select(p => new SelectListItem
                 {
                     Value = p.PropertyId.ToString(),
@@ -1392,8 +1404,11 @@ namespace MyMvcApp.Controllers
                     !p.IsDeleted &&
                     p.ApprovalStatus == PropertyApprovalStatus.Approved &&
                     (p.PropertyId == currentPropertyId ||
-                        (p.AvailabilityStatus == PropertyAvailabilityStatus.Available &&
-                            !_dbContext.Tenants.Any(t => t.PropertyId == p.PropertyId))))
+                        (p.AvailabilityStatus != PropertyAvailabilityStatus.Maintenance &&
+                            p.AvailabilityStatus != PropertyAvailabilityStatus.Unavailable &&
+                            !_dbContext.Tenants.Any(t =>
+                                t.PropertyId == p.PropertyId &&
+                                t.LeaseStatus == LeaseStatus.Active))))
                 .OrderBy(p => p.PropertyName)
                 .Select(p => new SelectListItem
                 {

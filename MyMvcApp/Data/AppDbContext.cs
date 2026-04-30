@@ -114,12 +114,12 @@ namespace MyMvcApp.Data
                 .HasForeignKey(h => h.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // --- Property ↔ Tenant (one-to-one) ---
-            // Cannot delete a property while a tenant is assigned to it
+            // --- Property -> Tenant lease records ---
+            // A property can have multiple historical leases; business logic treats only Active leases as occupied.
             modelBuilder.Entity<Tenant>()
                 .HasOne(t => t.Property)
-                .WithOne(p => p.Tenant)
-                .HasForeignKey<Tenant>(t => t.PropertyId)
+                .WithMany(p => p.Tenants)
+                .HasForeignKey(t => t.PropertyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // --- Property → PropertyAmenity ---
