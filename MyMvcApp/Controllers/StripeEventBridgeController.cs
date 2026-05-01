@@ -8,6 +8,7 @@ using MyMvcApp.Data;
 using MyMvcApp.Models;
 using MyMvcApp.Services;
 using Stripe;
+using Amazon.XRay.Recorder.Core;
 
 namespace MyMvcApp.Controllers
 {
@@ -50,8 +51,18 @@ namespace MyMvcApp.Controllers
                 return BadRequest("Stripe event type is missing.");
             }
 
+            // 1. START X-RAY SUBSEGMENT
+            AWSXRayRecorder.Instance.BeginSubsegment("ProcessStripeEventBridgeWebhook");
+
             try
             {
+                // 2. ADD SEARCHABLE ANNOTATIONS
+                if (!string.IsNullOrEmpty(eventId)) 
+                {
+                    AWSXRayRecorder.Instance.AddAnnotation("StripeEventId", eventId);
+                }
+                AWSXRayRecorder.Instance.AddAnnotation("EventType", eventType);
+
                 return eventType switch
                 {
                     "checkout.session.completed" => await HandleCheckoutSessionCompletedAsync(stripeEvent, eventId),
@@ -67,8 +78,20 @@ namespace MyMvcApp.Controllers
             }
             catch (Exception ex)
             {
+                // 3. CAPTURE FAILURES IN X-RAY
+                AWSXRayRecorder.Instance.AddAnnotation("WebhookStatus", "Failed");
+                
+                // Dump the full exception into Metadata (viewable in the trace details)
+                AWSXRayRecorder.Instance.AddMetadata("WebhookError", "ExceptionMessage", ex.Message);
+                AWSXRayRecorder.Instance.AddMetadata("WebhookError", "StackTrace", ex.StackTrace);
+
                 _logger.LogError(ex, "Failed to process Stripe EventBridge event {EventType} {EventId}.", eventType, eventId);
                 return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+            finally
+            {
+                // 4. CRITICAL: ALWAYS END THE SUBSEGMENT
+                AWSXRayRecorder.Instance.EndSubsegment();
             }
         }
 
