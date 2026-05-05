@@ -536,6 +536,17 @@ body.landlord-cloud-skin {
     color: #fca5a5;
 }
 
+.landlord-cloud-skin input[type="number"]::-webkit-outer-spin-button,
+.landlord-cloud-skin input[type="number"]::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}
+
+.landlord-cloud-skin input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 /* ===== Responsive ===== */
 
 @media (max-width: 1000px) {
