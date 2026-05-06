@@ -16,7 +16,6 @@ var builder = WebApplication.CreateBuilder(args);
 AWSSDKHandler.RegisterXRayForAllServices();
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
-Console.WriteLine(builder.Configuration["Stripe:SecretKey"]);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

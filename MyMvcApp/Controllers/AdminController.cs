@@ -736,7 +736,7 @@ namespace MyMvcApp.Controllers
                 catch (Exception ex)
                 {
                     TempData["ErrorMessage"] = $"Failed to confirm in Cognito: {ex.Message}";
-                    return RedirectToAction(nameof(Dashboard));
+                    return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
                 }
 
                 user.IsApproved = true;
@@ -760,7 +760,7 @@ namespace MyMvcApp.Controllers
                     TempData["SuccessMessage"] = "User approved, but the notification email failed to send.";
                 }
             }
-            return RedirectToAction(nameof(Dashboard));
+            return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
         [HttpPost]
@@ -772,7 +772,7 @@ namespace MyMvcApp.Controllers
             if (request == null || request.Status != PasswordResetRequestStatus.Pending)
             {
                 TempData["ErrorMessage"] = "Password reset request is no longer available.";
-                return RedirectToAction(nameof(Dashboard));
+                return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
             }
 
             try
@@ -787,7 +787,7 @@ namespace MyMvcApp.Controllers
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = $"Failed to send reset email through Cognito: {ex.Message}";
-                return RedirectToAction(nameof(Dashboard));
+                return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
             }
 
             request.Status = PasswordResetRequestStatus.Approved;
@@ -802,7 +802,7 @@ namespace MyMvcApp.Controllers
             await _dbContext.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Password reset approved. Cognito has sent the reset email.";
-            return RedirectToAction(nameof(Dashboard));
+            return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
         [HttpPost]
@@ -814,7 +814,7 @@ namespace MyMvcApp.Controllers
             if (request == null || request.Status != PasswordResetRequestStatus.Pending)
             {
                 TempData["ErrorMessage"] = "Password reset request is no longer available.";
-                return RedirectToAction(nameof(Dashboard));
+                return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
             }
 
             request.Status = PasswordResetRequestStatus.Rejected;
@@ -829,7 +829,7 @@ namespace MyMvcApp.Controllers
             await _dbContext.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Password reset request rejected.";
-            return RedirectToAction(nameof(Dashboard));
+            return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
         [HttpPost]
@@ -841,7 +841,7 @@ namespace MyMvcApp.Controllers
                 if (IsCurrentUser(user.Email))
                 {
                     TempData["ErrorMessage"] = "You cannot disable your own admin account.";
-                    return RedirectToAction(nameof(Dashboard));
+                    return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
                 }
 
                 try
@@ -858,7 +858,7 @@ namespace MyMvcApp.Controllers
                 catch (Exception ex)
                 {
                     TempData["ErrorMessage"] = $"Failed to disable in Cognito: {ex.Message}";
-                    return RedirectToAction(nameof(Dashboard));
+                    return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
                 }
 
                 // Mark as disabled in Neon DB
@@ -872,7 +872,7 @@ namespace MyMvcApp.Controllers
                 await _dbContext.SaveChangesAsync();
                 TempData["SuccessMessage"] = "User has been disabled successfully.";
             }
-            return RedirectToAction(nameof(Dashboard));
+            return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
         [HttpPost]
@@ -895,7 +895,7 @@ namespace MyMvcApp.Controllers
                 catch (Exception ex)
                 {
                     TempData["ErrorMessage"] = $"Failed to enable in Cognito: {ex.Message}";
-                    return RedirectToAction(nameof(Dashboard));
+                    return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
                 }
 
                 // 2. Mark as enabled in Neon DB
@@ -909,7 +909,7 @@ namespace MyMvcApp.Controllers
                 await _dbContext.SaveChangesAsync();
                 TempData["SuccessMessage"] = "User has been enabled successfully.";
             }
-            return RedirectToAction(nameof(Dashboard));
+            return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
         [HttpPost]
