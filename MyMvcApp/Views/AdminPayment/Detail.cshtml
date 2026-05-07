@@ -30,10 +30,11 @@
 
 @{
     ViewData["Title"] = $"Payment #{Model.PaymentId}";
+    ViewData["AdminActivePane"] = "payments";
 
-    var listUrl = string.IsNullOrWhiteSpace(Model.ReturnUrl)
-        ? Url.Action("Index", "AdminPayment")
-        : Url.Action("Index", "AdminPayment") + Model.ReturnUrl;
+    var listUrl = !string.IsNullOrWhiteSpace(Model.ReturnUrl) && Url.IsLocalUrl(Model.ReturnUrl)
+        ? Model.ReturnUrl
+        : Url.Action("Dashboard", "Admin", new { activePane = "payments" });
 }
 
 @section Styles {
@@ -41,29 +42,8 @@
     <link rel="stylesheet" href="~/css/pages/admin.css" asp-append-version="true" />
 }
 
-<div class="landlord-console admin-console" data-admin-page>
-    <aside class="landlord-rail">
-        <div class="landlord-rail-brand">
-            <span class="landlord-rail-logo">
-                <i class="bi bi-receipt"></i>
-            </span>
-            <div>
-                <p class="landlord-rail-title">Payment Detail</p>
-                <p class="landlord-rail-sub">#@Model.PaymentId</p>
-            </div>
-        </div>
-        <nav class="landlord-rail-nav">
-            <a href="@listUrl" class="landlord-rail-link">
-                <i class="bi bi-arrow-left-circle"></i>
-                Back to list
-            </a>
-            <a asp-controller="Admin" asp-action="Dashboard" asp-route-activePane="payments"
-               class="landlord-rail-link">
-                <i class="bi bi-grid-1x2-fill"></i>
-                Dashboard
-            </a>
-        </nav>
-    </aside>
+<div class="landlord-console admin-console" data-admin-detail-page>
+    <partial name="~/Views/Admin/_AdminRail.cshtml" />
 
     <section class="landlord-workspace admin-workspace">
         <div class="admin-shell">
@@ -420,3 +400,17 @@
         </div>
     </section>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const dashboardUrl = '@Url.Action("Dashboard", "Admin")';
+            document.querySelectorAll('[data-admin-switch]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const pane = button.dataset.adminSwitch || 'dashboard';
+                    window.location.href = `${dashboardUrl}?activePane=${encodeURIComponent(pane)}`;
+                });
+            });
+        })();
+    </script>
+}
