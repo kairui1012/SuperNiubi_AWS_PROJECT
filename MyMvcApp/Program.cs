@@ -58,21 +58,15 @@ builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 // 2. Register your custom S3 Image Service
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();
 
-// Persist DataProtection keys to disk so machine-key / encryption keys are stable
-// across restarts / multiple instances. Adjust path if running in containers.
-var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys");
-Directory.CreateDirectory(keysFolder);
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
-    .SetApplicationName("PropEase");
+var dataProtectionBuilder = builder.Services.AddDataProtection()
+    .SetApplicationName("ProPease");
 
-// Configure forwarded headers to respect reverse proxy (load balancer) headers
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
-});
+    Directory.CreateDirectory(dataProtectionKeysPath);
+    dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+}
 
 var app = builder.Build();
 
@@ -90,9 +84,6 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-
-// Process proxy headers (X-Forwarded-For, X-Forwarded-Proto) before authentication
-app.UseForwardedHeaders();
 
 // In containerized HTTP deployments (e.g. direct EC2), keep HTTPS redirection optional.
 if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection"))
