@@ -24,6 +24,19 @@ StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders =
+            ForwardedHeaders.XForwardedFor |
+            ForwardedHeaders.XForwardedProto |
+            ForwardedHeaders.XForwardedHost;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
         .AddXRayInterceptor(true));
@@ -90,6 +103,11 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 var app = builder.Build();
+
+if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
+{
+    app.UseForwardedHeaders();
+}
 
 app.UseXRay("MyMvcApp"); // The string here is the name that will appear in the X-Ray console
 
