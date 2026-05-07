@@ -15,6 +15,9 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 
 EXPOSE 8080
 
+# Create the persistent DataProtection keys directory (will be mounted as volume)
+RUN mkdir -p /var/propease/dataprotection-keys && chmod 755 /var/propease/dataprotection-keys
+
 COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "MyMvcApp.dll"]

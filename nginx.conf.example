@@ -1,0 +1,124 @@
+# Nginx Reverse Proxy Configuration for PropEase
+# 用于在云端代理 ASP.NET Core 应用，处理 HTTPS 终止和转发头
+
+upstream propease_backend {
+    # 如果是 docker-compose，这里是 service name:port
+    server mymvcapp:8080;
+    
+    # 如果有多个后端实例，添加更多行（需要 load balancer）
+    # server backend2:8080;
+    # server backend3:8080;
+}
+
+# HTTP 到 HTTPS 重定向
+server {
+    listen 80;
+    server_name propease.dev www.propease.dev;
+    
+    # 强制重定向到 HTTPS
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS 主服务器
+server {
+    listen 443 ssl http2;
+    server_name propease.dev www.propease.dev;
+    
+    # ========== SSL 证书配置 ==========
+    # 使用 Let's Encrypt 或其他 CA 颁发的证书
+    ssl_certificate /etc/ssl/certs/propease.dev.crt;
+    ssl_certificate_key /etc/ssl/private/propease.dev.key;
+    
+    # SSL 安全配置（推荐）
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    
+    # HSTS 头（可选，确保只走 HTTPS）
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    # ========== 反向代理配置 ==========
+    location / {
+        proxy_pass http://propease_backend;
+        
+        # ========== CRITICAL: 转发必要的代理头 ==========
+        # 这些头供 ASP.NET Core ForwardedHeaders 中间件读取
+        
+        # 转发原始 Host（重要：保持 propease.dev）
+        proxy_set_header Host $host;
+        
+        # 转发客户端真实 IP
+        proxy_set_header X-Real-IP $remote_addr;
+        
+        # 转发所有代理链中的 IP
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        
+        # CRITICAL：转发原始请求 scheme（http 或 https）
+        # 这是修复 Identity cookie 问题的关键！
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # 转发原始 Host
+        proxy_set_header X-Forwarded-Host $host;
+        
+        # 转发原始端口
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # 告知后端有代理
+        proxy_set_header X-Forwarded-Prefix /;
+        
+        # ========== WebSocket 支持（如需要） ==========
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # ========== 超时配置 ==========
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # 其他有用的配置
+        proxy_buffering off;  # 禁用缓冲，实时响应
+        proxy_redirect off;   # 不修改重定向位置
+    }
+    
+    # ========== 性能优化 ==========
+    
+    # 压缩静态资源
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss;
+    gzip_min_length 1024;
+    
+    # 缓存静态文件
+    location ~* \.(css|js|images|fonts)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # 日志配置
+    access_log /var/log/nginx/propease_access.log;
+    error_log /var/log/nginx/propease_error.log;
+}
+
+# 可选：性能和安全监控
+upstream propease_monitoring {
+    # 如果有专门的监控端点
+    server mymvcapp:8080;
+}
+
+server {
+    listen 443 ssl;
+    server_name monitoring.propease.dev;
+    
+    ssl_certificate /etc/ssl/certs/propease.dev.crt;
+    ssl_certificate_key /etc/ssl/private/propease.dev.key;
+    
+    location / {
+        proxy_pass http://propease_monitoring;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

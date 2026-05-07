@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # AWS X-Ray Daemon Service
@@ -29,13 +29,21 @@ services:
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
 
+      # DataProtection keys path (must be on persistent storage)
+      DATAPROTECTION_KEYS_PATH: /var/propease/dataprotection-keys
+
       # AWS Credentials
       AWS__UserPoolClientSecret: ${AWS_USER_POOL_CLIENT_SECRET}
       AWS__AccessKey: ${AWS_ACCESS_KEY}
       AWS__SecretKey: ${AWS_SECRET_KEY}
-      
+
       # AWS X-Ray Link
       AWS_XRAY_DAEMON_ADDRESS: xray-daemon:2000
+
+    volumes:
+      # CRITICAL: Mount persistent volume for DataProtection keys
+      # This ensures keys survive container restarts and are shared across instances
+      - /var/propease/dataprotection-keys:/var/propease/dataprotection-keys
 
     depends_on:
       - xray-daemon

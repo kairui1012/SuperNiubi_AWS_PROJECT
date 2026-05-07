@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Stripe;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using Amazon.XRay.Recorder.Core;
+using Microsoft.AspNetCore.Http;
 
 
 QuestPDF.Settings.License = LicenseType.Community;
@@ -69,15 +70,48 @@ builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 // 2. Register your custom S3 Image Service
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();
 
-var dataProtectionBuilder = builder.Services.AddDataProtection()
-    .SetApplicationName("ProPease");
+// ========== CRITICAL: DataProtection Key Persistence ==========
+// Persist DataProtection keys to a shared, persistent location.
+// In production, this MUST be on shared storage (EFS, shared volume) if you have multiple instances.
+// Otherwise, each instance will have different keys and cookies won't be recognized across instances.
+var dataProtectionKeysPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYS_PATH") 
+    ?? (builder.Environment.IsDevelopment() 
+        ? Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")
+        : "/var/propease/dataprotection-keys");
 
-var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
-if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+Directory.CreateDirectory(dataProtectionKeysPath);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("PropEase");
+
+// ========== Forwarded Headers Configuration ==========
+// REQUIRED when behind a reverse proxy (Nginx, ALB, etc).
+// This ensures X-Forwarded-Proto, X-Forwarded-For headers are processed correctly.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    Directory.CreateDirectory(dataProtectionKeysPath);
-    dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
-}
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// ========== Identity Application Cookie Configuration ==========
+// Explicitly configure the Identity Application Cookie to ensure it's recognized across requests.
+// This is crucial when the app sits behind a reverse proxy or load balancer.
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.LogoutPath = "/Account/Logout";
+    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromDays(14);
+
+    // Cookie security settings - important for HTTPS deployments
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.Path = "/";
+    options.Cookie.Name = ".AspNetCore.Identity.Application";
+});
 
 var app = builder.Build();
 
@@ -96,6 +130,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// ========== CRITICAL: ForwardedHeaders Middleware MUST come FIRST ==========
+// This must be before UseHttpsRedirection, UseAuthentication, etc.
+// It processes X-Forwarded-Proto header to determine if request is HTTPS
+app.UseForwardedHeaders();
+
 // In containerized HTTP deployments (e.g. direct EC2), keep HTTPS redirection optional.
 if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection"))
 {
@@ -105,7 +144,37 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); 
+app.UseAuthentication();
+
+// ========== DEBUG MIDDLEWARE: Log authentication state for troubleshooting ==========
+// This helps identify whether cookie decryption is working correctly across requests.
+// Only logs specific paths to reduce noise.
+app.Use(async (context, next) =>
+{
+    var machine = Environment.MachineName;
+    var processId = Environment.ProcessId;
+    var path = context.Request.Path;
+    var host = context.Request.Host.ToString();
+    var scheme = context.Request.Scheme;
+    var isAuth = context.User.Identity?.IsAuthenticated ?? false;
+    var name = context.User.Identity?.Name ?? "anonymous";
+    var hasIdentityCookie = context.Request.Cookies.ContainsKey(".AspNetCore.Identity.Application");
+    var roles = string.Join(",", context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
+
+    // Only log specific paths to reduce noise
+    if (path.StartsWithSegments("/Account/CheckAuth") || 
+        path.StartsWithSegments("/Admin") ||
+        path.StartsWithSegments("/Account/Login"))
+    {
+        Console.WriteLine(
+            $"[AUTH_DEBUG] Machine={machine} | PID={processId} | Host={host} | Scheme={scheme} | Path={path} | " +
+            $"IsAuth={isAuth} | Name={name} | HasIdentityCookie={hasIdentityCookie} | Roles={roles}"
+        );
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.UseMiddleware<MyMvcApp.Middlewares.XRayUserTrackingMiddleware>();
