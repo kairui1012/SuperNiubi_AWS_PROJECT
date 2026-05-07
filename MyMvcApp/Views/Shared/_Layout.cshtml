@@ -94,7 +94,7 @@
                     </ul>
                     
                     <div class="d-flex align-items-center gap-3 mt-3 mt-sm-0 app-topbar-actions">
-                        <button id="theme-toggle" class="btn p-2 app-page-theme-toggle" aria-label="Toggle theme">
+                        <button id="theme-toggle" type="button" class="btn p-2 app-page-theme-toggle" aria-label="Toggle theme">
                             <i class="bi bi-moon-stars fs-5" id="theme-icon"></i>
                         </button>
                         
@@ -114,6 +114,7 @@
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end app-account-dropdown">
                                     <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
                                         <button type="submit" class="app-account-item app-account-item-danger">
                                             <i class="bi bi-box-arrow-right"></i>
                                             Logout

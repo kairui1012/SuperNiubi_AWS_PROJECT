@@ -47,7 +47,7 @@
                 <h1 class="tenant-heading">Service Requests</h1>
                 <p class="tenant-sub">Create tickets, monitor status changes, and maintain a clear issue timeline.</p>
             </div>
-            <button class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ New Request</button>
+            <button type="button" class="btn tenant-btn tenant-btn-primary" onclick="toggleForm()">+ New Request</button>
         </div>
 
         <div class="tenant-grid-4">
@@ -131,10 +131,10 @@
             <div class="tenant-panel-head">
                 <h3 class="tenant-panel-title">Request Queue</h3>
                 <div class="tenant-filter">
-                    <button class="filter-btn active" onclick="filterRequests(this,'all')">All</button>
-                    <button class="filter-btn" onclick="filterRequests(this,'Pending')">Pending</button>
-                    <button class="filter-btn" onclick="filterRequests(this,'Approved')">Approved</button>
-                    <button class="filter-btn" onclick="filterRequests(this,'Completed')">Completed</button>
+                    <button type="button" class="filter-btn active" onclick="filterRequests(this,'all')">All</button>
+                    <button type="button" class="filter-btn" onclick="filterRequests(this,'Pending')">Pending</button>
+                    <button type="button" class="filter-btn" onclick="filterRequests(this,'Approved')">Approved</button>
+                    <button type="button" class="filter-btn" onclick="filterRequests(this,'Completed')">Completed</button>
                 </div>
             </div>
             <div class="tenant-panel-body p-0">
