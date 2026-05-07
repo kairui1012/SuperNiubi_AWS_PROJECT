@@ -3,6 +3,7 @@ using Amazon.Extensions.CognitoAuthentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using MyMvcApp.Models;
 using MyMvcApp.Data; // ADD THIS
 
@@ -174,6 +175,19 @@ namespace MyMvcApp.Controllers
         {
             await _signInManager.SignOutAsync();
             return RedirectToAction(nameof(Login), "Account");
+        }
+
+        [HttpGet]
+        public IActionResult CheckAuth()
+        {
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            return Json(new
+            {
+                IsAuthenticated = User.Identity?.IsAuthenticated ?? false,
+                Name = User.Identity?.Name,
+                AuthenticationType = User.Identity?.AuthenticationType,
+                Claims = claims
+            });
         }
 
     }

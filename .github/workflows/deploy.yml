@@ -27,7 +27,6 @@ jobs:
       run: |
         docker push ${{ secrets.DOCKER_USERNAME }}/mymvcapp:latest
 
-    # NEW: Configure AWS Credentials
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -35,11 +34,13 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
         aws-region: ap-southeast-1
 
-    # NEW: Trigger deployment script on all ASG instances via SSM
     - name: Deploy to Auto Scaling Group via SSM
       run: |
         aws ssm send-command \
           --document-name "AWS-RunShellScript" \
           --targets "Key=tag:Environment,Values=Production" \
-          --parameters 'commands=["/opt/deploy.sh"]' \
+          --parameters 'commands=[
+            "chmod +x /opt/deploy.sh",
+            "/opt/deploy.sh"
+          ]' \
           --comment "Deploying latest Docker image to ASG"

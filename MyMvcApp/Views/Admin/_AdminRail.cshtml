@@ -1,3 +1,9 @@
+@{
+    var activePane = (ViewData["AdminActivePane"] as string) ?? "dashboard";
+    string ActiveClass(string pane) => activePane == pane ? " active is-active" : string.Empty;
+    string AriaPressed(string pane) => activePane == pane ? "true" : "false";
+}
+
 <aside class="landlord-rail">
     <div class="landlord-rail-brand">
         <span class="landlord-rail-logo">
@@ -11,65 +17,65 @@
 
     <nav class="landlord-rail-nav" aria-label="Admin sections">
         <button type="button"
-                class="landlord-rail-link admin-rail-switch active"
+                class="landlord-rail-link admin-rail-switch@(ActiveClass("dashboard"))"
                 data-admin-switch="dashboard"
                 data-admin-kicker="Dashboard"
                 data-admin-title="Analytics"
-                aria-pressed="true">
+                aria-pressed="@AriaPressed("dashboard")">
             <i class="bi bi-grid-1x2-fill"></i>
             Dashboard
         </button>
         <button type="button"
-                class="landlord-rail-link admin-rail-switch"
+                class="landlord-rail-link admin-rail-switch@(ActiveClass("users"))"
                 data-admin-switch="users"
                 data-admin-kicker="Users"
                 data-admin-title="User Management"
-                aria-pressed="false">
+                aria-pressed="@AriaPressed("users")">
             <i class="bi bi-people-fill"></i>
             User Management
         </button>
         <button type="button"
-                class="landlord-rail-link admin-rail-switch"
+                class="landlord-rail-link admin-rail-switch@(ActiveClass("properties"))"
                 data-admin-switch="properties"
                 data-admin-kicker="Properties"
                 data-admin-title="Property Overview"
-                aria-pressed="false">
+                aria-pressed="@AriaPressed("properties")">
             <i class="bi bi-houses-fill"></i>
             Property Overview
         </button>
         <button type="button"
-                class="landlord-rail-link admin-rail-switch"
+                class="landlord-rail-link admin-rail-switch@(ActiveClass("maintenance"))"
                 data-admin-switch="maintenance"
                 data-admin-kicker="Maintenance"
                 data-admin-title="Maintenance Queue"
-                aria-pressed="false">
+                aria-pressed="@AriaPressed("maintenance")">
             <i class="bi bi-tools"></i>
             Maintenance Queue
         </button>
         <button type="button"
-                class="landlord-rail-link admin-rail-switch"
+                class="landlord-rail-link admin-rail-switch@(ActiveClass("payments"))"
                 data-admin-switch="payments"
                 data-admin-kicker="Payments"
                 data-admin-title="Payment Center"
-                aria-pressed="false">
+                aria-pressed="@AriaPressed("payments")">
             <i class="bi bi-wallet2"></i>
             Payment Center
         </button>
         <button type="button"
-                class="landlord-rail-link admin-rail-switch"
+                class="landlord-rail-link admin-rail-switch@(ActiveClass("audit"))"
                 data-admin-switch="audit"
                 data-admin-kicker="Audit"
                 data-admin-title="Audit Trail"
-                aria-pressed="false">
+                aria-pressed="@AriaPressed("audit")">
             <i class="bi bi-clock-history"></i>
             Audit Trail
         </button>
         <button type="button"
-                class="landlord-rail-link admin-rail-switch"
+                class="landlord-rail-link admin-rail-switch@(ActiveClass("announcements"))"
                 data-admin-switch="announcements"
                 data-admin-kicker="Announcements"
                 data-admin-title="System Announcements"
-                aria-pressed="false">
+                aria-pressed="@AriaPressed("announcements")">
             <i class="bi bi-megaphone-fill"></i>
             Announcements
         </button>

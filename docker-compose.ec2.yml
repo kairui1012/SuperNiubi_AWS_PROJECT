@@ -23,6 +23,11 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       EnableHttpsRedirection: "false"
+      EnableForwardedHeaders: ${ENABLE_FORWARDED_HEADERS:-false}
+
+      # Google OAuth
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
 
       # AWS Credentials
       AWS__UserPoolClientSecret: ${AWS_USER_POOL_CLIENT_SECRET}

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Amazon.S3;
+using Amazon.S3.Model;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -25,17 +27,23 @@ namespace MyMvcApp.Controllers
         private readonly IS3ImageService _s3ImageService;
         private readonly EmailService _emailService;
         private readonly IWebHostEnvironment _environment;
+        private readonly IAmazonS3 _s3Client;
+        private readonly IConfiguration _configuration;
 
         public LandlordController(
             AppDbContext dbContext,
             IS3ImageService s3ImageService,
             EmailService emailService,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            IAmazonS3 s3Client,
+            IConfiguration configuration)
         {
             _dbContext = dbContext;
             _s3ImageService = s3ImageService;
             _emailService = emailService;
             _environment = environment;
+            _s3Client = s3Client;
+            _configuration = configuration;
         }
 
         public async Task<IActionResult> Dashboard()
@@ -993,20 +1001,35 @@ namespace MyMvcApp.Controllers
                 return View(nameof(Documents), invalidModel);
             }
 
-            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "landlord", landlord.Id.ToString(), "documents");
-            Directory.CreateDirectory(uploadsFolder);
-
             var extension = Path.GetExtension(file!.FileName).ToLowerInvariant();
             var savedFileName = $"{Guid.NewGuid():N}{extension}";
-            var physicalPath = Path.Combine(uploadsFolder, savedFileName);
+            var key = $"landlord/{landlord.Id}/documents/{savedFileName}";
 
-            await using (var stream = System.IO.File.Create(physicalPath))
+            var bucketName = _configuration["AWS:BucketName"];
+            var region = _configuration["AWS:Region"] ?? "us-east-1";
+            if (string.IsNullOrWhiteSpace(bucketName))
             {
-                await file.CopyToAsync(stream);
+                ModelState.AddModelError("NewDocument.File", "S3 bucket is not configured.");
+                var invalidModel = await BuildLandlordDocumentsViewModelAsync(landlord.Id, model.NewDocument);
+                return View(nameof(Documents), invalidModel);
             }
 
-            var fileKey = Path.Combine("uploads", "landlord", landlord.Id.ToString(), "documents", savedFileName)
-                .Replace("\\", "/");
+            await using var memory = new MemoryStream();
+            await file.CopyToAsync(memory);
+            memory.Position = 0;
+
+            var putRequest = new PutObjectRequest
+            {
+                BucketName = bucketName,
+                Key = key,
+                InputStream = memory,
+                ContentType = file.ContentType
+            };
+
+            await _s3Client.PutObjectAsync(putRequest);
+
+            var fileKey = key;
+            var s3Url = $"https://{bucketName}.s3.{region}.amazonaws.com/{fileKey}";
 
             var document = new Document
             {
@@ -1018,7 +1041,7 @@ namespace MyMvcApp.Controllers
                 FileKey = fileKey,
                 FileSize = (int)Math.Min(file.Length, int.MaxValue),
                 FileType = file.ContentType,
-                S3Url = "/" + fileKey,
+                S3Url = s3Url,
                 Notes = model.NewDocument.Notes,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -1045,6 +1068,28 @@ namespace MyMvcApp.Controllers
             if (document == null)
             {
                 return NotFound();
+            }
+
+            var bucketName = _configuration["AWS:BucketName"];
+            if (!string.IsNullOrWhiteSpace(document.FileKey) && !string.IsNullOrWhiteSpace(bucketName))
+            {
+                try
+                {
+                    var presignRequest = new GetPreSignedUrlRequest
+                    {
+                        BucketName = bucketName,
+                        Key = document.FileKey,
+                        Expires = DateTime.UtcNow.AddMinutes(15),
+                        Verb = HttpVerb.GET
+                    };
+
+                    var url = _s3Client.GetPreSignedURL(presignRequest);
+                    return Redirect(url);
+                }
+                catch (Exception)
+                {
+                    // fall back to S3Url or local file
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(document.S3Url) && Uri.IsWellFormedUriString(document.S3Url, UriKind.Absolute))
