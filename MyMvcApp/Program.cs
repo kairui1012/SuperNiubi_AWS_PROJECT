@@ -3,6 +3,7 @@ using MyMvcApp.Data;
 using MyMvcApp.Extensions;
 using MyMvcApp.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.HttpOverrides;
 using QuestPDF.Infrastructure; 
 using Stripe;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
@@ -19,6 +20,19 @@ StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders =
+            ForwardedHeaders.XForwardedFor |
+            ForwardedHeaders.XForwardedProto |
+            ForwardedHeaders.XForwardedHost;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
@@ -43,6 +57,11 @@ builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();
 
 var app = builder.Build();
+
+if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
+{
+    app.UseForwardedHeaders();
+}
 
 app.UseXRay("MyMvcApp"); // The string here is the name that will appear in the X-Ray console
 

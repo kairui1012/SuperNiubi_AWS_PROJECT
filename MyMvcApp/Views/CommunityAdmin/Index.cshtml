@@ -10,10 +10,16 @@
         <h1 class="app-page-title">Community Events</h1>
         <p class="app-page-subtitle">Stay updated with property announcements, community activities, and important notices. 2</p>
     </div>
-    <a asp-action="Create" class="app-btn app-btn-primary">
-        <i class="bi bi-plus-lg"></i>
-        <span>Create New Update</span>
-    </a>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-controller="Admin" asp-action="Dashboard" class="app-btn app-btn-outline">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
+        <a asp-action="Create" class="app-btn app-btn-primary">
+            <i class="bi bi-plus-lg"></i>
+            <span>Create New Update</span>
+        </a>
+    </div>
 </section>
 
 @if (TempData["SuccessMessage"] != null)

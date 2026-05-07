@@ -32,6 +32,13 @@
                     Back to Dashboard
                 </a>
             }
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="CommunityAdmin" asp-action="Index" class="community-dashboard-link">
+                    <i class="bi bi-pencil-square"></i>
+                    Manage Updates
+                </a>
+            }
         </div>
         <div class="community-summary" aria-label="Community update summary">
             <div>

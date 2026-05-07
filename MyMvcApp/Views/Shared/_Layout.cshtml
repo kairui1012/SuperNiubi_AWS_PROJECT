@@ -45,13 +45,34 @@
     var isLandlordPage = controllerName.Equals("Landlord", StringComparison.OrdinalIgnoreCase); 
     var isTenantPage = controllerName.Equals("Tenant", StringComparison.OrdinalIgnoreCase); 
     var currentUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var brandController = "Home";
+    var brandAction = "Index";
+
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        if (User.IsInRole("Admin"))
+        {
+            brandController = "Admin";
+            brandAction = "Dashboard";
+        }
+        else if (User.IsInRole("Landlord"))
+        {
+            brandController = "Landlord";
+            brandAction = "Dashboard";
+        }
+        else
+        {
+            brandController = "Tenant";
+            brandAction = "Dashboard";
+        }
+    }
 }
 <body class="@(isAuthPage ? null : (isLandlordPage ? "landlord-cloud-skin" : (isTenantPage ? "tenant-cloud-skin" : "admin-cloud-skin")))">
     
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm bg-body-tertiary border-bottom box-shadow mb-4 py-2 app-topbar-shell">
             <div class="container">
-                <a class="navbar-brand app-brand-link" asp-controller="Home" asp-action="Index" aria-label="PropEase community events">
+                <a class="navbar-brand app-brand-link" asp-controller="@brandController" asp-action="@brandAction" aria-label="PropEase dashboard">
                     <span class="app-brand-mark">
                         <img class="app-brand-emblem" src="~/images/auth-side.png" alt="" />
                     </span>
