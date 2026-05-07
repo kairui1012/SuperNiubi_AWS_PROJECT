@@ -23,6 +23,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       EnableHttpsRedirection: "false"
+      
+      # DataProtection keys path (must be on persistent storage)
+      DATAPROTECTION_KEYS_PATH: /var/propease/dataprotection-keys
 
       # AWS Credentials
       AWS__UserPoolClientSecret: ${AWS_USER_POOL_CLIENT_SECRET}
@@ -31,6 +34,11 @@ services:
       
       # AWS X-Ray Link
       AWS_XRAY_DAEMON_ADDRESS: xray-daemon:2000
+
+    volumes:
+      # CRITICAL: Mount persistent volume for DataProtection keys
+      # This ensures keys survive container restarts and are shared across instances
+      - /var/propease/dataprotection-keys:/var/propease/dataprotection-keys
 
     depends_on:
       - xray-daemon
