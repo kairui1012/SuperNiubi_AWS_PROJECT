@@ -20,6 +20,8 @@ public static class GoogleAuthenticationExtensions
                 options.ClientId = googleClientId;
                 options.ClientSecret = googleClientSecret;
                 options.SaveTokens = true;
+                options.CorrelationCookie.SameSite = SameSiteMode.None;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
             });
 
         return services;
