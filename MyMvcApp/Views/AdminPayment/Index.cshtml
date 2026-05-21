@@ -133,6 +133,16 @@
                         <h1 class="admin-title">Payment Management</h1>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
+                        <form asp-action="RequestExport" asp-controller="AdminPayment" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Search" value="@f.Search" />
+                            <input type="hidden" name="Status" value="@f.Status" />
+                            <input type="hidden" name="FromDate" value="@f.FromDate?.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="ToDate" value="@f.ToDate?.ToString("yyyy-MM-dd")" />
+                            <button type="submit" class="btn admin-btn-primary">
+                                <i class="bi bi-cloud-upload me-1"></i> Serverless Export
+                            </button>
+                        </form>
                         <a href="@ExportLink()" class="btn admin-btn-secondary">
                             <i class="bi bi-download me-1"></i> Export CSV
                         </a>
@@ -147,6 +157,55 @@
             @if (TempData["ErrorMessage"] is string errorMsg)
             {
                 <div class="alert alert-danger admin-alert">@errorMsg</div>
+            }
+
+            @if (Model.RecentReportExportJobs.Count > 0)
+            {
+                <div class="panel-card mb-4">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Serverless exports</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Job</th>
+                                    <th>Status</th>
+                                    <th>Requested by</th>
+                                    <th>Created</th>
+                                    <th class="text-end">File</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var job in Model.RecentReportExportJobs)
+                                {
+                                    <tr>
+                                        <td>#@job.ReportExportJobId</td>
+                                        <td>@job.Status</td>
+                                        <td>@job.RequestedByEmail</td>
+                                        <td>@job.CreatedAt.ToString("yyyy-MM-dd HH:mm") UTC</td>
+                                        <td class="text-end">
+                                            @if (job.Status == ReportExportStatus.Completed)
+                                            {
+                                                <a asp-action="DownloadExport" asp-route-id="@job.ReportExportJobId" class="btn btn-sm admin-btn-secondary">
+                                                    <i class="bi bi-download me-1"></i> Download
+                                                </a>
+                                            }
+                                            else if (job.Status == ReportExportStatus.Failed)
+                                            {
+                                                <span class="text-danger small">@job.ErrorMessage</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">Not ready</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             }
 
             @* Stats cards *@
