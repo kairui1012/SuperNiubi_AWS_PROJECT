@@ -24,7 +24,6 @@ namespace MyMvcApp.Data
         public DbSet<LeaseHistory> LeaseHistories { get; set; }
         public DbSet<PropertyBooking> PropertyBookings { get; set; }
         public DbSet<PromoCode> PromoCodes { get; set; }
-        public DbSet<ReportExportJob> ReportExportJobs { get; set; }
 
 
         // Setting rules to store the data
@@ -50,9 +49,6 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<PasswordResetRequest>().Property(p => p.Status).HasConversion<string>();
             modelBuilder.Entity<PropertyBooking>().Property(p => p.Status).HasConversion<string>();
             modelBuilder.Entity<PropertyBooking>().Property(p => p.PaymentStatus).HasConversion<string>();
-            modelBuilder.Entity<ReportExportJob>().Property(r => r.Status).HasConversion<string>();
-            modelBuilder.Entity<ReportExportJob>().HasIndex(r => r.Status);
-            modelBuilder.Entity<ReportExportJob>().HasIndex(r => r.CreatedAt);
 
             modelBuilder.Entity<AppUser>()
                 .HasIndex(u => u.CreatedAt);

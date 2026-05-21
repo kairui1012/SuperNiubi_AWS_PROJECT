@@ -29,12 +29,6 @@ The Stripe payment event processor is serverless:
 Stripe -> Amazon EventBridge partner event bus -> AWS Lambda -> PostgreSQL / S3 / SES
 ```
 
-The payment report export is also serverless:
-
-```text
-Admin -> MVC export job -> Amazon SQS -> AWS Lambda -> PostgreSQL -> S3
-```
-
 Code evidence:
 
 - `MyMvcApp.Serverless/MyMvcApp.Serverless.csproj` contains:
@@ -85,11 +79,6 @@ The project is not fully serverless. The main ASP.NET Core MVC application remai
 - `MyMvcApp.Serverless/Function.cs`
   - Lambda entry point.
   - Handler: `MyMvcApp.Serverless::MyMvcApp.Serverless.Function::FunctionHandler`
-- `MyMvcApp.Serverless/ReportExportFunction.cs`
-  - SQS-triggered Lambda entry point for asynchronous payment CSV export.
-  - Handler: `MyMvcApp.Serverless::MyMvcApp.Serverless.ReportExportFunction::FunctionHandler`
-- `MyMvcApp/Models/ReportExportJob.cs`
-  - Tracks pending, processing, completed, and failed report exports.
 - `MyMvcApp/Services/StripeEventBridgeProcessingService.cs`
   - Shared Stripe/EventBridge processing service used by both MVC and Lambda.
 - `SERVERLESS_CHANGES.md`
@@ -109,10 +98,6 @@ builder.Services.AddScoped<StripeEventBridgeProcessingService>();
 
 - `dotNET.sln`
   - Added `MyMvcApp.Serverless` to the solution.
-- `MyMvcApp/Controllers/AdminPaymentController.cs`
-  - Added serverless export request and secure S3 download actions.
-- `MyMvcApp/Views/AdminPayment/Index.cshtml`
-  - Added Serverless Export button and recent export job status table.
 
 ## Events Covered
 
@@ -152,14 +137,6 @@ AWS__BucketName=<your-s3-bucket>
 AWS__SesSenderEmail=<your-verified-ses-email>
 ConnectionStrings__DefaultConnection=<your-postgresql-connection-string>
 Stripe__SecretKey=<your-stripe-secret-key>
-ReportExport__BucketName=<your-report-s3-bucket-or-same-bucket>
-```
-
-Set MVC environment variables for report export:
-
-```text
-ReportExport__QueueUrl=<your-sqs-queue-url>
-ReportExport__BucketName=<your-report-s3-bucket-or-same-bucket>
 ```
 
 Set Lambda role permissions:
@@ -168,7 +145,6 @@ Set Lambda role permissions:
 - X-Ray write
 - S3 `PutObject` / `GetObject`
 - SES `SendEmail` / `SendRawEmail`
-- SQS trigger permission for the report export queue
 
 Then in AWS EventBridge:
 

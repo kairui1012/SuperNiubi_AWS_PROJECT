@@ -57,7 +57,6 @@ namespace MyMvcApp.Models.Admin
         public List<MonthlyRevenueReportItem> MonthlyRevenueReport { get; set; } = new();
         public List<OverdueTenantReportItem> OverdueTenantReport { get; set; } = new();
         public List<TenantPaymentReliabilityItem> TenantReliabilityReport { get; set; } = new();
-        public List<ReportExportJob> RecentReportExportJobs { get; set; } = new();
     }
 
     public class PaymentDetailViewModel

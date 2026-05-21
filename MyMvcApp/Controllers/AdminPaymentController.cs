@@ -4,13 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using MyMvcApp.Data;
 using MyMvcApp.Models;
 using MyMvcApp.Models.Admin;
-using Amazon.S3;
-using Amazon.S3.Model;
-using Amazon.SQS;
-using Amazon.SQS.Model;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Json;
 
 namespace MyMvcApp.Controllers
 {
@@ -27,17 +22,10 @@ namespace MyMvcApp.Controllers
         };
 
         private readonly AppDbContext _db;
-        private readonly IConfiguration _configuration;
-        private readonly IAmazonS3 _s3Client;
 
-        public AdminPaymentController(
-            AppDbContext db,
-            IConfiguration configuration,
-            IAmazonS3 s3Client)
+        public AdminPaymentController(AppDbContext db)
         {
             _db = db;
-            _configuration = configuration;
-            _s3Client = s3Client;
         }
 
         // GET /AdminPayment/Index
@@ -175,92 +163,10 @@ namespace MyMvcApp.Controllers
                     .SumAsync(p => (decimal?)p.Amount) ?? 0m,
                 MonthlyRevenueReport = await BuildMonthlyRevenueReportAsync(utcNow),
                 OverdueTenantReport = await BuildOverdueTenantReportAsync(utcNow),
-                TenantReliabilityReport = await BuildTenantReliabilityReportAsync(utcNow),
-                RecentReportExportJobs = await _db.ReportExportJobs.AsNoTracking()
-                    .OrderByDescending(j => j.CreatedAt)
-                    .Take(5)
-                    .ToListAsync()
+                TenantReliabilityReport = await BuildTenantReliabilityReportAsync(utcNow)
             };
 
             return View(vm);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RequestExport(PaymentFilterViewModel filter)
-        {
-            var queueUrl = _configuration["ReportExport:QueueUrl"];
-            if (string.IsNullOrWhiteSpace(queueUrl))
-            {
-                TempData["ErrorMessage"] = "Report export queue is not configured.";
-                return RedirectToAction(nameof(Index), filter);
-            }
-
-            var requester = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? "admin";
-            var job = new ReportExportJob
-            {
-                ReportType = "PaymentCsv",
-                RequestedByEmail = requester,
-                Status = ReportExportStatus.Pending,
-                FilterJson = JsonSerializer.Serialize(new ReportExportFilter(
-                    filter.Search,
-                    filter.Status,
-                    filter.FromDate,
-                    filter.ToDate))
-            };
-
-            _db.ReportExportJobs.Add(job);
-            await _db.SaveChangesAsync();
-
-            using var sqsClient = new AmazonSQSClient();
-            await sqsClient.SendMessageAsync(new SendMessageRequest
-            {
-                QueueUrl = queueUrl,
-                MessageBody = JsonSerializer.Serialize(new ReportExportMessage(job.ReportExportJobId))
-            });
-
-            AddAuditLog(
-                "RequestServerlessPaymentReport",
-                "ReportExportJob",
-                job.ReportExportJobId,
-                requester,
-                $"Queued payment CSV export job #{job.ReportExportJobId}.");
-            await _db.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = $"Serverless export job #{job.ReportExportJobId} has been queued.";
-            return RedirectToAction(nameof(Index), filter);
-        }
-
-        public async Task<IActionResult> DownloadExport(int id)
-        {
-            var job = await _db.ReportExportJobs.AsNoTracking()
-                .FirstOrDefaultAsync(j => j.ReportExportJobId == id);
-
-            if (job is null)
-            {
-                return NotFound();
-            }
-
-            if (job.Status != ReportExportStatus.Completed ||
-                string.IsNullOrWhiteSpace(job.S3Bucket) ||
-                string.IsNullOrWhiteSpace(job.S3Key))
-            {
-                TempData["ErrorMessage"] = "This export is not ready yet.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var url = _s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
-            {
-                BucketName = job.S3Bucket,
-                Key = job.S3Key,
-                Expires = DateTime.UtcNow.AddMinutes(5),
-                ResponseHeaderOverrides = new ResponseHeaderOverrides
-                {
-                    ContentDisposition = $"attachment; filename=\"{job.FileName ?? "payment-report.csv"}\""
-                }
-            });
-
-            return Redirect(url);
         }
 
         // GET /AdminPayment/Detail/{id}
@@ -654,13 +560,5 @@ namespace MyMvcApp.Controllers
                 return $"\"{value.Replace("\"", "\"\"")}\"";
             return value;
         }
-
-        private sealed record ReportExportFilter(
-            string? Search,
-            string? Status,
-            DateTime? FromDate,
-            DateTime? ToDate);
-
-        private sealed record ReportExportMessage(int JobId);
     }
 }
