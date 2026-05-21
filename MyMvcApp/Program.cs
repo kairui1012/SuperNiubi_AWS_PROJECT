@@ -73,6 +73,7 @@ builder.Services.ConfigureExternalCookie(options =>
 builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIdentityProvider>();
 
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
+builder.Services.AddAWSService<Amazon.SecretsManager.IAmazonSecretsManager>();
 
 // 2. Register your custom S3 Image Service
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();

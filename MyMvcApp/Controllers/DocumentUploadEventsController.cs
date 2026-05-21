@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Amazon.SecretsManager;
+using Amazon.SecretsManager.Model;
 using MyMvcApp.Models;
 using MyMvcApp.Services;
+using System.Text.Json;
 
 namespace MyMvcApp.Controllers
 {
@@ -12,17 +15,22 @@ namespace MyMvcApp.Controllers
     {
         private readonly DocumentUploadService _documentUploadService;
         private readonly IConfiguration _configuration;
+        private readonly IAmazonSecretsManager _secretsManager;
 
-        public DocumentUploadEventsController(DocumentUploadService documentUploadService, IConfiguration configuration)
+        public DocumentUploadEventsController(
+            DocumentUploadService documentUploadService,
+            IConfiguration configuration,
+            IAmazonSecretsManager secretsManager)
         {
             _documentUploadService = documentUploadService;
             _configuration = configuration;
+            _secretsManager = secretsManager;
         }
 
         [HttpPost("s3-object-created")]
         public async Task<IActionResult> S3ObjectCreated([FromBody] S3ObjectCreatedUploadNotification notification)
         {
-            var configuredKey = _configuration["InternalApi:Key"] ?? _configuration["EventBridge:SharedSecret"];
+            var configuredKey = await ResolveInternalApiKeyAsync();
             if (string.IsNullOrWhiteSpace(configuredKey))
             {
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Internal API key is not configured." });
@@ -50,6 +58,54 @@ namespace MyMvcApp.Controllers
             }
 
             return Ok(result);
+        }
+
+        private async Task<string?> ResolveInternalApiKeyAsync()
+        {
+            var configuredKey = _configuration["InternalApi:Key"];
+            if (!string.IsNullOrWhiteSpace(configuredKey))
+            {
+                return configuredKey;
+            }
+
+            var secretId = _configuration["InternalApi:SecretId"];
+            if (string.IsNullOrWhiteSpace(secretId))
+            {
+                return null;
+            }
+
+            var response = await _secretsManager.GetSecretValueAsync(new GetSecretValueRequest
+            {
+                SecretId = secretId
+            });
+
+            return ExtractInternalApiKey(response.SecretString);
+        }
+
+        private static string? ExtractInternalApiKey(string? secretString)
+        {
+            if (string.IsNullOrWhiteSpace(secretString))
+            {
+                return null;
+            }
+
+            var trimmed = secretString.Trim();
+            if (!trimmed.StartsWith('{'))
+            {
+                return trimmed;
+            }
+
+            using var document = JsonDocument.Parse(trimmed);
+            foreach (var key in new[] { "INTERNAL_API_KEY", "InternalApi__Key", "InternalApi:Key", "InternalApiKey", "Key" })
+            {
+                if (document.RootElement.TryGetProperty(key, out var value) &&
+                    value.ValueKind == JsonValueKind.String)
+                {
+                    return value.GetString();
+                }
+            }
+
+            return null;
         }
     }
 }
