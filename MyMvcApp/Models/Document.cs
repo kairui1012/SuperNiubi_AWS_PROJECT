@@ -5,6 +5,7 @@ using MyMvcApp.Models;
 namespace MyMvcApp.Models
 {
     public enum DocumentType { TenancyAgreement, IdentityCard, PaymentReceipt, InspectionReport, Others }
+    public enum DocumentUploadStatus { PendingUpload, Confirmed, FailedValidation, Expired }
 
     public class Document
     {
@@ -39,6 +40,21 @@ namespace MyMvcApp.Models
 
         [MaxLength(1000)]
         public string? S3Url { get; set; }
+
+        [Required]
+        public DocumentUploadStatus UploadStatus { get; set; } = DocumentUploadStatus.Confirmed;
+
+        [Required, MaxLength(64)]
+        public string UploadId { get; set; } = Guid.NewGuid().ToString("N");
+
+        public DateTime? UploadUrlExpiresAt { get; set; }
+        public DateTime? ConfirmedAt { get; set; }
+
+        [MaxLength(200)]
+        public string? S3ETag { get; set; }
+
+        [MaxLength(1000)]
+        public string? ValidationMessage { get; set; }
 
         public string? Notes { get; set; }
         public bool IsDeleted { get; set; } = false;

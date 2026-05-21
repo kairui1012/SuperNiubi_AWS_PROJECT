@@ -29,6 +29,7 @@ namespace MyMvcApp.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IAmazonS3 _s3Client;
         private readonly IConfiguration _configuration;
+        private readonly DocumentUploadService _documentUploadService;
 
         public LandlordController(
             AppDbContext dbContext,
@@ -36,7 +37,8 @@ namespace MyMvcApp.Controllers
             EmailService emailService,
             IWebHostEnvironment environment,
             IAmazonS3 s3Client,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            DocumentUploadService documentUploadService)
         {
             _dbContext = dbContext;
             _s3ImageService = s3ImageService;
@@ -44,6 +46,7 @@ namespace MyMvcApp.Controllers
             _environment = environment;
             _s3Client = s3Client;
             _configuration = configuration;
+            _documentUploadService = documentUploadService;
         }
 
         public async Task<IActionResult> Dashboard()
@@ -927,6 +930,143 @@ namespace MyMvcApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateDocumentUpload([FromBody] CreateDirectDocumentUploadRequest? request)
+        {
+            var landlord = GetCurrentLandlord();
+
+            if (landlord == null)
+            {
+                return Unauthorized(new { message = "Landlord account not found." });
+            }
+
+            if (request is null)
+            {
+                return BadRequest(new { message = "Upload request payload is invalid." });
+            }
+
+            if (request.PropertyId == null && request.TenantId == null)
+            {
+                return BadRequest(new { message = "Please select a property or tenant." });
+            }
+
+            Tenant? tenant = null;
+            Property? property = null;
+
+            if (request.TenantId.HasValue)
+            {
+                tenant = await _dbContext.Tenants
+                    .Include(t => t.Property)
+                    .Include(t => t.User)
+                    .FirstOrDefaultAsync(t =>
+                        t.TenantId == request.TenantId.Value &&
+                        t.Property.LandlordId == landlord.Id);
+
+                if (tenant == null)
+                {
+                    return BadRequest(new { message = "Selected tenant is invalid." });
+                }
+
+                property = tenant.Property;
+            }
+
+            if (request.PropertyId.HasValue)
+            {
+                var selectedProperty = await _dbContext.Properties
+                    .FirstOrDefaultAsync(p =>
+                        p.PropertyId == request.PropertyId.Value &&
+                        p.LandlordId == landlord.Id &&
+                        !p.IsDeleted);
+
+                if (selectedProperty == null)
+                {
+                    return BadRequest(new { message = "Selected property is invalid." });
+                }
+
+                if (property != null && selectedProperty.PropertyId != property.PropertyId)
+                {
+                    return BadRequest(new { message = "Selected property does not match the tenant." });
+                }
+
+                property = selectedProperty;
+            }
+
+            var validationError = _documentUploadService.ValidateDocumentUploadRequest(
+                request,
+                AllowedDocumentExtensions,
+                MaxDocumentSizeBytes);
+
+            if (validationError != null)
+            {
+                return BadRequest(new { message = validationError });
+            }
+
+            var bucketName = _configuration["AWS:BucketName"];
+            if (string.IsNullOrWhiteSpace(bucketName))
+            {
+                return BadRequest(new { message = "S3 bucket is not configured." });
+            }
+
+            var extension = Path.GetExtension(request.FileName).ToLowerInvariant();
+            var uploadId = Guid.NewGuid().ToString("N");
+            var fileKey = $"landlord/{landlord.Id}/documents/{uploadId}{extension}";
+
+            var document = new Document
+            {
+                UploadedBy = landlord.Id,
+                PropertyId = property?.PropertyId,
+                TenantId = tenant?.TenantId,
+                DocumentName = request.DocumentName.Trim(),
+                DocumentType = request.DocumentType!.Value,
+                FileKey = fileKey,
+                FileSize = (int)Math.Min(request.FileSize, int.MaxValue),
+                FileType = request.ContentType,
+                S3BucketName = bucketName,
+                S3Url = _documentUploadService.BuildS3Url(fileKey),
+                Notes = request.Notes,
+                UploadStatus = DocumentUploadStatus.PendingUpload,
+                UploadId = uploadId,
+                UploadUrlExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dbContext.Documents.Add(document);
+            await _dbContext.SaveChangesAsync();
+
+            var response = _documentUploadService.CreatePresignedPutUrl(document, request.ContentType);
+            document.UploadUrlExpiresAt = response.ExpiresAtUtc;
+            await _dbContext.SaveChangesAsync();
+
+            return Json(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetDocumentUploadStatus(int id)
+        {
+            var landlord = GetCurrentLandlord();
+
+            if (landlord == null)
+            {
+                return Unauthorized(new { message = "Landlord account not found." });
+            }
+
+            var document = await GetManagedDocumentAsync(id, landlord.Id);
+
+            if (document == null)
+            {
+                return NotFound(new { message = "Document not found." });
+            }
+
+            return Json(new DocumentUploadStatusResponse
+            {
+                DocumentId = document.DocumentId,
+                Status = document.UploadStatus.ToString(),
+                ValidationMessage = document.ValidationMessage
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadDocument(LandlordDocumentsViewModel model)
         {
             var landlord = GetCurrentLandlord();
@@ -1047,6 +1187,11 @@ namespace MyMvcApp.Controllers
                 FileSize = (int)Math.Min(file.Length, int.MaxValue),
                 FileType = file.ContentType,
                 S3Url = s3Url,
+                S3BucketName = bucketName,
+                UploadStatus = DocumentUploadStatus.Confirmed,
+                UploadId = Guid.NewGuid().ToString("N"),
+                ConfirmedAt = DateTime.UtcNow,
+                ValidationMessage = "Uploaded through MVC backend.",
                 Notes = model.NewDocument.Notes,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -1073,6 +1218,12 @@ namespace MyMvcApp.Controllers
             if (document == null)
             {
                 return NotFound();
+            }
+
+            if (document.UploadStatus != DocumentUploadStatus.Confirmed)
+            {
+                TempData["ErrorMessage"] = "This document is still being validated and is not ready for download yet.";
+                return RedirectToAction(nameof(Documents));
             }
 
             var bucketName = _configuration["AWS:BucketName"];

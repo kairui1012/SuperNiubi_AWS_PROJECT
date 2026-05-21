@@ -12,6 +12,7 @@ using Stripe;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using Amazon.XRay.Recorder.Core;
 using Microsoft.AspNetCore.Http;
+using System.Text.Json.Serialization;
 
 
 QuestPDF.Settings.License = LicenseType.Community;
@@ -23,7 +24,11 @@ AWSSDKHandler.RegisterXRayForAllServices();
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
 {
@@ -45,6 +50,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add Email Service
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<StripeEventBridgeProcessingService>();
+builder.Services.AddScoped<DocumentUploadService>();
 
 builder.Services.AddScoped<IClaimsTransformation, MyMvcApp.Services.RoleClaimsTransformation>();
 

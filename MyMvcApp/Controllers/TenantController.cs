@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using QRCoder;
 using Amazon.S3;
 using Amazon.S3.Model;
+using MyMvcApp.Services;
 
 namespace MyMvcApp.Controllers
 {
@@ -24,17 +25,24 @@ namespace MyMvcApp.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
         private readonly IAmazonS3 _s3Client;
+        private readonly DocumentUploadService _documentUploadService;
         private const long MaxDocumentSizeBytes = 10 * 1024 * 1024;
         private const long MaxMaintenanceImageSizeBytes = 8 * 1024 * 1024;
         private static readonly string[] AllowedDocumentExtensions = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"];
         private static readonly string[] AllowedMaintenanceImageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
-        public TenantController(AppDbContext context, IWebHostEnvironment environment, IConfiguration configuration, IAmazonS3 s3Client)
+        public TenantController(
+            AppDbContext context,
+            IWebHostEnvironment environment,
+            IConfiguration configuration,
+            IAmazonS3 s3Client,
+            DocumentUploadService documentUploadService)
         {
             _context = context;
             _environment = environment;
             _configuration = configuration;
             _s3Client = s3Client;
+            _documentUploadService = documentUploadService;
         }
 
         private string? GetCurrentEmail()
@@ -645,6 +653,114 @@ namespace MyMvcApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateDocumentUpload([FromBody] CreateDirectDocumentUploadRequest? request)
+        {
+            var email = GetCurrentEmail();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Unauthorized(new { message = "Please log in again." });
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (tenant == null || appUser == null)
+            {
+                return BadRequest(new { message = "Tenant assignment was not found." });
+            }
+
+            var validationError = _documentUploadService.ValidateDocumentUploadRequest(
+                request,
+                AllowedDocumentExtensions,
+                MaxDocumentSizeBytes);
+
+            if (validationError != null)
+            {
+                return BadRequest(new { message = validationError });
+            }
+
+            request ??= new CreateDirectDocumentUploadRequest();
+
+            var extension = Path.GetExtension(request.FileName).ToLowerInvariant();
+            var uploadId = Guid.NewGuid().ToString("N");
+            var fileKey = $"tenant/{tenant.TenantId}/documents/{uploadId}{extension}";
+            var bucketName = _configuration["AWS:BucketName"];
+
+            if (string.IsNullOrWhiteSpace(bucketName))
+            {
+                return BadRequest(new { message = "S3 bucket is not configured." });
+            }
+
+            var document = new MyMvcApp.Models.Document
+            {
+                UploadedBy = appUser.Id,
+                PropertyId = tenant.PropertyId,
+                TenantId = tenant.TenantId,
+                DocumentName = request.DocumentName.Trim(),
+                DocumentType = request.DocumentType!.Value,
+                FileKey = fileKey,
+                FileSize = (int)Math.Min(request.FileSize, int.MaxValue),
+                FileType = request.ContentType,
+                S3BucketName = bucketName,
+                S3Url = _documentUploadService.BuildS3Url(fileKey),
+                Notes = request.Notes,
+                UploadStatus = Models.DocumentUploadStatus.PendingUpload,
+                UploadId = uploadId,
+                UploadUrlExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Documents.Add(document);
+            await _context.SaveChangesAsync();
+
+            var response = _documentUploadService.CreatePresignedPutUrl(document, request.ContentType);
+            document.UploadUrlExpiresAt = response.ExpiresAtUtc;
+            await _context.SaveChangesAsync();
+
+            return Json(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetDocumentUploadStatus(int id)
+        {
+            var email = GetCurrentEmail();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Unauthorized(new { message = "Please log in again." });
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
+
+            if (tenant is null)
+            {
+                return BadRequest(new { message = "Tenant assignment was not found." });
+            }
+
+            var document = await _context.Documents
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.DocumentId == id && d.TenantId == tenant.TenantId && !d.IsDeleted);
+
+            if (document is null)
+            {
+                return NotFound(new { message = "Document not found." });
+            }
+
+            return Json(new DocumentUploadStatusResponse
+            {
+                DocumentId = document.DocumentId,
+                Status = document.UploadStatus.ToString(),
+                ValidationMessage = document.ValidationMessage
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadDocument(TenantDocumentsViewModel model)
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -747,6 +863,11 @@ namespace MyMvcApp.Controllers
                 FileSize = (int)Math.Min(file.Length, int.MaxValue),
                 FileType = file.ContentType,
                 S3Url = s3Url,
+                S3BucketName = bucketName,
+                UploadStatus = Models.DocumentUploadStatus.Confirmed,
+                UploadId = Guid.NewGuid().ToString("N"),
+                ConfirmedAt = DateTime.UtcNow,
+                ValidationMessage = "Uploaded through MVC backend.",
                 Notes = model.NewDocument.Notes,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -782,6 +903,12 @@ namespace MyMvcApp.Controllers
             if (document is null)
             {
                 return NotFound();
+            }
+
+            if (document.UploadStatus != Models.DocumentUploadStatus.Confirmed)
+            {
+                TempData["ErrorMessage"] = "This document is still being validated and is not ready for download yet.";
+                return RedirectToAction(nameof(Documents));
             }
 
             var bucketName = _configuration["AWS:BucketName"];
