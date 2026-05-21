@@ -29,26 +29,39 @@ namespace MyMvcApp.Services
                 return configuredKey;
             }
 
-            var secretId = _configuration["InternalApi:SecretId"];
-            if (string.IsNullOrWhiteSpace(secretId))
+            foreach (var secretId in GetSecretIds())
             {
-                return _configuration["EventBridge:SharedSecret"];
-            }
-
-            try
-            {
-                var response = await _secretsManager.GetSecretValueAsync(new GetSecretValueRequest
+                try
                 {
-                    SecretId = secretId
-                });
+                    var response = await _secretsManager.GetSecretValueAsync(new GetSecretValueRequest
+                    {
+                        SecretId = secretId
+                    });
 
-                return ExtractSecretValue(response);
+                    var secretValue = ExtractSecretValue(response);
+                    if (!string.IsNullOrWhiteSpace(secretValue))
+                    {
+                        return secretValue;
+                    }
+
+                    _logger.LogWarning("Secrets Manager secret {SecretId} did not contain an internal API key value.", secretId);
+                }
+                catch (ResourceNotFoundException)
+                {
+                    _logger.LogWarning("Secrets Manager secret {SecretId} was not found while loading the internal API key.", secretId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to load internal API key from Secrets Manager secret {SecretId}.", secretId);
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unable to load internal API key from Secrets Manager secret {SecretId}.", secretId);
-                return null;
-            }
+
+            return _configuration["EventBridge:SharedSecret"];
+        }
+
+        private static IEnumerable<string> GetSecretIds()
+        {
+            yield return "InternalApi__Key";
         }
 
         private static string? ExtractSecretValue(GetSecretValueResponse response)
