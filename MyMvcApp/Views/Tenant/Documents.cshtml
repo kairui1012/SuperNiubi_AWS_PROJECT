@@ -231,6 +231,30 @@
         uploadStatusMessage.style.display = 'block';
     }
 
+    async function readUploadJsonResponse(response, fallbackMessage) {
+        const responseText = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+
+        if (!contentType.includes('application/json')) {
+            if (response.status === 401) {
+                throw new Error('Your session expired. Please log in again before uploading.');
+            }
+
+            if (response.status === 403) {
+                throw new Error('You do not have permission to upload this document.');
+            }
+
+            throw new Error(`${fallbackMessage} Server returned ${response.status} with a non-JSON response.`);
+        }
+
+        const payload = responseText ? JSON.parse(responseText) : {};
+        if (!response.ok) {
+            throw new Error(payload.message || fallbackMessage);
+        }
+
+        return payload;
+    }
+
     async function pollUploadStatus(documentId) {
         for (let attempt = 0; attempt < 15; attempt++) {
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -290,24 +314,13 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'RequestVerificationToken': token,
+                    'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json'
                 },
                 body: JSON.stringify(payload)
             });
 
-            if (!createResponse.ok) {
-                const responseText = await createResponse.text();
-                let message = 'Unable to create upload session.';
-                try {
-                    const error = JSON.parse(responseText);
-                    message = error.message || message;
-                } catch {
-                    message = `${message} Server returned ${createResponse.status}. ${responseText.substring(0, 180)}`;
-                }
-                throw new Error(message);
-            }
-
-            const uploadSession = await createResponse.json();
+            const uploadSession = await readUploadJsonResponse(createResponse, 'Unable to create upload session.');
             uploadButton.textContent = 'Uploading to S3...';
             setUploadMessage('Uploading file directly to S3...', false);
 

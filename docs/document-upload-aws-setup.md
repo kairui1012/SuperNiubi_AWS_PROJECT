@@ -19,10 +19,11 @@ Set these in production configuration or secrets:
 }
 ```
 
-For production, prefer storing the shared key in Secrets Manager. The default secret name expected by the MVC app is:
+For production, prefer storing the shared key in Secrets Manager. The default secret expected by the MVC app is:
 
 ```text
-InternalApi__Key
+Secret name: prod/mymvcapp/secrets
+Secret JSON field: InternalApi__Key
 ```
 
 The secret value may be either the raw key string or a JSON object with one of these fields:
@@ -46,8 +47,9 @@ Nested JSON also works:
 The MVC app resolves the internal API key in this order:
 
 1. `InternalApi:Key`
-2. Secrets Manager value from `InternalApi__Key`
-3. legacy `EventBridge:SharedSecret`
+2. Secrets Manager field `InternalApi__Key` from `prod/mymvcapp/secrets`
+3. Secrets Manager value from a standalone secret named `InternalApi__Key`
+4. legacy `EventBridge:SharedSecret`
 
 The same resolved key must be set as the Lambda environment variable `INTERNAL_API_KEY`.
 
