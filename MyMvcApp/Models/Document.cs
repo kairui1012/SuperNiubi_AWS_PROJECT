@@ -32,7 +32,7 @@ namespace MyMvcApp.Models
 
         public int? FileSize { get; set; }
 
-        [MaxLength(50)]
+        [MaxLength(255)]
         public string? FileType { get; set; }
 
         [MaxLength(100)]
