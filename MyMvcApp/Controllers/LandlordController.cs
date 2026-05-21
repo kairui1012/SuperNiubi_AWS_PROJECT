@@ -908,17 +908,7 @@ namespace MyMvcApp.Controllers
                 .Include(p => p.Tenant)
                 .ThenInclude(t => t.User)
                 .Where(p => p.Property.LandlordId == landlord.Id)
-                .OrderBy(p =>
-                    p.Status == PaymentStatus.Pending ||
-                    p.Status == PaymentStatus.Submitted ||
-                    p.Status == PaymentStatus.Overdue
-                        ? 0
-                        : p.Status == PaymentStatus.Verified ||
-                          p.Status == PaymentStatus.Refunded
-                            ? 1
-                            : 2)
-                .ThenByDescending(p => p.DueDate)
-                .ThenByDescending(p => p.PaymentDate ?? p.UpdatedAt)
+                .OrderByDescending(p => p.CreatedAt)
                 .ThenByDescending(p => p.PaymentId)
                 .ToList();
 
