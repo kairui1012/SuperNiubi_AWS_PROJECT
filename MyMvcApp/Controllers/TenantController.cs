@@ -665,63 +665,25 @@ namespace MyMvcApp.Controllers
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.User.Email == email && !t.User.IsDisabled);
 
-            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-
-            if (tenant == null || appUser == null)
+            if (tenant == null)
             {
                 return BadRequest(new { message = "Tenant assignment was not found." });
             }
 
-            var validationError = _documentUploadService.ValidateDocumentUploadRequest(
+            var uploadResult = await _documentUploadService.CreateTenantDirectUploadAsync(
                 request,
+                tenant.User.Id,
+                tenant.TenantId,
+                tenant.PropertyId,
                 AllowedDocumentExtensions,
                 MaxDocumentSizeBytes);
 
-            if (validationError != null)
+            if (!uploadResult.Succeeded)
             {
-                return BadRequest(new { message = validationError });
+                return BadRequest(new { message = uploadResult.ErrorMessage });
             }
 
-            request ??= new CreateDirectDocumentUploadRequest();
-
-            var extension = Path.GetExtension(request.FileName).ToLowerInvariant();
-            var uploadId = Guid.NewGuid().ToString("N");
-            var fileKey = $"tenant/{tenant.TenantId}/documents/{uploadId}{extension}";
-            var bucketName = _configuration["AWS:BucketName"];
-
-            if (string.IsNullOrWhiteSpace(bucketName))
-            {
-                return BadRequest(new { message = "S3 bucket is not configured." });
-            }
-
-            var document = new MyMvcApp.Models.Document
-            {
-                UploadedBy = appUser.Id,
-                PropertyId = tenant.PropertyId,
-                TenantId = tenant.TenantId,
-                DocumentName = request.DocumentName.Trim(),
-                DocumentType = request.DocumentType!.Value,
-                FileKey = fileKey,
-                FileSize = (int)Math.Min(request.FileSize, int.MaxValue),
-                FileType = request.ContentType,
-                S3BucketName = bucketName,
-                S3Url = _documentUploadService.BuildS3Url(fileKey),
-                Notes = request.Notes,
-                UploadStatus = Models.DocumentUploadStatus.PendingUpload,
-                UploadId = uploadId,
-                UploadUrlExpiresAt = DateTime.UtcNow.AddMinutes(15),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _context.Documents.Add(document);
-            await _context.SaveChangesAsync();
-
-            var response = _documentUploadService.CreatePresignedPutUrl(document, request.ContentType);
-            document.UploadUrlExpiresAt = response.ExpiresAtUtc;
-            await _context.SaveChangesAsync();
-
-            return Json(response);
+            return Json(uploadResult.Response);
         }
 
         [HttpGet]
@@ -742,21 +704,14 @@ namespace MyMvcApp.Controllers
                 return BadRequest(new { message = "Tenant assignment was not found." });
             }
 
-            var document = await _context.Documents
-                .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.DocumentId == id && d.TenantId == tenant.TenantId && !d.IsDeleted);
+            var status = await _documentUploadService.GetTenantUploadStatusAsync(id, tenant.TenantId);
 
-            if (document is null)
+            if (status is null)
             {
                 return NotFound(new { message = "Document not found." });
             }
 
-            return Json(new DocumentUploadStatusResponse
-            {
-                DocumentId = document.DocumentId,
-                Status = document.UploadStatus.ToString(),
-                ValidationMessage = document.ValidationMessage
-            });
+            return Json(status);
         }
 
         [HttpPost]

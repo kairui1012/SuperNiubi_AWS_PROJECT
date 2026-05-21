@@ -939,105 +939,18 @@ namespace MyMvcApp.Controllers
                 return Unauthorized(new { message = "Landlord account not found." });
             }
 
-            if (request is null)
-            {
-                return BadRequest(new { message = "Upload request payload is invalid." });
-            }
-
-            if (request.PropertyId == null && request.TenantId == null)
-            {
-                return BadRequest(new { message = "Please select a property or tenant." });
-            }
-
-            Tenant? tenant = null;
-            Property? property = null;
-
-            if (request.TenantId.HasValue)
-            {
-                tenant = await _dbContext.Tenants
-                    .Include(t => t.Property)
-                    .Include(t => t.User)
-                    .FirstOrDefaultAsync(t =>
-                        t.TenantId == request.TenantId.Value &&
-                        t.Property.LandlordId == landlord.Id);
-
-                if (tenant == null)
-                {
-                    return BadRequest(new { message = "Selected tenant is invalid." });
-                }
-
-                property = tenant.Property;
-            }
-
-            if (request.PropertyId.HasValue)
-            {
-                var selectedProperty = await _dbContext.Properties
-                    .FirstOrDefaultAsync(p =>
-                        p.PropertyId == request.PropertyId.Value &&
-                        p.LandlordId == landlord.Id &&
-                        !p.IsDeleted);
-
-                if (selectedProperty == null)
-                {
-                    return BadRequest(new { message = "Selected property is invalid." });
-                }
-
-                if (property != null && selectedProperty.PropertyId != property.PropertyId)
-                {
-                    return BadRequest(new { message = "Selected property does not match the tenant." });
-                }
-
-                property = selectedProperty;
-            }
-
-            var validationError = _documentUploadService.ValidateDocumentUploadRequest(
+            var uploadResult = await _documentUploadService.CreateLandlordDirectUploadAsync(
                 request,
+                landlord.Id,
                 AllowedDocumentExtensions,
                 MaxDocumentSizeBytes);
 
-            if (validationError != null)
+            if (!uploadResult.Succeeded)
             {
-                return BadRequest(new { message = validationError });
+                return BadRequest(new { message = uploadResult.ErrorMessage });
             }
 
-            var bucketName = _configuration["AWS:BucketName"];
-            if (string.IsNullOrWhiteSpace(bucketName))
-            {
-                return BadRequest(new { message = "S3 bucket is not configured." });
-            }
-
-            var extension = Path.GetExtension(request.FileName).ToLowerInvariant();
-            var uploadId = Guid.NewGuid().ToString("N");
-            var fileKey = $"landlord/{landlord.Id}/documents/{uploadId}{extension}";
-
-            var document = new Document
-            {
-                UploadedBy = landlord.Id,
-                PropertyId = property?.PropertyId,
-                TenantId = tenant?.TenantId,
-                DocumentName = request.DocumentName.Trim(),
-                DocumentType = request.DocumentType!.Value,
-                FileKey = fileKey,
-                FileSize = (int)Math.Min(request.FileSize, int.MaxValue),
-                FileType = request.ContentType,
-                S3BucketName = bucketName,
-                S3Url = _documentUploadService.BuildS3Url(fileKey),
-                Notes = request.Notes,
-                UploadStatus = DocumentUploadStatus.PendingUpload,
-                UploadId = uploadId,
-                UploadUrlExpiresAt = DateTime.UtcNow.AddMinutes(15),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _dbContext.Documents.Add(document);
-            await _dbContext.SaveChangesAsync();
-
-            var response = _documentUploadService.CreatePresignedPutUrl(document, request.ContentType);
-            document.UploadUrlExpiresAt = response.ExpiresAtUtc;
-            await _dbContext.SaveChangesAsync();
-
-            return Json(response);
+            return Json(uploadResult.Response);
         }
 
         [HttpGet]
@@ -1057,12 +970,7 @@ namespace MyMvcApp.Controllers
                 return NotFound(new { message = "Document not found." });
             }
 
-            return Json(new DocumentUploadStatusResponse
-            {
-                DocumentId = document.DocumentId,
-                Status = document.UploadStatus.ToString(),
-                ValidationMessage = document.ValidationMessage
-            });
+            return Json(_documentUploadService.ToStatusResponse(document));
         }
 
         [HttpPost]
@@ -1824,4 +1732,3 @@ namespace MyMvcApp.Controllers
         }
     }
 }
-

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyMvcApp.Models;
 using MyMvcApp.Services;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace MyMvcApp.Controllers
 {
@@ -11,25 +13,27 @@ namespace MyMvcApp.Controllers
     public class DocumentUploadEventsController : ControllerBase
     {
         private readonly DocumentUploadService _documentUploadService;
-        private readonly IConfiguration _configuration;
+        private readonly InternalApiKeyProvider _internalApiKeyProvider;
 
-        public DocumentUploadEventsController(DocumentUploadService documentUploadService, IConfiguration configuration)
+        public DocumentUploadEventsController(
+            DocumentUploadService documentUploadService,
+            InternalApiKeyProvider internalApiKeyProvider)
         {
             _documentUploadService = documentUploadService;
-            _configuration = configuration;
+            _internalApiKeyProvider = internalApiKeyProvider;
         }
 
         [HttpPost("s3-object-created")]
         public async Task<IActionResult> S3ObjectCreated([FromBody] S3ObjectCreatedUploadNotification notification)
         {
-            var configuredKey = _configuration["InternalApi:Key"] ?? _configuration["EventBridge:SharedSecret"];
+            var configuredKey = await _internalApiKeyProvider.GetInternalApiKeyAsync();
             if (string.IsNullOrWhiteSpace(configuredKey))
             {
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Internal API key is not configured." });
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Internal API key or secret id is not configured." });
             }
 
             if (!Request.Headers.TryGetValue("X-Internal-Api-Key", out var suppliedKey) ||
-                !string.Equals(suppliedKey.ToString(), configuredKey, StringComparison.Ordinal))
+                !FixedTimeEquals(configuredKey, suppliedKey.ToString()))
             {
                 return Unauthorized(new { message = "Invalid internal API key." });
             }
@@ -50,6 +54,15 @@ namespace MyMvcApp.Controllers
             }
 
             return Ok(result);
+        }
+
+        private static bool FixedTimeEquals(string expected, string provided)
+        {
+            var expectedBytes = Encoding.UTF8.GetBytes(expected);
+            var providedBytes = Encoding.UTF8.GetBytes(provided);
+
+            return expectedBytes.Length == providedBytes.Length &&
+                   CryptographicOperations.FixedTimeEquals(expectedBytes, providedBytes);
         }
     }
 }

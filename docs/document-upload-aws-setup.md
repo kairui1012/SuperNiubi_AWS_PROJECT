@@ -14,12 +14,43 @@ Set these in production configuration or secrets:
     "UploadUrlExpiryMinutes": 15
   },
   "InternalApi": {
-    "Key": "generate-a-long-random-secret"
+    "Key": "generate-a-long-random-secret",
+    "SecretId": "optional-secrets-manager-secret-name-or-arn"
   }
 }
 ```
 
-The same `InternalApi:Key` value must be set as the Lambda environment variable `INTERNAL_API_KEY`.
+For production, prefer storing the shared key in Secrets Manager and setting:
+
+```text
+InternalApi__SecretId=your-secret-name-or-arn
+```
+
+The secret value may be either the raw key string or a JSON object with one of these fields:
+
+```json
+{
+  "INTERNAL_API_KEY": "same-long-random-secret"
+}
+```
+
+Nested JSON also works:
+
+```json
+{
+  "InternalApi": {
+    "Key": "same-long-random-secret"
+  }
+}
+```
+
+The MVC app resolves the internal API key in this order:
+
+1. `InternalApi:Key`
+2. Secrets Manager value from `InternalApi:SecretId`
+3. legacy `EventBridge:SharedSecret`
+
+The same resolved key must be set as the Lambda environment variable `INTERNAL_API_KEY`.
 
 ## S3 CORS
 
@@ -46,18 +77,28 @@ Recommended production wiring:
 ```text
 S3 ObjectCreated
   -> SQS queue
-  -> Lambda aws/lambdas/s3-document-upload-confirmation/index.mjs
+  -> Lambda S3-document-upload-confirmation-serverless/index.mjs
   -> POST /api/document-uploads/s3-object-created
 ```
+
+This Lambda is separate from the Stripe `.NET` Lambda project in `MyMvcApp.Serverless`.
 
 Lambda environment variables:
 
 ```text
 DOCUMENT_UPLOAD_CONFIRM_ENDPOINT=https://your-domain.com/api/document-uploads/s3-object-created
-INTERNAL_API_KEY=same-value-as-InternalApi__Key
+INTERNAL_API_KEY=same-value-as-MVC-internal-api-key
 ```
 
+If MVC uses Secrets Manager, `INTERNAL_API_KEY` must match the value stored in that secret.
+
 The Lambda can consume direct S3 notification events, SQS-wrapped S3 events, or EventBridge S3 object events.
+
+Use a Node.js 20.x or newer Lambda runtime. The handler is:
+
+```text
+index.handler
+```
 
 ## IAM
 
@@ -67,6 +108,7 @@ The MVC app role needs:
 s3:PutObject
 s3:GetObject
 s3:GetObjectMetadata
+secretsmanager:GetSecretValue
 ```
 
 Scope those permissions to the document prefixes:

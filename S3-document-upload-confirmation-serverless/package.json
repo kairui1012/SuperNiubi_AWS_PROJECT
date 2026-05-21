@@ -1,0 +1,11 @@
+{
+  "name": "s3-document-upload-confirmation-serverless",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
