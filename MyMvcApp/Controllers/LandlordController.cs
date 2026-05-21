@@ -237,6 +237,7 @@ namespace MyMvcApp.Controllers
             model.UpdatedAt = DateTime.UtcNow;
             model.ApprovalStatus = PropertyApprovalStatus.Pending;
             model.IsDeleted = false;
+            NormalizeShortTermSettings(model);
 
             if (!ModelState.IsValid)
             {
@@ -338,6 +339,8 @@ namespace MyMvcApp.Controllers
                 return View(model);
             }
 
+            NormalizeShortTermSettings(model);
+
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -359,6 +362,8 @@ namespace MyMvcApp.Controllers
                 existingProperty.Bathrooms = model.Bathrooms;
                 existingProperty.MonthlyRent = model.MonthlyRent;
                 existingProperty.DepositAmount = model.DepositAmount;
+                existingProperty.AllowShortTerm = model.AllowShortTerm;
+                existingProperty.DailyRate = model.DailyRate;
                 existingProperty.ParkingBay = model.ParkingBay;
                 existingProperty.Description = model.Description;
                 existingProperty.AvailabilityStatus = model.AvailabilityStatus;
@@ -1575,6 +1580,20 @@ namespace MyMvcApp.Controllers
             return AllowedPropertyImageExtensions.Contains(extension)
                 ? null
                 : "Only JPG, JPEG, PNG, and WEBP property images are allowed.";
+        }
+
+        private void NormalizeShortTermSettings(Property property)
+        {
+            if (!property.AllowShortTerm)
+            {
+                property.DailyRate = null;
+                return;
+            }
+
+            if (!property.DailyRate.HasValue || property.DailyRate.Value <= 0)
+            {
+                ModelState.AddModelError(nameof(Property.DailyRate), "Daily rate is required when short-term stays are enabled.");
+            }
         }
 
         private static string? ValidateRepairImage(IFormFile file)

@@ -130,6 +130,12 @@
                                     <strong>Approval:</strong> @property.ApprovalStatus
                                 </p>
                                 <p class="landlord-sub mb-1">
+                                    <strong>Book a Stay:</strong>
+                                    @(property.AllowShortTerm && property.DailyRate.HasValue
+                                        ? $"Enabled at RM {property.DailyRate.Value:0.00}/night"
+                                        : "Disabled")
+                                </p>
+                                <p class="landlord-sub mb-1">
                                     <strong>Address:</strong> @property.AddressLine1 @property.AddressLine2,
                                     @property.City, @property.State @property.PostalCode
                                 </p>

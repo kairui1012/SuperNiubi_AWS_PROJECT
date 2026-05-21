@@ -22,9 +22,12 @@ namespace MyMvcApp.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Put the strict rules back!
             var properties = await _context.Properties
-                .Where(p => p.AllowShortTerm && p.DailyRate.HasValue && p.AvailabilityStatus == PropertyAvailabilityStatus.Available)
+                .Where(p => !p.IsDeleted
+                    && p.AllowShortTerm
+                    && p.DailyRate.HasValue
+                    && p.DailyRate.Value > 0
+                    && p.AvailabilityStatus == PropertyAvailabilityStatus.Available)
                 .ToListAsync();
                 
             return View(properties);
@@ -33,7 +36,12 @@ namespace MyMvcApp.Controllers
         public async Task<IActionResult> Book(int id)
         {
             var property = await _context.Properties.FindAsync(id);
-            if (property == null || !property.AllowShortTerm || property.AvailabilityStatus != PropertyAvailabilityStatus.Available)
+            if (property == null
+                || property.IsDeleted
+                || !property.AllowShortTerm
+                || !property.DailyRate.HasValue
+                || property.DailyRate.Value <= 0
+                || property.AvailabilityStatus != PropertyAvailabilityStatus.Available)
                 return NotFound();
 
             return View(property); 
@@ -46,7 +54,15 @@ namespace MyMvcApp.Controllers
             var utcCheckOut = DateTime.SpecifyKind(checkOutDate.Date, DateTimeKind.Utc);
 
             var property = await _context.Properties.FindAsync(propertyId);
-            if (property == null || property.DailyRate == null) return BadRequest();
+            if (property == null
+                || property.IsDeleted
+                || !property.AllowShortTerm
+                || !property.DailyRate.HasValue
+                || property.DailyRate.Value <= 0
+                || property.AvailabilityStatus != PropertyAvailabilityStatus.Available)
+            {
+                return BadRequest();
+            }
 
             if (utcCheckOut <= utcCheckIn)
             {
