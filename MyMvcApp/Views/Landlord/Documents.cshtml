@@ -81,8 +81,9 @@
                 <h3 class="landlord-panel-title">Upload New Document</h3>
             </div>
 
-            <form asp-action="UploadDocument" method="post" enctype="multipart/form-data">
+            <form id="landlordDocumentForm" asp-action="UploadDocument" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
+                <div class="alert alert-info" id="landlordUploadStatusMessage" style="display:none;"></div>
 
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -136,7 +137,7 @@
 
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <button class="landlord-btn landlord-btn-outline" type="button" onclick="toggleDocumentForm()">Cancel</button>
-                    <button class="landlord-btn landlord-btn-primary" type="submit">Upload Document</button>
+                    <button class="landlord-btn landlord-btn-primary" id="landlordUploadButton" type="submit">Upload Document</button>
                 </div>
             </form>
         </article>
@@ -182,6 +183,10 @@
                                 </p>
                                 <p class="landlord-sub mb-0">
                                     <strong>Uploaded:</strong> @document.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")
+                                    @if (document.UploadStatus != DocumentUploadStatus.Confirmed)
+                                    {
+                                        <span> | <strong>Status:</strong> @document.UploadStatus</span>
+                                    }
                                     @if (!string.IsNullOrWhiteSpace(document.Notes))
                                     {
                                         <span> | <strong>Notes:</strong> @document.Notes</span>
@@ -190,12 +195,19 @@
                             </div>
 
                             <div class="landlord-actions">
-                                <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" target="_blank" class="landlord-btn landlord-btn-outline">
-                                    View
-                                </a>
-                                <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" class="landlord-btn landlord-btn-outline">
-                                    Download
-                                </a>
+                                @if (document.UploadStatus == DocumentUploadStatus.Confirmed)
+                                {
+                                    <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" target="_blank" class="landlord-btn landlord-btn-outline">
+                                        View
+                                    </a>
+                                    <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" class="landlord-btn landlord-btn-outline">
+                                        Download
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button class="landlord-btn landlord-btn-outline" type="button" disabled>Validating</button>
+                                }
                                 <form asp-action="DeleteDocument" method="post">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@document.DocumentId" />
@@ -232,4 +244,119 @@
             item.style.display = name.includes(value) ? '' : 'none';
         });
     }
+
+    const landlordDocumentForm = document.getElementById('landlordDocumentForm');
+    const landlordUploadButton = document.getElementById('landlordUploadButton');
+    const landlordUploadStatusMessage = document.getElementById('landlordUploadStatusMessage');
+
+    function setLandlordUploadMessage(message, isError) {
+        landlordUploadStatusMessage.textContent = message;
+        landlordUploadStatusMessage.className = isError ? 'alert alert-danger' : 'alert alert-info';
+        landlordUploadStatusMessage.style.display = 'block';
+    }
+
+    async function pollLandlordUploadStatus(documentId) {
+        for (let attempt = 0; attempt < 15; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const response = await fetch(`/Landlord/GetDocumentUploadStatus/${documentId}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                continue;
+            }
+
+            const result = await response.json();
+            if (result.status === 'Confirmed') {
+                setLandlordUploadMessage('Upload confirmed. Refreshing document library...', false);
+                window.location.reload();
+                return;
+            }
+
+            if (result.status === 'FailedValidation') {
+                setLandlordUploadMessage(result.validationMessage || 'Upload failed validation.', true);
+                landlordUploadButton.disabled = false;
+                landlordUploadButton.textContent = 'Upload Document';
+                return;
+            }
+        }
+
+        setLandlordUploadMessage('File reached S3. Waiting for backend validation event; the document will become available after confirmation.', false);
+        setTimeout(() => window.location.reload(), 2500);
+    }
+
+    landlordDocumentForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const fileInput = document.getElementById('NewDocument_File');
+        const file = fileInput.files[0];
+        if (!file) {
+            setLandlordUploadMessage('Please choose a valid file.', true);
+            return;
+        }
+
+        landlordUploadButton.disabled = true;
+        landlordUploadButton.textContent = 'Preparing upload...';
+        setLandlordUploadMessage('Creating secure upload session...', false);
+
+        try {
+            const token = landlordDocumentForm.querySelector('input[name="__RequestVerificationToken"]').value;
+            const propertyValue = document.getElementById('NewDocument_PropertyId').value;
+            const tenantValue = document.getElementById('NewDocument_TenantId').value;
+            const payload = {
+                documentName: document.getElementById('NewDocument_DocumentName').value,
+                documentType: document.getElementById('NewDocument_DocumentType').value,
+                notes: document.getElementById('NewDocument_Notes').value,
+                propertyId: propertyValue ? Number(propertyValue) : null,
+                tenantId: tenantValue ? Number(tenantValue) : null,
+                fileName: file.name,
+                contentType: file.type || 'application/octet-stream',
+                fileSize: file.size
+            };
+
+            const createResponse = await fetch('/Landlord/CreateDocumentUpload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!createResponse.ok) {
+                const responseText = await createResponse.text();
+                let message = 'Unable to create upload session.';
+                try {
+                    const error = JSON.parse(responseText);
+                    message = error.message || message;
+                } catch {
+                    message = `${message} Server returned ${createResponse.status}. ${responseText.substring(0, 180)}`;
+                }
+                throw new Error(message);
+            }
+
+            const uploadSession = await createResponse.json();
+            landlordUploadButton.textContent = 'Uploading to S3...';
+            setLandlordUploadMessage('Uploading file directly to S3...', false);
+
+            const putResponse = await fetch(uploadSession.uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': payload.contentType },
+                body: file
+            });
+
+            if (!putResponse.ok) {
+                throw new Error('S3 upload failed. Please try again.');
+            }
+
+            landlordUploadButton.textContent = 'Waiting for validation...';
+            setLandlordUploadMessage('Upload completed. Waiting for S3 validation event...', false);
+            await pollLandlordUploadStatus(uploadSession.documentId);
+        } catch (error) {
+            setLandlordUploadMessage(error.message || 'Upload failed.', true);
+            landlordUploadButton.disabled = false;
+            landlordUploadButton.textContent = 'Upload Document';
+        }
+    });
 </script>

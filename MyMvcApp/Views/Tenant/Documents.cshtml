@@ -51,6 +51,7 @@
             <div class="tenant-panel-body tenant-form">
                 <form id="docForm" asp-action="UploadDocument" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
+                    <div class="alert alert-info" id="uploadStatusMessage" style="display:none;"></div>
                     <div class="tenant-form-grid">
                         <div>
                             <label>Document Name</label>
@@ -91,7 +92,7 @@
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
                         <button type="button" class="btn tenant-btn tenant-btn-outline" onclick="toggleForm()">Cancel</button>
-                        <button type="submit" class="btn tenant-btn tenant-btn-primary">Upload Document</button>
+                        <button type="submit" class="btn tenant-btn tenant-btn-primary" id="uploadButton">Upload Document</button>
                     </div>
                 </form>
             </div>
@@ -122,9 +123,20 @@
                                 <div class="fw-semibold">@document.DocumentName</div>
                                 <div class="tenant-sub small mb-2">Uploaded @document.CreatedAt.ToLocalTime().ToString("dd MMM yyyy") - @fileSizeText</div>
                                 <span class="tenant-badge badge-primary mb-2">@document.DocumentType</span>
+                                @if (document.UploadStatus != DocumentUploadStatus.Confirmed)
+                                {
+                                    <span class="tenant-badge mb-2">@document.UploadStatus</span>
+                                }
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" target="_blank" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
-                                    <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                                    @if (document.UploadStatus == DocumentUploadStatus.Confirmed)
+                                    {
+                                        <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" target="_blank" class="btn tenant-btn tenant-btn-outline btn-sm">View</a>
+                                        <a asp-action="DownloadDocument" asp-route-id="@document.DocumentId" class="btn tenant-btn tenant-btn-outline btn-sm">Download</a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn tenant-btn tenant-btn-outline btn-sm" disabled>Validating</button>
+                                    }
                                     <form asp-action="DeleteDocument" method="post" class="d-inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@document.DocumentId" />
@@ -162,6 +174,9 @@
     const fileInput = document.getElementById('docFile');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     const dropZone = document.getElementById('dropZone');
+    const docForm = document.getElementById('docForm');
+    const uploadButton = document.getElementById('uploadButton');
+    const uploadStatusMessage = document.getElementById('uploadStatusMessage');
 
     fileInput.addEventListener('change', function () {
         const icon = document.getElementById('dz-file');
@@ -209,4 +224,110 @@
             card.style.display = name.includes(q) ? '' : 'none';
         });
     }
+
+    function setUploadMessage(message, isError) {
+        uploadStatusMessage.textContent = message;
+        uploadStatusMessage.className = isError ? 'alert alert-danger' : 'alert alert-info';
+        uploadStatusMessage.style.display = 'block';
+    }
+
+    async function pollUploadStatus(documentId) {
+        for (let attempt = 0; attempt < 15; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const response = await fetch(`/Tenant/GetDocumentUploadStatus/${documentId}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                continue;
+            }
+
+            const result = await response.json();
+            if (result.status === 'Confirmed') {
+                setUploadMessage('Upload confirmed. Refreshing document library...', false);
+                window.location.reload();
+                return;
+            }
+
+            if (result.status === 'FailedValidation') {
+                setUploadMessage(result.validationMessage || 'Upload failed validation.', true);
+                uploadButton.disabled = false;
+                uploadButton.textContent = 'Upload Document';
+                return;
+            }
+        }
+
+        setUploadMessage('File reached S3. Waiting for backend validation event; the document will become available after confirmation.', false);
+        setTimeout(() => window.location.reload(), 2500);
+    }
+
+    docForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const file = fileInput.files[0];
+        if (!file) {
+            setUploadMessage('Please choose a valid file.', true);
+            return;
+        }
+
+        uploadButton.disabled = true;
+        uploadButton.textContent = 'Preparing upload...';
+        setUploadMessage('Creating secure upload session...', false);
+
+        try {
+            const token = docForm.querySelector('input[name="__RequestVerificationToken"]').value;
+            const payload = {
+                documentName: document.getElementById('NewDocument_DocumentName').value,
+                documentType: document.getElementById('NewDocument_DocumentType').value,
+                notes: document.getElementById('NewDocument_Notes').value,
+                fileName: file.name,
+                contentType: file.type || 'application/octet-stream',
+                fileSize: file.size
+            };
+
+            const createResponse = await fetch('/Tenant/CreateDocumentUpload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!createResponse.ok) {
+                const responseText = await createResponse.text();
+                let message = 'Unable to create upload session.';
+                try {
+                    const error = JSON.parse(responseText);
+                    message = error.message || message;
+                } catch {
+                    message = `${message} Server returned ${createResponse.status}. ${responseText.substring(0, 180)}`;
+                }
+                throw new Error(message);
+            }
+
+            const uploadSession = await createResponse.json();
+            uploadButton.textContent = 'Uploading to S3...';
+            setUploadMessage('Uploading file directly to S3...', false);
+
+            const putResponse = await fetch(uploadSession.uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': payload.contentType },
+                body: file
+            });
+
+            if (!putResponse.ok) {
+                throw new Error('S3 upload failed. Please try again.');
+            }
+
+            uploadButton.textContent = 'Waiting for validation...';
+            setUploadMessage('Upload completed. Waiting for S3 validation event...', false);
+            await pollUploadStatus(uploadSession.documentId);
+        } catch (error) {
+            setUploadMessage(error.message || 'Upload failed.', true);
+            uploadButton.disabled = false;
+            uploadButton.textContent = 'Upload Document';
+        }
+    });
 </script>

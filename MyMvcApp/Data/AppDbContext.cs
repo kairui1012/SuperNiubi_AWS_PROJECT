@@ -45,6 +45,10 @@ namespace MyMvcApp.Data
             modelBuilder.Entity<Payment>().HasIndex(p => p.StripePaymentIntentId);
             modelBuilder.Entity<Payment>().HasIndex(p => p.StripeEventId);
             modelBuilder.Entity<Document>().Property(d => d.DocumentType).HasConversion<string>();
+            modelBuilder.Entity<Document>().Property(d => d.UploadStatus).HasConversion<string>();
+            modelBuilder.Entity<Document>().HasIndex(d => d.FileKey);
+            modelBuilder.Entity<Document>().HasIndex(d => d.UploadId);
+            modelBuilder.Entity<Document>().HasIndex(d => d.UploadStatus);
             modelBuilder.Entity<VisitorPass>().Property(v => v.Status).HasConversion<string>();
             modelBuilder.Entity<PasswordResetRequest>().Property(p => p.Status).HasConversion<string>();
             modelBuilder.Entity<PropertyBooking>().Property(p => p.Status).HasConversion<string>();
