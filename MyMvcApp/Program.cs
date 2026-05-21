@@ -44,6 +44,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Add Email Service
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<StripeEventBridgeProcessingService>();
 
 builder.Services.AddScoped<IClaimsTransformation, MyMvcApp.Services.RoleClaimsTransformation>();
 
