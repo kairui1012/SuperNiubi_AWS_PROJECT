@@ -13,6 +13,7 @@ using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using Amazon.XRay.Recorder.Core;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json.Serialization;
+using Amazon.SecretsManager;
 
 
 QuestPDF.Settings.License = LicenseType.Community;
@@ -51,6 +52,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<StripeEventBridgeProcessingService>();
 builder.Services.AddScoped<DocumentUploadService>();
+builder.Services.AddScoped<InternalApiKeyProvider>();
 
 builder.Services.AddScoped<IClaimsTransformation, MyMvcApp.Services.RoleClaimsTransformation>();
 
@@ -73,7 +75,7 @@ builder.Services.ConfigureExternalCookie(options =>
 builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIdentityProvider>();
 
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
-builder.Services.AddAWSService<Amazon.SecretsManager.IAmazonSecretsManager>();
+builder.Services.AddAWSService<IAmazonSecretsManager>();
 
 // 2. Register your custom S3 Image Service
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();

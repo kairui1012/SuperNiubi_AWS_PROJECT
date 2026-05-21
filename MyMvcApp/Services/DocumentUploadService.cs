@@ -19,6 +19,21 @@ namespace MyMvcApp.Services
             _configuration = configuration;
         }
 
+        public sealed record DocumentUploadCreateResult(DirectDocumentUploadResponse? Response, string? ErrorMessage)
+        {
+            public bool Succeeded => Response is not null;
+
+            public static DocumentUploadCreateResult Success(DirectDocumentUploadResponse response)
+            {
+                return new DocumentUploadCreateResult(response, null);
+            }
+
+            public static DocumentUploadCreateResult Failure(string message)
+            {
+                return new DocumentUploadCreateResult(null, message);
+            }
+        }
+
         public string? ValidateDocumentUploadRequest(
             CreateDirectDocumentUploadRequest? request,
             string[] allowedExtensions,
@@ -64,6 +79,120 @@ namespace MyMvcApp.Services
             return null;
         }
 
+        public async Task<DocumentUploadCreateResult> CreateTenantDirectUploadAsync(
+            CreateDirectDocumentUploadRequest? request,
+            int uploadedByUserId,
+            int tenantId,
+            int? propertyId,
+            string[] allowedExtensions,
+            long maxFileSizeBytes)
+        {
+            var validationError = ValidateDocumentUploadRequest(request, allowedExtensions, maxFileSizeBytes);
+            if (validationError != null)
+            {
+                return DocumentUploadCreateResult.Failure(validationError);
+            }
+
+            var bucketName = _configuration["AWS:BucketName"];
+            if (string.IsNullOrWhiteSpace(bucketName))
+            {
+                return DocumentUploadCreateResult.Failure("S3 bucket is not configured.");
+            }
+
+            request ??= new CreateDirectDocumentUploadRequest();
+            var document = CreatePendingDocument(
+                request,
+                uploadedByUserId,
+                propertyId,
+                tenantId,
+                $"tenant/{tenantId}/documents",
+                bucketName);
+
+            return DocumentUploadCreateResult.Success(
+                await SavePendingDocumentAndCreateUploadAsync(document, request.ContentType));
+        }
+
+        public async Task<DocumentUploadCreateResult> CreateLandlordDirectUploadAsync(
+            CreateDirectDocumentUploadRequest? request,
+            int landlordId,
+            string[] allowedExtensions,
+            long maxFileSizeBytes)
+        {
+            if (request is null)
+            {
+                return DocumentUploadCreateResult.Failure("Upload request payload is invalid.");
+            }
+
+            if (request.PropertyId == null && request.TenantId == null)
+            {
+                return DocumentUploadCreateResult.Failure("Please select a property or tenant.");
+            }
+
+            Tenant? tenant = null;
+            Property? property = null;
+
+            if (request.TenantId.HasValue)
+            {
+                tenant = await _dbContext.Tenants
+                    .Include(t => t.Property)
+                    .Include(t => t.User)
+                    .FirstOrDefaultAsync(t =>
+                        t.TenantId == request.TenantId.Value &&
+                        t.Property.LandlordId == landlordId);
+
+                if (tenant is null)
+                {
+                    return DocumentUploadCreateResult.Failure("Selected tenant is invalid.");
+                }
+
+                property = tenant.Property;
+            }
+
+            if (request.PropertyId.HasValue)
+            {
+                var selectedProperty = await _dbContext.Properties
+                    .FirstOrDefaultAsync(p =>
+                        p.PropertyId == request.PropertyId.Value &&
+                        p.LandlordId == landlordId &&
+                        !p.IsDeleted);
+
+                if (selectedProperty is null)
+                {
+                    return DocumentUploadCreateResult.Failure("Selected property is invalid.");
+                }
+
+                if (property != null && selectedProperty.PropertyId != property.PropertyId)
+                {
+                    return DocumentUploadCreateResult.Failure("Selected property does not match the tenant.");
+                }
+
+                property = selectedProperty;
+            }
+
+            var validationError = ValidateDocumentUploadRequest(request, allowedExtensions, maxFileSizeBytes);
+            if (validationError != null)
+            {
+                return DocumentUploadCreateResult.Failure(validationError);
+            }
+
+            var bucketName = _configuration["AWS:BucketName"];
+            if (string.IsNullOrWhiteSpace(bucketName))
+            {
+                return DocumentUploadCreateResult.Failure("S3 bucket is not configured.");
+            }
+
+            var document = CreatePendingDocument(
+                request,
+                landlordId,
+                property?.PropertyId,
+                tenant?.TenantId,
+                $"landlord/{landlordId}/documents",
+                bucketName);
+
+            return DocumentUploadCreateResult.Success(
+                await SavePendingDocumentAndCreateUploadAsync(document, request.ContentType));
+        }
+
         public DirectDocumentUploadResponse CreatePresignedPutUrl(Document document, string contentType)
         {
             var bucketName = _configuration["AWS:BucketName"];
@@ -100,6 +229,70 @@ namespace MyMvcApp.Services
             var bucketName = _configuration["AWS:BucketName"] ?? string.Empty;
             var region = _configuration["AWS:Region"] ?? "us-east-1";
             return $"https://{bucketName}.s3.{region}.amazonaws.com/{fileKey}";
+        }
+
+        public async Task<DocumentUploadStatusResponse?> GetTenantUploadStatusAsync(int documentId, int tenantId)
+        {
+            var document = await _dbContext.Documents
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.DocumentId == documentId && d.TenantId == tenantId && !d.IsDeleted);
+
+            return document is null ? null : ToStatusResponse(document);
+        }
+
+        public DocumentUploadStatusResponse ToStatusResponse(Document document)
+        {
+            return new DocumentUploadStatusResponse
+            {
+                DocumentId = document.DocumentId,
+                Status = document.UploadStatus.ToString(),
+                ValidationMessage = document.ValidationMessage
+            };
+        }
+
+        private Document CreatePendingDocument(
+            CreateDirectDocumentUploadRequest request,
+            int uploadedByUserId,
+            int? propertyId,
+            int? tenantId,
+            string keyPrefix,
+            string bucketName)
+        {
+            var extension = Path.GetExtension(request.FileName).ToLowerInvariant();
+            var uploadId = Guid.NewGuid().ToString("N");
+            var fileKey = $"{keyPrefix}/{uploadId}{extension}";
+
+            return new Document
+            {
+                UploadedBy = uploadedByUserId,
+                PropertyId = propertyId,
+                TenantId = tenantId,
+                DocumentName = request.DocumentName.Trim(),
+                DocumentType = request.DocumentType!.Value,
+                FileKey = fileKey,
+                FileSize = (int)Math.Min(request.FileSize, int.MaxValue),
+                FileType = request.ContentType,
+                S3BucketName = bucketName,
+                S3Url = BuildS3Url(fileKey),
+                Notes = request.Notes,
+                UploadStatus = DocumentUploadStatus.PendingUpload,
+                UploadId = uploadId,
+                UploadUrlExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
+
+        private async Task<DirectDocumentUploadResponse> SavePendingDocumentAndCreateUploadAsync(Document document, string contentType)
+        {
+            _dbContext.Documents.Add(document);
+            await _dbContext.SaveChangesAsync();
+
+            var response = CreatePresignedPutUrl(document, contentType);
+            document.UploadUrlExpiresAt = response.ExpiresAtUtc;
+            await _dbContext.SaveChangesAsync();
+
+            return response;
         }
 
         public async Task<DocumentUploadStatusResponse?> ConfirmS3ObjectCreatedAsync(string fileKey, string? bucketName, string? eTag)
