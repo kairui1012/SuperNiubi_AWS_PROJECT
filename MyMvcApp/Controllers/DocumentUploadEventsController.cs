@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Amazon.SecretsManager;
+using Amazon.SecretsManager.Model;
 using MyMvcApp.Models;
 using MyMvcApp.Services;
 using System.Security.Cryptography;

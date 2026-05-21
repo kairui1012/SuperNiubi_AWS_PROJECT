@@ -958,7 +958,7 @@ namespace MyMvcApp.Controllers
             document.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Document moved to archive.";
+            TempData["SuccessMessage"] = "Document is deleted.";
             return RedirectToAction(nameof(Documents));
         }
 

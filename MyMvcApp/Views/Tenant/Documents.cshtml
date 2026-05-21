@@ -140,7 +140,7 @@
                                     <form asp-action="DeleteDocument" method="post" class="d-inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@document.DocumentId" />
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Archive this document?')">Archive</button>
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this document?')">Delete</button>
                                     </form>
                                 </div>
                             </div>

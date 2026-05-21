@@ -37,6 +37,9 @@ services:
       AWS__AccessKey: ${AWS_ACCESS_KEY}
       AWS__SecretKey: ${AWS_SECRET_KEY}
 
+      # Internal API secret for Lambda callbacks
+      InternalApi__Key: ${INTERNAL_API_KEY}
+
       # AWS X-Ray Link
       AWS_XRAY_DAEMON_ADDRESS: xray-daemon:2000
 
