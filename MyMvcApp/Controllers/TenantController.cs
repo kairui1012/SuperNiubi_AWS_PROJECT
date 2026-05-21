@@ -298,6 +298,23 @@ namespace MyMvcApp.Controllers
             };
         }
 
+        private static IOrderedQueryable<Payment> OrderPaymentHistory(IQueryable<Payment> payments)
+        {
+            return payments
+                .OrderBy(p =>
+                    p.Status == PaymentStatus.Pending ||
+                    p.Status == PaymentStatus.Submitted ||
+                    p.Status == PaymentStatus.Overdue
+                        ? 0
+                        : p.Status == PaymentStatus.Verified ||
+                          p.Status == PaymentStatus.Refunded
+                            ? 1
+                            : 2)
+                .ThenByDescending(p => p.DueDate)
+                .ThenByDescending(p => p.PaymentDate ?? p.UpdatedAt)
+                .ThenByDescending(p => p.PaymentId);
+        }
+
         private async Task<string> GenerateMockPaymentReceiptPdfAsync(Tenant tenant, Payment payment)
         {
             var receiptsFolder = Path.Combine(_environment.WebRootPath, "uploads", "tenant", tenant.TenantId.ToString(), "payments");
@@ -963,10 +980,8 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction(nameof(PendingAssignment));
             }
 
-            var payments = await _context.Payments
-                .Where(p => p.TenantId == tenant.TenantId)
-                .OrderByDescending(p => p.PaymentYear)
-                .ThenByDescending(p => p.PaymentDate)
+            var payments = await OrderPaymentHistory(_context.Payments
+                .Where(p => p.TenantId == tenant.TenantId))
                 .ToListAsync();
 
             return View(BuildPaymentsViewModel(tenant, payments));
@@ -1001,10 +1016,8 @@ namespace MyMvcApp.Controllers
 
             Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
 
-            var existingPayments = await _context.Payments
-                .Where(p => p.TenantId == tenant.TenantId)
-                .OrderByDescending(p => p.PaymentYear)
-                .ThenByDescending(p => p.PaymentDate)
+            var existingPayments = await OrderPaymentHistory(_context.Payments
+                .Where(p => p.TenantId == tenant.TenantId))
                 .ToListAsync();
 
             var now = DateTime.UtcNow;
