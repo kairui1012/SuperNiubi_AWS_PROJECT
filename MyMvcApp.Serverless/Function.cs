@@ -4,8 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MyMvcApp.Data;
-using MyMvcApp.Services;
 using Stripe;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -24,10 +22,9 @@ namespace MyMvcApp.Serverless
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(configuration);
             services.AddLogging(logging => logging.AddConsole());
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContext<StripeWorkerDbContext>(options =>
                 options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
-            services.AddScoped<EmailService>();
-            services.AddScoped<StripeEventBridgeProcessingService>();
+            services.AddScoped<StripeEventProcessor>();
 
             _serviceProvider = services.BuildServiceProvider();
         }
@@ -35,9 +32,9 @@ namespace MyMvcApp.Serverless
         public async Task<StripeEventLambdaResponse> FunctionHandler(JsonElement payload, ILambdaContext context)
         {
             using var scope = _serviceProvider.CreateScope();
-            var processor = scope.ServiceProvider.GetRequiredService<StripeEventBridgeProcessingService>();
+            var processor = scope.ServiceProvider.GetRequiredService<StripeEventProcessor>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Function>>();
-            var summary = StripeEventBridgeProcessingService.ReadEventSummary(payload);
+            var summary = StripeEventProcessor.ReadEventSummary(payload);
 
             try
             {

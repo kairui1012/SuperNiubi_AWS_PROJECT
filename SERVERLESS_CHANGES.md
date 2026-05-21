@@ -117,9 +117,10 @@ The Lambda/shared service handles:
 Publish and zip the Lambda:
 
 ```bash
+rm -rf publish-lambda propease-stripe-only-lambda.zip
 dotnet publish MyMvcApp.Serverless/MyMvcApp.Serverless.csproj -c Release -o ./publish-lambda
 cd publish-lambda
-zip -r ../propease-stripe-lambda.zip .
+zip -r ../propease-stripe-only-lambda.zip .
 ```
 
 Create or update the Lambda in AWS Console:
