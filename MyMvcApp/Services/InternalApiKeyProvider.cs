@@ -90,6 +90,7 @@ namespace MyMvcApp.Services
 
         private static IEnumerable<string> GetSecretIds()
         {
+            yield return "prod/mymvcapp/secrets";
             yield return "InternalApi__Key";
             yield return "InternalApi:Key";
         }

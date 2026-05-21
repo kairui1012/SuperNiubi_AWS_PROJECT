@@ -14,7 +14,7 @@ DOCUMENT_UPLOAD_CONFIRM_ENDPOINT=https://your-domain.com/api/document-uploads/s3
 INTERNAL_API_KEY=same-value-as-MVC-internal-api-key
 ```
 
-If MVC uses Secrets Manager, the secret name is `InternalApi__Key`. `INTERNAL_API_KEY` must match the secret value.
+If MVC uses Secrets Manager, the default secret is `prod/mymvcapp/secrets` with JSON field `InternalApi__Key`. `INTERNAL_API_KEY` must match that field value.
 
 ## Event Sources
 
