@@ -11,6 +11,11 @@ namespace MyMvcApp.Services
         private readonly IAmazonSecretsManager _secretsManager;
         private readonly ILogger<InternalApiKeyProvider> _logger;
 
+        public sealed record InternalApiKeyLookupResult(string? Key, string Source, string Message)
+        {
+            public bool HasKey => !string.IsNullOrWhiteSpace(Key);
+        }
+
         public InternalApiKeyProvider(
             IConfiguration configuration,
             IAmazonSecretsManager secretsManager,
@@ -23,32 +28,70 @@ namespace MyMvcApp.Services
 
         public async Task<string?> GetInternalApiKeyAsync()
         {
+            return (await GetInternalApiKeyLookupAsync()).Key;
+        }
+
+        public async Task<InternalApiKeyLookupResult> GetInternalApiKeyLookupAsync()
+        {
             var configuredKey = _configuration["InternalApi:Key"];
             if (!string.IsNullOrWhiteSpace(configuredKey))
             {
-                return configuredKey;
+                return new InternalApiKeyLookupResult(configuredKey, "configuration:InternalApi:Key", "Loaded internal API key from MVC configuration.");
             }
 
-            var secretId = _configuration["InternalApi:SecretId"];
-            if (string.IsNullOrWhiteSpace(secretId))
+            var failures = new List<string>();
+            foreach (var secretId in GetSecretIds())
             {
-                return _configuration["EventBridge:SharedSecret"];
-            }
-
-            try
-            {
-                var response = await _secretsManager.GetSecretValueAsync(new GetSecretValueRequest
+                try
                 {
-                    SecretId = secretId
-                });
+                    var response = await _secretsManager.GetSecretValueAsync(new GetSecretValueRequest
+                    {
+                        SecretId = secretId
+                    });
 
-                return ExtractSecretValue(response);
+                    var secretValue = ExtractSecretValue(response);
+                    if (!string.IsNullOrWhiteSpace(secretValue))
+                    {
+                        return new InternalApiKeyLookupResult(secretValue, $"secrets-manager:{secretId}", "Loaded internal API key from Secrets Manager.");
+                    }
+
+                    failures.Add($"{secretId}: empty secret value");
+                    _logger.LogWarning("Secrets Manager secret {SecretId} did not contain an internal API key value.", secretId);
+                }
+                catch (ResourceNotFoundException)
+                {
+                    failures.Add($"{secretId}: not found");
+                    _logger.LogWarning("Secrets Manager secret {SecretId} was not found while loading the internal API key.", secretId);
+                }
+                catch (AmazonSecretsManagerException ex)
+                {
+                    failures.Add($"{secretId}: {ex.ErrorCode ?? ex.GetType().Name}");
+                    _logger.LogError(ex, "Unable to load internal API key from Secrets Manager secret {SecretId}.", secretId);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add($"{secretId}: {ex.GetType().Name}");
+                    _logger.LogError(ex, "Unable to load internal API key from Secrets Manager secret {SecretId}.", secretId);
+                }
             }
-            catch (Exception ex)
+
+            var legacySecret = _configuration["EventBridge:SharedSecret"];
+            if (!string.IsNullOrWhiteSpace(legacySecret))
             {
-                _logger.LogError(ex, "Unable to load internal API key from Secrets Manager secret {SecretId}.", secretId);
-                return null;
+                return new InternalApiKeyLookupResult(legacySecret, "configuration:EventBridge:SharedSecret", "Loaded internal API key from legacy EventBridge shared secret.");
             }
+
+            var message = failures.Count == 0
+                ? "Internal API key is not configured. Checked configuration InternalApi:Key and legacy EventBridge:SharedSecret."
+                : $"Internal API key is not configured. Checked configuration InternalApi:Key, Secrets Manager ({string.Join("; ", failures)}), and legacy EventBridge:SharedSecret.";
+
+            return new InternalApiKeyLookupResult(null, "not-configured", message);
+        }
+
+        private static IEnumerable<string> GetSecretIds()
+        {
+            yield return "InternalApi__Key";
+            yield return "InternalApi:Key";
         }
 
         private static string? ExtractSecretValue(GetSecretValueResponse response)
