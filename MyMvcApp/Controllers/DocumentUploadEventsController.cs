@@ -26,14 +26,14 @@ namespace MyMvcApp.Controllers
         [HttpPost("s3-object-created")]
         public async Task<IActionResult> S3ObjectCreated([FromBody] S3ObjectCreatedUploadNotification notification)
         {
-            var configuredKey = await _internalApiKeyProvider.GetInternalApiKeyAsync();
-            if (string.IsNullOrWhiteSpace(configuredKey))
+            var keyLookup = await _internalApiKeyProvider.GetInternalApiKeyLookupAsync();
+            if (!keyLookup.HasKey)
             {
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Internal API key or secret id is not configured." });
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = keyLookup.Message });
             }
 
             if (!Request.Headers.TryGetValue("X-Internal-Api-Key", out var suppliedKey) ||
-                !FixedTimeEquals(configuredKey, suppliedKey.ToString()))
+                !FixedTimeEquals(keyLookup.Key!, suppliedKey.ToString()))
             {
                 return Unauthorized(new { message = "Invalid internal API key." });
             }
