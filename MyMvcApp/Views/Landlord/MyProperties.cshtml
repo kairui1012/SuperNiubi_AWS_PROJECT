@@ -109,43 +109,65 @@
                     <a href="/Landlord/Dashboard" class="landlord-link">Back to Dashboard</a>
                 </div>
 
-                <div class="landlord-list">
+                <div class="landlord-list landlord-property-list">
                     @foreach (var property in Model)
                     {
-                        <div class="landlord-list-item">
+                        <div class="landlord-list-item landlord-property-row">
                             @if (!string.IsNullOrWhiteSpace(property.ImageUrl))
                             {
                                 <img src="@property.ImageUrl"
                                      alt="@property.PropertyName"
-                                     style="width: 120px; height: 90px; object-fit: cover; border-radius: 8px; margin-right: 1rem;" />
+                                     class="landlord-property-thumb" />
                             }
-                            <div>
-                                <h4 class="mb-2">@property.PropertyName</h4>
-                                <p class="landlord-sub mb-1">
-                                    <strong>Type:</strong> @property.PropertyType |
-                                    <strong>Rent:</strong> RM @property.MonthlyRent
+                            else
+                            {
+                                <div class="landlord-property-thumb landlord-property-thumb-empty" aria-label="No property image">
+                                    <i class="bi bi-image"></i>
+                                </div>
+                            }
+
+                            <div class="landlord-property-main">
+                                <h4 class="landlord-property-title">@property.PropertyName</h4>
+                                <dl class="landlord-property-meta">
+                                    <div>
+                                        <dt>Type</dt>
+                                        <dd>@property.PropertyType</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Rent</dt>
+                                        <dd>RM @property.MonthlyRent.ToString("0.00")</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Availability</dt>
+                                        <dd>@property.AvailabilityStatus</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Approval</dt>
+                                        <dd>@property.ApprovalStatus</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Book a Stay</dt>
+                                        <dd>
+                                            @(property.AllowShortTerm && property.DailyRate.HasValue
+                                                ? $"RM {property.DailyRate.Value:0.00}/night"
+                                                : "Disabled")
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt>Rooms</dt>
+                                        <dd>@property.Bedrooms bed / @property.Bathrooms bath</dd>
+                                    </div>
+                                </dl>
+                                <p class="landlord-property-address">
+                                    @property.AddressLine1 @property.AddressLine2, @property.City, @property.State @property.PostalCode
                                 </p>
-                                <p class="landlord-sub mb-1">
-                                    <strong>Availability:</strong> @property.AvailabilityStatus |
-                                    <strong>Approval:</strong> @property.ApprovalStatus
-                                </p>
-                                <p class="landlord-sub mb-1">
-                                    <strong>Book a Stay:</strong>
-                                    @(property.AllowShortTerm && property.DailyRate.HasValue
-                                        ? $"Enabled at RM {property.DailyRate.Value:0.00}/night"
-                                        : "Disabled")
-                                </p>
-                                <p class="landlord-sub mb-1">
-                                    <strong>Address:</strong> @property.AddressLine1 @property.AddressLine2,
-                                    @property.City, @property.State @property.PostalCode
-                                </p>
-                                <p class="landlord-sub mb-0">
-                                    <strong>Bedrooms:</strong> @property.Bedrooms |
-                                    <strong>Bathrooms:</strong> @property.Bathrooms
-                                </p>
+                                @if (!string.IsNullOrWhiteSpace(property.Description))
+                                {
+                                    <p class="landlord-property-description">@property.Description</p>
+                                }
                             </div>
 
-                            <div class="landlord-actions">
+                            <div class="landlord-actions landlord-property-actions">
                                 <a href="/Landlord/PropertyDetails/@property.PropertyId"
                                    class="landlord-btn landlord-btn-outline">
                                     Details

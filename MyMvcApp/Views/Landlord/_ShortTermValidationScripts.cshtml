@@ -1,0 +1,79 @@
+<script>
+    (() => {
+        const allowShortTerm = document.getElementById('AllowShortTerm');
+        const dailyRate = document.getElementById('DailyRate');
+
+        if (!allowShortTerm || !dailyRate) {
+            return;
+        }
+
+        const dailyRateMessage = 'Daily rate is required when Book a Stay is enabled.';
+
+        function setDailyRateValidation() {
+            const form = dailyRate.form;
+
+            if (allowShortTerm.checked) {
+                dailyRate.disabled = false;
+                dailyRate.required = true;
+                dailyRate.min = '0.01';
+                dailyRate.setAttribute('aria-required', 'true');
+                dailyRate.setAttribute('data-val', 'true');
+                dailyRate.setAttribute('data-val-required', dailyRateMessage);
+                dailyRate.setAttribute('data-val-range', 'Daily rate must be greater than 0.');
+                dailyRate.setAttribute('data-val-range-min', '0.01');
+                dailyRate.setAttribute('data-val-range-max', '999999999');
+            } else {
+                dailyRate.required = false;
+                dailyRate.disabled = true;
+                dailyRate.value = '';
+                dailyRate.removeAttribute('aria-required');
+                dailyRate.removeAttribute('data-val-required');
+                dailyRate.removeAttribute('data-val-range');
+                dailyRate.removeAttribute('data-val-range-min');
+                dailyRate.removeAttribute('data-val-range-max');
+                dailyRate.setCustomValidity('');
+
+                if (window.jQuery) {
+                    const field = window.jQuery(dailyRate);
+                    field.removeClass('input-validation-error');
+                    window.jQuery(`[data-valmsg-for="${dailyRate.name}"]`)
+                        .removeClass('field-validation-error')
+                        .addClass('field-validation-valid')
+                        .empty();
+                }
+            }
+
+            if (form && window.jQuery?.validator?.unobtrusive) {
+                window.jQuery(form).removeData('validator');
+                window.jQuery(form).removeData('unobtrusiveValidation');
+                window.jQuery.validator.unobtrusive.parse(form);
+            }
+        }
+
+        dailyRate.addEventListener('input', () => {
+            dailyRate.setCustomValidity('');
+        });
+
+        allowShortTerm.addEventListener('change', () => {
+            setDailyRateValidation();
+            if (allowShortTerm.checked) {
+                dailyRate.focus();
+            }
+        });
+
+        dailyRate.form?.addEventListener('submit', (event) => {
+            if (!allowShortTerm.checked) {
+                return;
+            }
+
+            const value = Number(dailyRate.value);
+            if (!dailyRate.value || Number.isNaN(value) || value <= 0) {
+                dailyRate.setCustomValidity(dailyRateMessage);
+                dailyRate.reportValidity();
+                event.preventDefault();
+            }
+        });
+
+        setDailyRateValidation();
+    })();
+</script>
