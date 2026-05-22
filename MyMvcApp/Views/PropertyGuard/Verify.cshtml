@@ -13,9 +13,24 @@
 
     <div class="card shadow-sm mb-4 border-0">
         <div class="card-body p-4">
+            <div class="guest-scan-panel mb-3">
+                <div id="guest-qr-reader" class="guest-qr-reader"></div>
+                <div class="d-grid gap-2 mt-3">
+                    <button type="button" id="startScannerBtn" class="btn btn-outline-primary fw-bold">
+                        <i class="bi bi-camera"></i> Open Camera Scanner
+                    </button>
+                    <button type="button" id="stopScannerBtn" class="btn btn-outline-secondary d-none">
+                        Stop Scanner
+                    </button>
+                </div>
+                <p id="scannerStatus" class="text-muted small text-center mt-2 mb-0">
+                    Allow camera permission to scan a Book A Stay QR pass.
+                </p>
+            </div>
+
             <form method="get" asp-action="Verify">
                 <div class="input-group input-group-lg">
-                    <input type="text" name="code" class="form-control text-uppercase text-center fw-bold bg-light" placeholder="E.G. A1B2C3D4" value="@Context.Request.Query["code"]" required maxlength="8">
+                    <input type="text" id="manualCode" name="code" class="form-control text-uppercase text-center fw-bold bg-light" placeholder="E.G. A1B2C3D4" value="@Context.Request.Query["code"]" required maxlength="8">
                     <button class="btn btn-primary px-4 fw-bold" type="submit">Verify</button>
                 </div>
             </form>
@@ -63,3 +78,147 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script>
+        (() => {
+            const readerId = 'guest-qr-reader';
+            const startButton = document.getElementById('startScannerBtn');
+            const stopButton = document.getElementById('stopScannerBtn');
+            const statusText = document.getElementById('scannerStatus');
+            const manualCode = document.getElementById('manualCode');
+            let scanner;
+            let scanLocked = false;
+
+            function setStatus(message) {
+                if (statusText) {
+                    statusText.textContent = message;
+                }
+            }
+
+            function extractGuestCode(rawValue) {
+                const text = (rawValue || '').trim();
+                if (!text) {
+                    return '';
+                }
+
+                try {
+                    const url = new URL(text);
+                    const code = url.searchParams.get('code');
+                    if (code) {
+                        return code.trim().toUpperCase();
+                    }
+                } catch {
+                }
+
+                const codeParamMatch = text.match(/[?&]code=([A-Za-z0-9]+)/i);
+                if (codeParamMatch && codeParamMatch[1]) {
+                    return codeParamMatch[1].trim().toUpperCase();
+                }
+
+                const tokenMatch = text.match(/[A-Z0-9]{8}/i);
+                if (tokenMatch && tokenMatch[0]) {
+                    return tokenMatch[0].toUpperCase();
+                }
+
+                return text.toUpperCase();
+            }
+
+            async function stopScanner() {
+                if (!scanner) {
+                    return;
+                }
+
+                try {
+                    await scanner.stop();
+                    await scanner.clear();
+                } catch {
+                } finally {
+                    scanner = null;
+                    scanLocked = false;
+                    startButton?.classList.remove('d-none');
+                    stopButton?.classList.add('d-none');
+                }
+            }
+
+            async function startScanner() {
+                if (scanner) {
+                    return;
+                }
+
+                if (typeof Html5Qrcode === 'undefined') {
+                    setStatus('QR scanner library could not load. Please check your connection and try again.');
+                    return;
+                }
+
+                try {
+                    scanner = new Html5Qrcode(readerId);
+                    startButton?.classList.add('d-none');
+                    stopButton?.classList.remove('d-none');
+                    setStatus('Starting camera...');
+
+                    await scanner.start(
+                        { facingMode: 'environment' },
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 }
+                        },
+                        async decodedText => {
+                            if (scanLocked) {
+                                return;
+                            }
+
+                            const code = extractGuestCode(decodedText);
+                            if (!code) {
+                                return;
+                            }
+
+                            scanLocked = true;
+                            if (manualCode) {
+                                manualCode.value = code;
+                            }
+                            setStatus('QR scanned. Verifying pass...');
+                            await stopScanner();
+                            window.location.href = `/PropertyGuard/Verify?code=${encodeURIComponent(code)}`;
+                        },
+                        () => {
+                        });
+
+                    setStatus('Camera is active. Point it at the guest QR code.');
+                } catch {
+                    scanner = null;
+                    startButton?.classList.remove('d-none');
+                    stopButton?.classList.add('d-none');
+                    setStatus('Unable to start camera. Use HTTPS and allow camera permission in your browser.');
+                }
+            }
+
+            startButton?.addEventListener('click', startScanner);
+            stopButton?.addEventListener('click', stopScanner);
+
+            window.addEventListener('beforeunload', () => {
+                if (scanner) {
+                    scanner.stop().catch(() => {});
+                }
+            });
+        })();
+    </script>
+    <style>
+        .guest-qr-reader {
+            width: 100%;
+            min-height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .guest-qr-reader:empty {
+            display: none;
+        }
+
+        .guest-qr-reader video {
+            border-radius: 8px;
+        }
+    </style>
+}
