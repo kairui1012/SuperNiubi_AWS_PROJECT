@@ -14,17 +14,13 @@
     <div class="card shadow-sm mb-4 border-0">
         <div class="card-body p-4">
             <div class="guest-scan-panel mb-3">
-                <div id="guest-qr-reader" class="guest-qr-reader"></div>
                 <div class="d-grid gap-2 mt-3">
                     <button type="button" id="startScannerBtn" class="btn btn-outline-primary fw-bold">
                         <i class="bi bi-camera"></i> Open Camera Scanner
                     </button>
-                    <button type="button" id="stopScannerBtn" class="btn btn-outline-secondary d-none">
-                        Stop Scanner
-                    </button>
                 </div>
-                <p id="scannerStatus" class="text-muted small text-center mt-2 mb-0">
-                    Allow camera permission to scan a Book A Stay QR pass.
+                <p class="text-muted small text-center mt-2 mb-0">
+                    Open the camera window and place the QR code inside the square frame.
                 </p>
             </div>
 
@@ -79,6 +75,109 @@
     }
 </div>
 
+<div class="modal fade guest-scanner-modal" id="guestScannerModal" tabindex="-1" aria-labelledby="guestScannerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0">
+                <div>
+                    <h5 class="modal-title fw-bold" id="guestScannerTitle">
+                        <i class="bi bi-qr-code-scan"></i> Scan Guest QR Pass
+                    </h5>
+                    <p class="text-muted small mb-0">Move the phone until the QR code is clear inside the square.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close scanner"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <div class="guest-camera-shell">
+                    <div id="guest-qr-reader" class="guest-qr-reader"></div>
+                    <div class="guest-scan-frame" aria-hidden="true"></div>
+                </div>
+                <p id="scannerStatus" class="text-muted small text-center mt-3 mb-0">
+                    Camera is not running yet.
+                </p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" id="stopScannerBtn" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Close Scanner
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .guest-scanner-modal .modal-content {
+            border-radius: 12px;
+        }
+
+        .guest-camera-shell {
+            position: relative;
+            width: 100%;
+            min-height: min(72vh, 520px);
+            overflow: hidden;
+            border-radius: 12px;
+            background: #050505;
+        }
+
+        .guest-qr-reader {
+            width: 100%;
+            min-height: min(72vh, 520px);
+            background: #050505;
+        }
+
+        .guest-qr-reader video {
+            width: 100% !important;
+            min-height: min(72vh, 520px);
+            object-fit: cover;
+        }
+
+        .guest-scan-frame {
+            position: absolute;
+            inset: 50% auto auto 50%;
+            width: min(68vw, 320px);
+            aspect-ratio: 1;
+            transform: translate(-50%, -50%);
+            border: 3px solid #ffffff;
+            border-radius: 14px;
+            box-shadow:
+                0 0 0 999px rgba(0, 0, 0, 0.32),
+                0 0 24px rgba(37, 99, 235, 0.45);
+            pointer-events: none;
+        }
+
+        .guest-scan-frame::before,
+        .guest-scan-frame::after {
+            content: "";
+            position: absolute;
+            inset: 12px;
+            border-top: 4px solid #22c55e;
+            border-bottom: 4px solid #22c55e;
+            border-radius: 8px;
+        }
+
+        .guest-scan-frame::after {
+            border-top: 0;
+            border-bottom: 0;
+            border-left: 4px solid #22c55e;
+            border-right: 4px solid #22c55e;
+        }
+
+        @@media (max-width: 575.98px) {
+            .guest-scanner-modal .modal-content {
+                min-height: 100dvh;
+                border-radius: 0;
+            }
+
+            .guest-camera-shell,
+            .guest-qr-reader,
+            .guest-qr-reader video {
+                min-height: 64dvh;
+            }
+        }
+    </style>
+}
+
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script>
@@ -88,8 +187,10 @@
             const stopButton = document.getElementById('stopScannerBtn');
             const statusText = document.getElementById('scannerStatus');
             const manualCode = document.getElementById('manualCode');
+            const modalElement = document.getElementById('guestScannerModal');
             let scanner;
             let scanLocked = false;
+            let modal;
 
             function setStatus(message) {
                 if (statusText) {
@@ -137,8 +238,7 @@
                 } finally {
                     scanner = null;
                     scanLocked = false;
-                    startButton?.classList.remove('d-none');
-                    stopButton?.classList.add('d-none');
+                    setStatus('Camera stopped.');
                 }
             }
 
@@ -154,15 +254,15 @@
 
                 try {
                     scanner = new Html5Qrcode(readerId);
-                    startButton?.classList.add('d-none');
-                    stopButton?.classList.remove('d-none');
                     setStatus('Starting camera...');
+                    const qrboxSize = Math.min(320, Math.max(220, Math.floor(window.innerWidth * 0.68)));
 
                     await scanner.start(
                         { facingMode: 'environment' },
                         {
                             fps: 10,
-                            qrbox: { width: 250, height: 250 }
+                            qrbox: { width: qrboxSize, height: qrboxSize },
+                            aspectRatio: 1
                         },
                         async decodedText => {
                             if (scanLocked) {
@@ -180,6 +280,7 @@
                             }
                             setStatus('QR scanned. Verifying pass...');
                             await stopScanner();
+                            modal?.hide();
                             window.location.href = `/PropertyGuard/Verify?code=${encodeURIComponent(code)}`;
                         },
                         () => {
@@ -188,14 +289,19 @@
                     setStatus('Camera is active. Point it at the guest QR code.');
                 } catch {
                     scanner = null;
-                    startButton?.classList.remove('d-none');
-                    stopButton?.classList.add('d-none');
                     setStatus('Unable to start camera. Use HTTPS and allow camera permission in your browser.');
                 }
             }
 
-            startButton?.addEventListener('click', startScanner);
+            startButton?.addEventListener('click', () => {
+                modal ??= bootstrap.Modal.getOrCreateInstance(modalElement);
+                modal.show();
+            });
+
             stopButton?.addEventListener('click', stopScanner);
+
+            modalElement?.addEventListener('shown.bs.modal', startScanner);
+            modalElement?.addEventListener('hidden.bs.modal', stopScanner);
 
             window.addEventListener('beforeunload', () => {
                 if (scanner) {
@@ -204,21 +310,4 @@
             });
         })();
     </script>
-    <style>
-        .guest-qr-reader {
-            width: 100%;
-            min-height: 0;
-            overflow: hidden;
-            border-radius: 8px;
-            background: #000;
-        }
-
-        .guest-qr-reader:empty {
-            display: none;
-        }
-
-        .guest-qr-reader video {
-            border-radius: 8px;
-        }
-    </style>
 }
