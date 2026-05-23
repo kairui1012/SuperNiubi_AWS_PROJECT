@@ -336,16 +336,200 @@ Controller 一般不会只做 UI，它会协调：
 - `AppDbContext.cs`
 - `AppDbContextFactory.cs`
 
-`AppDbContext` 定义系统有哪些 tables，例如：
+#### AppDbContext.cs
+
+`AppDbContext` 是整个项目最重要的 database class。它继承自 Entity Framework Core 的 `DbContext`。
+
+可以把它理解成：
+
+> `AppDbContext` 是 C# code 和 PostgreSQL database 之间的桥梁。
+
+Controller 或 Service 如果要查询 database，通常会通过 `AppDbContext` 操作。
+
+例如：
+
+```csharp
+_context.Properties.ToListAsync()
+_context.Payments.Add(payment)
+_context.SaveChangesAsync()
+```
+
+`AppDbContext` 里面的 `DbSet` 会对应 database table。
+
+这个项目里定义的 tables 包括：
 
 - `Users`
 - `Properties`
+- `PropertyAmenities`
 - `Tenants`
+- `MaintenanceRequests`
+- `MaintenanceTimelines`
 - `Payments`
 - `Documents`
-- `MaintenanceRequests`
+- `CommunityUpdates`
+- `VisitorPasses`
+- `PasswordResetRequests`
+- `AuditLogs`
+- `SystemAnnouncements`
+- `LeaseHistories`
+- `PropertyBookings`
+- `PromoCodes`
 
-它也定义 entity relationship、index 和 enum conversion。
+例如这行：
+
+```csharp
+public DbSet<Property> Properties { get; set; }
+```
+
+意思是：
+
+> C# 里的 `Property` model 会映射到 database 里的 `Properties` table。
+
+#### OnModelCreating
+
+`OnModelCreating` 是 `AppDbContext` 里面很重要的方法。
+
+它的作用是配置 database rules，例如：
+
+- Enum 要怎么存。
+- 哪些字段需要 index。
+- Table 之间是什么 relationship。
+- 删除数据时要 cascade、restrict 还是 set null。
+
+第一类逻辑是 enum conversion。
+
+例如：
+
+```csharp
+modelBuilder.Entity<Property>()
+    .Property(p => p.PropertyType)
+    .HasConversion<string>();
+```
+
+意思是 `PropertyType` 这个 enum 不会存成数字，而是存成 string。
+
+如果不这样做，database 里可能看到：
+
+```text
+1
+2
+3
+```
+
+配置成 string 后会看到：
+
+```text
+Apartment
+House
+Condo
+```
+
+这样比较容易 debug，也比较容易直接看 database。
+
+第二类逻辑是 index。
+
+例如：
+
+```csharp
+modelBuilder.Entity<Payment>().HasIndex(p => p.StripeSessionId);
+modelBuilder.Entity<Document>().HasIndex(d => d.UploadStatus);
+modelBuilder.Entity<AuditLog>().HasIndex(a => a.CreatedAt);
+```
+
+Index 的作用是让常用查询更快。
+
+比如系统经常需要通过 Stripe session id 找 payment，所以给 `StripeSessionId` 加 index。
+
+第三类逻辑是 relationship。
+
+例如：
+
+```csharp
+modelBuilder.Entity<Property>()
+    .HasOne(p => p.Landlord)
+    .WithMany()
+    .HasForeignKey(p => p.LandlordId)
+    .OnDelete(DeleteBehavior.Cascade);
+```
+
+这表示：
+
+- 一个 property 属于一个 landlord。
+- `LandlordId` 是 foreign key。
+- 如果 landlord 被删除，他的 properties 也会被删除。
+
+再比如：
+
+```csharp
+modelBuilder.Entity<Tenant>()
+    .HasOne(t => t.Property)
+    .WithMany(p => p.Tenants)
+    .HasForeignKey(t => t.PropertyId)
+    .OnDelete(DeleteBehavior.Restrict);
+```
+
+这表示：
+
+- 一个 tenant 会关联到一个 property。
+- 一个 property 可以有多个 tenant records。
+- 删除 property 时不能随便 cascade 删除 tenant，因为租约历史需要被谨慎保留。
+
+#### AppDbContextFactory.cs
+
+`AppDbContextFactory` 是给 EF Core design-time tools 用的。
+
+简单说，它主要服务于这些 command：
+
+```bash
+dotnet ef migrations add ...
+dotnet ef database update
+```
+
+当你运行 migration command 时，EF Core 需要知道如何创建 `AppDbContext`，但那时候 application 可能没有真正启动。
+
+所以 `AppDbContextFactory` 会手动做三件事：
+
+1. 读取 configuration。
+2. 读取 `DefaultConnection` database connection string。
+3. 创建并返回 `AppDbContext`。
+
+核心代码：
+
+```csharp
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile("appsettings.Development.json", optional: true)
+    .AddEnvironmentVariables()
+    .Build();
+```
+
+这表示它会读取：
+
+- `appsettings.json`
+- `appsettings.Development.json`
+- environment variables
+
+然后：
+
+```csharp
+optionsBuilder.UseNpgsql(
+    configuration.GetConnectionString("DefaultConnection"));
+```
+
+这表示 EF Core migration 工具会用 PostgreSQL connection string 创建 database context。
+
+#### Data 文件夹逻辑总结
+
+`Data` 文件夹的核心逻辑是 database mapping。
+
+可以这样讲：
+
+> The Data folder defines how the application connects to PostgreSQL and how C# models map to database tables. `AppDbContext` is used during runtime, while `AppDbContextFactory` is used by EF Core tools when creating or applying migrations.
+
+一句更简单的中文解释：
+
+> `Data` 文件夹就是系统的数据库连接和数据库规则中心。
 
 ### MyMvcApp/Services
 
