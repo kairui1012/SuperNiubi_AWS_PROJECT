@@ -16,24 +16,196 @@ PropEase 是一个使用 ASP.NET Core MVC 开发的物业管理系统，主要�
 
 ```text
 SuperNiubi_AWS_PROJECT/
-├── MyMvcApp/                                # 主要 ASP.NET Core MVC 应用
-│   ├── Controllers/                         # 处理 request 和业务流程
-│   ├── Models/                              # 数据模型和 ViewModel
-│   ├── Views/                               # Razor 页面，按功能/角色分类
-│   ├── Data/                                # Entity Framework Core DbContext
-│   ├── Services/                            # 可复用的业务服务
-│   ├── Extensions/                          # Authentication 和 middleware 扩展
-│   ├── Migrations/                          # EF Core 数据库迁移文件
-│   ├── wwwroot/                             # 静态资源：CSS、JS、图片、前端库
-│   ├── Program.cs                           # 应用启动和依赖注入配置
-│   └── MyMvcApp.csproj                      # 主 Web 项目的配置和依赖
-├── MyMvcApp.Serverless/                     # .NET AWS Lambda，用来处理 Stripe EventBridge 事件
+├── MyMvcApp/                                # 主要 ASP.NET Core MVC Web 应用
+│   ├── Controllers/                         # Controller 层：接收 request，调用 service/database，返回 view 或 JSON
+│   ├── Models/                              # Model 层：数据库 entity、enum、ViewModel、表单数据结构
+│   ├── Models/Admin/                        # Admin dashboard 和 payment monitoring 专用 ViewModel
+│   ├── Views/                               # View 层：Razor .cshtml 页面，按 controller/功能分类
+│   ├── Views/Shared/                        # 共用 layout、error page、validation scripts
+│   ├── Data/                                # Database access 层，主要是 AppDbContext
+│   ├── Services/                            # Service 层：Email、S3 upload、document upload、Stripe event processing 等
+│   ├── Extensions/                          # 扩展配置和 middleware，例如 Google login、X-Ray user tracking
+│   ├── Migrations/                          # EF Core migrations，用来记录 database schema 变化
+│   ├── Properties/                          # launchSettings.json，开发环境启动设置
+│   ├── scripts/                             # 部署或维护用 script，例如 deploy.sh
+│   ├── wwwroot/                             # Public static files，browser 可以直接访问
+│   ├── wwwroot/css/                         # 全局和页面 CSS
+│   ├── wwwroot/js/                          # 前端 JavaScript
+│   ├── wwwroot/images/                      # 静态图片资源
+│   ├── wwwroot/lib/                         # 前端第三方 library，例如 jQuery
+│   ├── appsettings.json                     # 应用配置：DB、AWS、Stripe、logging 等
+│   ├── appsettings.Development.json         # Development 环境配置
+│   ├── Dockerfile                           # Build MVC app container 的 Docker 配置
+│   ├── Program.cs                           # 应用启动入口，配置 service、middleware、routing
+│   └── MyMvcApp.csproj                      # 主 Web 项目的 .NET 配置和 NuGet dependencies
+├── MyMvcApp.Serverless/                     # 独立 .NET AWS Lambda project，处理 Stripe EventBridge 事件
+│   ├── Function.cs                          # Lambda 入口，接收 event payload
+│   ├── StripeEventProcessor.cs              # Stripe event 的核心业务逻辑
+│   ├── StripeWorkerModels.cs                # Lambda 使用的轻量 database models 和 DbContext
+│   └── MyMvcApp.Serverless.csproj           # Serverless project 的 .NET 配置和 dependencies
 ├── S3-document-upload-confirmation-serverless/
-│   └── index.mjs                            # Node.js Lambda，用来确认 S3 文件上传
-├── docker-compose.ec2.yml                   # EC2/container 部署配置
-├── nginx.conf.example                       # Nginx reverse proxy 示例
-└── dotNET.sln                               # Visual Studio solution 文件
+│   ├── index.mjs                            # Node.js Lambda 入口，接收 S3 object-created event
+│   └── package.json                         # Node.js Lambda package 配置
+├── docs/                                    # 项目文档和 presentation notes
+├── docker-compose.ec2.yml                   # EC2/container 部署配置，启动 MVC app 和 X-Ray daemon
+├── nginx.conf.example                       # Nginx reverse proxy 示例配置
+└── dotNET.sln                               # Visual Studio solution，整合多个 .NET project
 ```
+
+### Root Level
+
+Root level 是整个 solution 的最外层，主要负责组织多个 project 和部署配置。
+
+- `dotNET.sln`：Visual Studio solution file。它把 `MyMvcApp` 和 `MyMvcApp.Serverless` 这类 .NET project 组织在一起，方便一次打开、build 和管理。
+- `docker-compose.ec2.yml`：用于 EC2/container 部署。它定义主 MVC app container 和 AWS X-Ray daemon container。
+- `nginx.conf.example`：Nginx reverse proxy 示例。真实部署时，Nginx 可以把外部 HTTP/HTTPS request 转发到 ASP.NET Core app。
+- `docs/`：项目说明文档。当前 presentation notes 就放在这里。
+
+### MyMvcApp
+
+`MyMvcApp` 是主系统，也就是用户通过 browser 访问的 Web application。
+
+它是 ASP.NET Core MVC project，包含 UI、controller、database access、authentication、business services 和 static assets。
+
+### MyMvcApp/Controllers
+
+`Controllers` 是 MVC 里的 C，负责处理用户 request。
+
+例如：
+
+- 用户登录会进入 `AccountController`。
+- Admin dashboard 会进入 `AdminController`。
+- Tenant payment 会进入 `TenantController`。
+- Landlord property management 会进入 `LandlordController`。
+
+Controller 一般不会只做 UI，它会协调：
+
+- 读取当前 user。
+- 查询或更新 database。
+- 调用 service。
+- 决定返回哪个 view。
+- 对 AJAX/API request 返回 JSON。
+
+### MyMvcApp/Models
+
+`Models` 主要有两类：
+
+- Database entity：对应 database table，例如 `Property`、`Tenant`、`Payment`、`Document`。
+- ViewModel：专门给某个页面或表单使用的数据结构，例如 dashboard view model、login view model、payment filter view model。
+
+简单说：
+
+> Entity 负责存数据，ViewModel 负责把页面需要的数据整理好。
+
+### MyMvcApp/Views
+
+`Views` 是 MVC 里的 V，负责页面显示。
+
+它使用 Razor `.cshtml` 文件。结构通常跟 controller 对应：
+
+- `Views/Account` 对应 `AccountController`
+- `Views/Admin` 对应 `AdminController`
+- `Views/Landlord` 对应 `LandlordController`
+- `Views/Tenant` 对应 `TenantController`
+
+`Views/Shared` 放共用页面组件，例如 layout、error page 和 validation scripts。
+
+### MyMvcApp/Data
+
+`Data` 负责 database connection 和 Entity Framework Core 设置。
+
+最重要的文件是：
+
+- `AppDbContext.cs`
+- `AppDbContextFactory.cs`
+
+`AppDbContext` 定义系统有哪些 tables，例如：
+
+- `Users`
+- `Properties`
+- `Tenants`
+- `Payments`
+- `Documents`
+- `MaintenanceRequests`
+
+它也定义 entity relationship、index 和 enum conversion。
+
+### MyMvcApp/Services
+
+`Services` 放可复用的业务逻辑，避免 controller 变得太复杂。
+
+例如：
+
+- `EmailService`：发送 approval email、maintenance email、property access pass。
+- `S3ImageService`：上传图片到 S3。
+- `DocumentUploadService`：创建 direct S3 upload、确认 document upload status。
+- `StripeEventBridgeProcessingService`：处理 Stripe/EventBridge payment event。
+- `InternalApiKeyProvider`：读取 internal API key。
+- `RoleClaimsTransformation`：把 user role 转换成 ASP.NET claims。
+
+可以这样理解：
+
+> Controller 负责接 request，Service 负责做可复用的业务操作。
+
+### MyMvcApp/Extensions
+
+`Extensions` 用来放扩展方法或 middleware，让 `Program.cs` 更干净。
+
+这里主要有：
+
+- `GoogleAuthenticationExtensions.cs`：封装 Google OAuth login 的注册逻辑。
+- `XRayUserTrackingMiddleware.cs`：把登录用户的 UserId 和 UserRole 写入 AWS X-Ray trace。
+
+### MyMvcApp/Migrations
+
+`Migrations` 是 Entity Framework Core 自动生成的 database schema 变化记录。
+
+例如项目新增了 `Documents` table、`Payments` table 或给某个 table 加字段，EF Core 会生成 migration file。
+
+部署或更新数据库时，migration 可以把数据库结构升级到最新版本。
+
+### MyMvcApp/wwwroot
+
+`wwwroot` 是 ASP.NET Core 的 public static files folder。
+
+放在这里的文件可以被 browser 直接访问，例如：
+
+- CSS
+- JavaScript
+- images
+- frontend libraries
+- uploaded/static assets
+
+比如 `wwwroot/css/site.css` 会影响页面样式，`wwwroot/js/site.js` 会放前端互动逻辑。
+
+### MyMvcApp.Serverless
+
+`MyMvcApp.Serverless` 是独立的 .NET Lambda project，专门处理 Stripe payment event。
+
+它不负责显示页面，也不处理普通 browser request。它是 event-driven worker。
+
+主要文件：
+
+- `Function.cs`：Lambda entry point。
+- `StripeEventProcessor.cs`：核心 payment event 处理逻辑。
+- `StripeWorkerModels.cs`：Lambda 需要的轻量 model 和 DbContext。
+- `MyMvcApp.Serverless.csproj`：Lambda project 配置和 dependencies。
+
+### S3-document-upload-confirmation-serverless
+
+这个 folder 是另一个 serverless function，不过它是 Node.js 写的。
+
+它的作用是：
+
+1. 接收 S3 object-created event。
+2. 读取 bucket name、object key、eTag、size。
+3. 调用 MVC app 的 internal endpoint。
+4. 通知 MVC app：这个 document 已经成功上传到 S3。
+
+主要文件：
+
+- `index.mjs`：Lambda handler。
+- `package.json`：Node.js project/package 配置。
 
 ## 3. 高层架构
 
