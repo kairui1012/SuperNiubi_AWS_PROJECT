@@ -86,6 +86,223 @@ Controller 一般不会只做 UI，它会协调：
 - 决定返回哪个 view。
 - 对 AJAX/API request 返回 JSON。
 
+更具体地说，这个项目里的 controller 可以分成几组：
+
+#### AccountController
+
+`AccountController` 负责普通账号流程。
+
+里面主要有：
+
+- `Login`：显示登录页面，以及处理用户提交的 login form。
+- `Register`：处理注册。
+- `Logout`：登出当前用户。
+- `RequestPasswordReset`：提交密码重置请求。
+- `PendingApproval`：用户注册后等待 admin 审批的页面。
+- `AccessDenied`：没有权限时显示的页面。
+- `CheckAuth`：检查当前 request 是否已经登录，常用于 debug 或 AJAX。
+
+这里的核心逻辑是 authentication。它会检查用户 email/password，处理登录状态，并根据账号状态决定用户能不能进入系统。
+
+#### GoogleLoginController
+
+`GoogleLoginController` 负责 Google OAuth login。
+
+里面主要有：
+
+- `ExternalLogin`：开始 Google login，把用户 redirect 到 Google。
+- `ExternalLoginCallback`：Google 登录完成后回调到这里。
+
+这里的核心逻辑是 external authentication。用户不是直接用本系统密码登录，而是通过 Google 证明身份，然后系统再决定是否创建/登录对应用户。
+
+#### AdminController
+
+`AdminController` 是 Admin dashboard 的主 controller，只允许 `Admin` 角色访问。
+
+里面主要有：
+
+- `Admin` / `Dashboard`：显示 admin dashboard 和统计资料。
+- `ApproveProperty` / `RejectProperty`：审批或拒绝 landlord 提交的房源。
+- `ApproveUser`：审批新用户。
+- `ApprovePasswordResetRequest` / `RejectPasswordResetRequest`：处理密码重置申请。
+- `DisableUser` / `EnableUser`：停用或启用账号。
+- `ChangeRole`：修改用户角色。
+- `CreateAnnouncement` / `EditAnnouncement` / `DeleteAnnouncement`：管理系统公告。
+
+这里的核心逻辑是 platform governance，也就是平台管理。Admin 可以控制用户、房源、公告和安全相关操作。
+
+#### AdminPaymentController
+
+`AdminPaymentController` 专门负责 Admin 的付款监控。
+
+里面主要有：
+
+- `Index`：显示付款列表，可根据 filter 搜索。
+- `Detail`：查看单笔付款详情。
+- `Verify`：人工确认付款。
+- `Reject`：拒绝付款并填写备注。
+- `ExportCsv`：导出付款记录。
+
+这里的核心逻辑是 payment review。虽然 Stripe 可以自动确认很多付款，但 Admin 仍然可以查看、验证、拒绝或导出 payment data。
+
+#### LandlordController
+
+`LandlordController` 是房东功能的主要 controller。
+
+里面主要有：
+
+- `Dashboard`：房东 dashboard。
+- `MyProperties`：查看自己的房源。
+- `PropertyDetails`：查看某个房源详情。
+- `AddProperty` / `EditProperty` / `DeleteProperty`：新增、编辑、删除房源。
+- `Tenants` / `TenantDetails`：查看租客列表和租客详情。
+- `AssignTenant`：把租客分配到房源。
+- `RenewLease`：续租。
+- `TerminateLease`：终止租约。
+- `AdjustRent`：调整租金。
+- `ChangeTenantProperty`：变更租客对应的房源。
+- `ChangeDepositStatus`：更新押金状态。
+- `MaintenanceRequests` / `EditMaintenanceRequest`：查看和处理维修请求。
+- `Payments`：查看付款。
+- `Documents`：查看文件。
+- `CreateDocumentUpload`：创建 direct S3 upload。
+- `GetDocumentUploadStatus`：查询文件上传状态。
+- `UploadDocument`：传统表单文件上传处理。
+- `DownloadDocument`：下载文件。
+- `DeleteDocument`：删除文件。
+- `Announcements` / `CreateAnnouncement`：房东公告。
+
+这里的核心逻辑是 landlord operations。房东可以管理房源、租客、租约、维修、付款和文件。
+
+#### TenantController
+
+`TenantController` 是租客功能的主要 controller。
+
+里面主要有：
+
+- `Dashboard` / `TenantDashboard`：租客 dashboard。
+- `PendingAssignment`：租客还没有被分配房源时的页面。
+- `MyProperty`：查看自己租住的房源。
+- `MaintenanceRequest`：查看维修请求页面。
+- `CreateMaintenance`：提交维修请求。
+- `Documents`：查看自己的文件。
+- `CreateDocumentUpload`：创建 direct S3 upload。
+- `GetDocumentUploadStatus`：查询文件上传状态。
+- `UploadDocument`：传统表单文件上传处理。
+- `DownloadDocument`：下载文件。
+- `DeleteDocument`：删除文件。
+- `Payments`：查看租金付款。
+- `CreateCheckoutSession`：创建 Stripe Checkout 付款 session。
+- `PaymentSuccess` / `PaymentCancel`：付款成功或取消后的页面。
+- `Visitors`：查看访客通行证。
+- `RegisterVisitor`：注册访客。
+- `CancelVisitorPass`：取消访客通行证。
+- `MarkVisitorPassUsed`：标记访客通行证已使用。
+- `ValidateVisitorPass`：Security 角色验证访客通行证。
+- `ValidateVisitorPassAndCheckIn`：Security 角色验证并 check-in。
+- `ConfirmMaintenanceCompletion`：租客确认维修完成并评分。
+- `Announcements`：查看公告。
+
+这里的核心逻辑是 tenant self-service。租客可以自己处理付款、维修、文件、访客和公告。
+
+#### PropertyBookingController
+
+`PropertyBookingController` 负责公开短租 booking，不一定要求用户先登录。
+
+里面主要有：
+
+- `Index`：显示可预订房源。
+- `Book`：显示某个房源的 booking 页面。
+- `CreateCheckoutSession`：创建 Stripe Checkout session。
+- `Success`：付款成功页面。
+- `Cancel`：付款取消页面。
+- `ForceTestEmail`：测试发送 access pass email。
+
+这里的核心逻辑是 guest booking。Guest 选择房源和日期后进入 Stripe 付款，付款确认后系统生成 access pass。
+
+#### CommunityAdminController
+
+`CommunityAdminController` 负责社区更新内容管理，只允许 Admin 访问。
+
+里面主要有：
+
+- `Index`：查看 community updates。
+- `Create`：新增 community update。
+- `Edit`：编辑 community update。
+- `Delete`：删除 community update。
+
+这里的核心逻辑是 community content management。Admin 可以发布和维护社区公告或活动信息。
+
+#### HomeController
+
+`HomeController` 负责公开页面。
+
+里面主要有：
+
+- `Index`：首页，通常显示公开房源或社区更新。
+- `UpdateDetails`：查看某个 community update 的详情。
+- `Privacy`：隐私页面。
+- `Error`：错误页面。
+
+这里的核心逻辑是 public browsing，让未登录用户也能看到首页和公开内容。
+
+#### PropertyGuardController
+
+`PropertyGuardController` 负责验证 property booking 的 access pass。
+
+里面主要有：
+
+- `Verify`：根据 pass code 验证 booking 是否有效。
+
+这里的核心逻辑是 access control。系统可以通过 pass code 判断 guest 是否拥有有效的 property access permission。
+
+#### StripeEventBridgeController
+
+`StripeEventBridgeController` 是 internal API controller，不是给普通用户点击页面用的。
+
+里面主要有：
+
+- `Receive`：接收 Stripe/EventBridge event payload。
+- `StripeConfirm`：接收 payment confirmed request。
+
+这里的核心逻辑是 payment callback。外部 payment event 进来后，这个 controller 会把 event 交给 service 处理，然后更新本地 payment 状态。
+
+#### DocumentUploadEventsController
+
+`DocumentUploadEventsController` 也是 internal API controller。
+
+里面主要有：
+
+- `S3ObjectCreated`：接收 S3 object-created notification。
+
+这里的核心逻辑是 upload confirmation。S3 文件上传成功后，Node.js Lambda 会 call 这个 endpoint，MVC app 再把 document status 更新成 confirmed。
+
+#### RoleController
+
+`RoleController` 是简单的角色页面 controller。
+
+里面主要有：
+
+- `Admin`
+- `Manager`
+- `StandardUser`
+
+它主要用于根据角色显示不同页面或测试 role-based authorization。
+
+#### Controller 逻辑总结
+
+整体来说，controller 层主要承担五类逻辑：
+
+- Page routing：决定用户访问哪个页面。
+- Authorization：限制某些功能只能给 Admin、Landlord、Tenant 或 Security。
+- Data coordination：从 database 读取数据，组合成 ViewModel。
+- Business action：处理用户提交的表单，例如付款、维修、文件上传、审批。
+- Integration callback：接收 Stripe、S3、Lambda 等外部系统传回来的事件。
+
+可以这样讲：
+
+> Controller is the traffic controller of the MVC application. It receives requests, checks permission, calls services or database, and returns either a Razor view or a JSON response.
+
 ### MyMvcApp/Models
 
 `Models` 主要有两类：
