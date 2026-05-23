@@ -10,603 +10,40 @@ PropEase 是一个使用 ASP.NET Core MVC 开发的物业管理系统，主要�
 - Security：访客通行证验证与 check-in。
 - Guest：短租房源浏览、预订和 Stripe 付款。
 
-这个项目把传统 MVC Web Application 和 AWS Serverless 架构结合起来。主系统负责用户界面和核心业务流程，Stripe 付款确认和 S3 文件上传确认则交给 Lambda 处理。
+这个项目结合了传统 MVC Web Application 和 AWS Serverless 架构。主 MVC 应用负责用户界面和核心业务流程，Stripe 付款确认和 S3 文件上传确认则交给 Lambda 处理。
 
-## 2. Repository 结构
+## 2. Repository 总览
 
 ```text
 SuperNiubi_AWS_PROJECT/
 ├── MyMvcApp/                                # 主要 ASP.NET Core MVC Web 应用
-│   ├── Controllers/                         # Controller 层：接收 request，调用 service/database，返回 view 或 JSON
-│   ├── Models/                              # Model 层：数据库 entity、enum、ViewModel、表单数据结构
-│   ├── Models/Admin/                        # Admin dashboard 和 payment monitoring 专用 ViewModel
-│   ├── Views/                               # View 层：Razor .cshtml 页面，按 controller/功能分类
-│   ├── Views/Shared/                        # 共用 layout、error page、validation scripts
-│   ├── Data/                                # Database access 层，主要是 AppDbContext
-│   ├── Services/                            # Service 层：Email、S3 upload、document upload、Stripe event processing 等
-│   ├── Extensions/                          # 扩展配置和 middleware，例如 Google login、X-Ray user tracking
-│   ├── Migrations/                          # EF Core migrations，用来记录 database schema 变化
-│   ├── Properties/                          # launchSettings.json，开发环境启动设置
-│   ├── scripts/                             # 部署或维护用 script，例如 deploy.sh
-│   ├── wwwroot/                             # Public static files，browser 可以直接访问
-│   ├── wwwroot/css/                         # 全局和页面 CSS
-│   ├── wwwroot/js/                          # 前端 JavaScript
-│   ├── wwwroot/images/                      # 静态图片资源
-│   ├── wwwroot/lib/                         # 前端第三方 library，例如 jQuery
-│   ├── appsettings.json                     # 应用配置：DB、AWS、Stripe、logging 等
-│   ├── appsettings.Development.json         # Development 环境配置
-│   ├── Dockerfile                           # Build MVC app container 的 Docker 配置
-│   ├── Program.cs                           # 应用启动入口，配置 service、middleware、routing
-│   └── MyMvcApp.csproj                      # 主 Web 项目的 .NET 配置和 NuGet dependencies
-├── MyMvcApp.Serverless/                     # 独立 .NET AWS Lambda project，处理 Stripe EventBridge 事件
-│   ├── Function.cs                          # Lambda 入口，接收 event payload
-│   ├── StripeEventProcessor.cs              # Stripe event 的核心业务逻辑
-│   ├── StripeWorkerModels.cs                # Lambda 使用的轻量 database models 和 DbContext
-│   └── MyMvcApp.Serverless.csproj           # Serverless project 的 .NET 配置和 dependencies
+│   ├── Controllers/                         # Controller 层：处理 request 和业务流程
+│   ├── Models/                              # Model 层：entity、ViewModel、API contract
+│   ├── Views/                               # Razor 页面
+│   ├── Data/                                # Entity Framework Core database context
+│   ├── Services/                            # 可复用业务服务
+│   ├── Extensions/                          # 扩展方法和 middleware
+│   ├── Migrations/                          # EF Core database migrations
+│   ├── wwwroot/                             # 静态资源
+│   ├── appsettings.json                     # 应用配置
+│   ├── Dockerfile                           # MVC app container build 配置
+│   ├── Program.cs                           # 应用启动入口
+│   └── MyMvcApp.csproj                      # 主 Web 项目配置
+├── MyMvcApp.Serverless/                     # .NET Lambda，处理 Stripe EventBridge 事件
 ├── S3-document-upload-confirmation-serverless/
-│   ├── index.mjs                            # Node.js Lambda 入口，接收 S3 object-created event
-│   └── package.json                         # Node.js Lambda package 配置
-├── docs/                                    # 项目文档和 presentation notes
-├── docker-compose.ec2.yml                   # EC2/container 部署配置，启动 MVC app 和 X-Ray daemon
-├── nginx.conf.example                       # Nginx reverse proxy 示例配置
-└── dotNET.sln                               # Visual Studio solution，整合多个 .NET project
+│   └── index.mjs                            # Node.js Lambda，确认 S3 文件上传
+├── docs/                                    # 项目文档
+├── docker-compose.ec2.yml                   # EC2/container 部署配置
+├── nginx.conf.example                       # Nginx reverse proxy 示例
+└── dotNET.sln                               # Visual Studio solution
 ```
-
-### Root Level
 
 Root level 是整个 solution 的最外层，主要负责组织多个 project 和部署配置。
 
-- `dotNET.sln`：Visual Studio solution file。它把 `MyMvcApp` 和 `MyMvcApp.Serverless` 这类 .NET project 组织在一起，方便一次打开、build 和管理。
-- `docker-compose.ec2.yml`：用于 EC2/container 部署。它定义主 MVC app container 和 AWS X-Ray daemon container。
-- `nginx.conf.example`：Nginx reverse proxy 示例。真实部署时，Nginx 可以把外部 HTTP/HTTPS request 转发到 ASP.NET Core app。
-- `docs/`：项目说明文档。当前 presentation notes 就放在这里。
-
-### MyMvcApp
-
-`MyMvcApp` 是主系统，也就是用户通过 browser 访问的 Web application。
-
-它是 ASP.NET Core MVC project，包含 UI、controller、database access、authentication、business services 和 static assets。
-
-### MyMvcApp/Controllers
-
-`Controllers` 是 MVC 里的 C，负责处理用户 request。
-
-例如：
-
-- 用户登录会进入 `AccountController`。
-- Admin dashboard 会进入 `AdminController`。
-- Tenant payment 会进入 `TenantController`。
-- Landlord property management 会进入 `LandlordController`。
-
-Controller 一般不会只做 UI，它会协调：
-
-- 读取当前 user。
-- 查询或更新 database。
-- 调用 service。
-- 决定返回哪个 view。
-- 对 AJAX/API request 返回 JSON。
-
-更具体地说，这个项目里的 controller 可以分成几组：
-
-#### AccountController
-
-`AccountController` 负责普通账号流程。
-
-里面主要有：
-
-- `Login`：显示登录页面，以及处理用户提交的 login form。
-- `Register`：处理注册。
-- `Logout`：登出当前用户。
-- `RequestPasswordReset`：提交密码重置请求。
-- `PendingApproval`：用户注册后等待 admin 审批的页面。
-- `AccessDenied`：没有权限时显示的页面。
-- `CheckAuth`：检查当前 request 是否已经登录，常用于 debug 或 AJAX。
-
-这里的核心逻辑是 authentication。它会检查用户 email/password，处理登录状态，并根据账号状态决定用户能不能进入系统。
-
-#### GoogleLoginController
-
-`GoogleLoginController` 负责 Google OAuth login。
-
-里面主要有：
-
-- `ExternalLogin`：开始 Google login，把用户 redirect 到 Google。
-- `ExternalLoginCallback`：Google 登录完成后回调到这里。
-
-这里的核心逻辑是 external authentication。用户不是直接用本系统密码登录，而是通过 Google 证明身份，然后系统再决定是否创建/登录对应用户。
-
-#### AdminController
-
-`AdminController` 是 Admin dashboard 的主 controller，只允许 `Admin` 角色访问。
-
-里面主要有：
-
-- `Admin` / `Dashboard`：显示 admin dashboard 和统计资料。
-- `ApproveProperty` / `RejectProperty`：审批或拒绝 landlord 提交的房源。
-- `ApproveUser`：审批新用户。
-- `ApprovePasswordResetRequest` / `RejectPasswordResetRequest`：处理密码重置申请。
-- `DisableUser` / `EnableUser`：停用或启用账号。
-- `ChangeRole`：修改用户角色。
-- `CreateAnnouncement` / `EditAnnouncement` / `DeleteAnnouncement`：管理系统公告。
-
-这里的核心逻辑是 platform governance，也就是平台管理。Admin 可以控制用户、房源、公告和安全相关操作。
-
-#### AdminPaymentController
-
-`AdminPaymentController` 专门负责 Admin 的付款监控。
-
-里面主要有：
-
-- `Index`：显示付款列表，可根据 filter 搜索。
-- `Detail`：查看单笔付款详情。
-- `Verify`：人工确认付款。
-- `Reject`：拒绝付款并填写备注。
-- `ExportCsv`：导出付款记录。
-
-这里的核心逻辑是 payment review。虽然 Stripe 可以自动确认很多付款，但 Admin 仍然可以查看、验证、拒绝或导出 payment data。
-
-#### LandlordController
-
-`LandlordController` 是房东功能的主要 controller。
-
-里面主要有：
-
-- `Dashboard`：房东 dashboard。
-- `MyProperties`：查看自己的房源。
-- `PropertyDetails`：查看某个房源详情。
-- `AddProperty` / `EditProperty` / `DeleteProperty`：新增、编辑、删除房源。
-- `Tenants` / `TenantDetails`：查看租客列表和租客详情。
-- `AssignTenant`：把租客分配到房源。
-- `RenewLease`：续租。
-- `TerminateLease`：终止租约。
-- `AdjustRent`：调整租金。
-- `ChangeTenantProperty`：变更租客对应的房源。
-- `ChangeDepositStatus`：更新押金状态。
-- `MaintenanceRequests` / `EditMaintenanceRequest`：查看和处理维修请求。
-- `Payments`：查看付款。
-- `Documents`：查看文件。
-- `CreateDocumentUpload`：创建 direct S3 upload。
-- `GetDocumentUploadStatus`：查询文件上传状态。
-- `UploadDocument`：传统表单文件上传处理。
-- `DownloadDocument`：下载文件。
-- `DeleteDocument`：删除文件。
-- `Announcements` / `CreateAnnouncement`：房东公告。
-
-这里的核心逻辑是 landlord operations。房东可以管理房源、租客、租约、维修、付款和文件。
-
-#### TenantController
-
-`TenantController` 是租客功能的主要 controller。
-
-里面主要有：
-
-- `Dashboard` / `TenantDashboard`：租客 dashboard。
-- `PendingAssignment`：租客还没有被分配房源时的页面。
-- `MyProperty`：查看自己租住的房源。
-- `MaintenanceRequest`：查看维修请求页面。
-- `CreateMaintenance`：提交维修请求。
-- `Documents`：查看自己的文件。
-- `CreateDocumentUpload`：创建 direct S3 upload。
-- `GetDocumentUploadStatus`：查询文件上传状态。
-- `UploadDocument`：传统表单文件上传处理。
-- `DownloadDocument`：下载文件。
-- `DeleteDocument`：删除文件。
-- `Payments`：查看租金付款。
-- `CreateCheckoutSession`：创建 Stripe Checkout 付款 session。
-- `PaymentSuccess` / `PaymentCancel`：付款成功或取消后的页面。
-- `Visitors`：查看访客通行证。
-- `RegisterVisitor`：注册访客。
-- `CancelVisitorPass`：取消访客通行证。
-- `MarkVisitorPassUsed`：标记访客通行证已使用。
-- `ValidateVisitorPass`：Security 角色验证访客通行证。
-- `ValidateVisitorPassAndCheckIn`：Security 角色验证并 check-in。
-- `ConfirmMaintenanceCompletion`：租客确认维修完成并评分。
-- `Announcements`：查看公告。
-
-这里的核心逻辑是 tenant self-service。租客可以自己处理付款、维修、文件、访客和公告。
-
-#### PropertyBookingController
-
-`PropertyBookingController` 负责公开短租 booking，不一定要求用户先登录。
-
-里面主要有：
-
-- `Index`：显示可预订房源。
-- `Book`：显示某个房源的 booking 页面。
-- `CreateCheckoutSession`：创建 Stripe Checkout session。
-- `Success`：付款成功页面。
-- `Cancel`：付款取消页面。
-- `ForceTestEmail`：测试发送 access pass email。
-
-这里的核心逻辑是 guest booking。Guest 选择房源和日期后进入 Stripe 付款，付款确认后系统生成 access pass。
-
-#### CommunityAdminController
-
-`CommunityAdminController` 负责社区更新内容管理，只允许 Admin 访问。
-
-里面主要有：
-
-- `Index`：查看 community updates。
-- `Create`：新增 community update。
-- `Edit`：编辑 community update。
-- `Delete`：删除 community update。
-
-这里的核心逻辑是 community content management。Admin 可以发布和维护社区公告或活动信息。
-
-#### HomeController
-
-`HomeController` 负责公开页面。
-
-里面主要有：
-
-- `Index`：首页，通常显示公开房源或社区更新。
-- `UpdateDetails`：查看某个 community update 的详情。
-- `Privacy`：隐私页面。
-- `Error`：错误页面。
-
-这里的核心逻辑是 public browsing，让未登录用户也能看到首页和公开内容。
-
-#### PropertyGuardController
-
-`PropertyGuardController` 负责验证 property booking 的 access pass。
-
-里面主要有：
-
-- `Verify`：根据 pass code 验证 booking 是否有效。
-
-这里的核心逻辑是 access control。系统可以通过 pass code 判断 guest 是否拥有有效的 property access permission。
-
-#### StripeEventBridgeController
-
-`StripeEventBridgeController` 是 internal API controller，不是给普通用户点击页面用的。
-
-里面主要有：
-
-- `Receive`：接收 Stripe/EventBridge event payload。
-- `StripeConfirm`：接收 payment confirmed request。
-
-这里的核心逻辑是 payment callback。外部 payment event 进来后，这个 controller 会把 event 交给 service 处理，然后更新本地 payment 状态。
-
-#### DocumentUploadEventsController
-
-`DocumentUploadEventsController` 也是 internal API controller。
-
-里面主要有：
-
-- `S3ObjectCreated`：接收 S3 object-created notification。
-
-这里的核心逻辑是 upload confirmation。S3 文件上传成功后，Node.js Lambda 会 call 这个 endpoint，MVC app 再把 document status 更新成 confirmed。
-
-#### RoleController
-
-`RoleController` 是简单的角色页面 controller。
-
-里面主要有：
-
-- `Admin`
-- `Manager`
-- `StandardUser`
-
-它主要用于根据角色显示不同页面或测试 role-based authorization。
-
-#### Controller 逻辑总结
-
-整体来说，controller 层主要承担五类逻辑：
-
-- Page routing：决定用户访问哪个页面。
-- Authorization：限制某些功能只能给 Admin、Landlord、Tenant 或 Security。
-- Data coordination：从 database 读取数据，组合成 ViewModel。
-- Business action：处理用户提交的表单，例如付款、维修、文件上传、审批。
-- Integration callback：接收 Stripe、S3、Lambda 等外部系统传回来的事件。
-
-可以这样讲：
-
-> Controller is the traffic controller of the MVC application. It receives requests, checks permission, calls services or database, and returns either a Razor view or a JSON response.
-
-### MyMvcApp/Models
-
-`Models` 主要有两类：
-
-- Database entity：对应 database table，例如 `Property`、`Tenant`、`Payment`、`Document`。
-- ViewModel：专门给某个页面或表单使用的数据结构，例如 dashboard view model、login view model、payment filter view model。
-
-简单说：
-
-> Entity 负责存数据，ViewModel 负责把页面需要的数据整理好。
-
-### MyMvcApp/Views
-
-`Views` 是 MVC 里的 V，负责页面显示。
-
-它使用 Razor `.cshtml` 文件。结构通常跟 controller 对应：
-
-- `Views/Account` 对应 `AccountController`
-- `Views/Admin` 对应 `AdminController`
-- `Views/Landlord` 对应 `LandlordController`
-- `Views/Tenant` 对应 `TenantController`
-
-`Views/Shared` 放共用页面组件，例如 layout、error page 和 validation scripts。
-
-### MyMvcApp/Data
-
-`Data` 负责 database connection 和 Entity Framework Core 设置。
-
-最重要的文件是：
-
-- `AppDbContext.cs`
-- `AppDbContextFactory.cs`
-
-#### AppDbContext.cs
-
-`AppDbContext` 是整个项目最重要的 database class。它继承自 Entity Framework Core 的 `DbContext`。
-
-可以把它理解成：
-
-> `AppDbContext` 是 C# code 和 PostgreSQL database 之间的桥梁。
-
-Controller 或 Service 如果要查询 database，通常会通过 `AppDbContext` 操作。
-
-例如：
-
-```csharp
-_context.Properties.ToListAsync()
-_context.Payments.Add(payment)
-_context.SaveChangesAsync()
-```
-
-`AppDbContext` 里面的 `DbSet` 会对应 database table。
-
-这个项目里定义的 tables 包括：
-
-- `Users`
-- `Properties`
-- `PropertyAmenities`
-- `Tenants`
-- `MaintenanceRequests`
-- `MaintenanceTimelines`
-- `Payments`
-- `Documents`
-- `CommunityUpdates`
-- `VisitorPasses`
-- `PasswordResetRequests`
-- `AuditLogs`
-- `SystemAnnouncements`
-- `LeaseHistories`
-- `PropertyBookings`
-- `PromoCodes`
-
-例如这行：
-
-```csharp
-public DbSet<Property> Properties { get; set; }
-```
-
-意思是：
-
-> C# 里的 `Property` model 会映射到 database 里的 `Properties` table。
-
-#### OnModelCreating
-
-`OnModelCreating` 是 `AppDbContext` 里面很重要的方法。
-
-它的作用是配置 database rules，例如：
-
-- Enum 要怎么存。
-- 哪些字段需要 index。
-- Table 之间是什么 relationship。
-- 删除数据时要 cascade、restrict 还是 set null。
-
-第一类逻辑是 enum conversion。
-
-例如：
-
-```csharp
-modelBuilder.Entity<Property>()
-    .Property(p => p.PropertyType)
-    .HasConversion<string>();
-```
-
-意思是 `PropertyType` 这个 enum 不会存成数字，而是存成 string。
-
-如果不这样做，database 里可能看到：
-
-```text
-1
-2
-3
-```
-
-配置成 string 后会看到：
-
-```text
-Apartment
-House
-Condo
-```
-
-这样比较容易 debug，也比较容易直接看 database。
-
-第二类逻辑是 index。
-
-例如：
-
-```csharp
-modelBuilder.Entity<Payment>().HasIndex(p => p.StripeSessionId);
-modelBuilder.Entity<Document>().HasIndex(d => d.UploadStatus);
-modelBuilder.Entity<AuditLog>().HasIndex(a => a.CreatedAt);
-```
-
-Index 的作用是让常用查询更快。
-
-比如系统经常需要通过 Stripe session id 找 payment，所以给 `StripeSessionId` 加 index。
-
-第三类逻辑是 relationship。
-
-例如：
-
-```csharp
-modelBuilder.Entity<Property>()
-    .HasOne(p => p.Landlord)
-    .WithMany()
-    .HasForeignKey(p => p.LandlordId)
-    .OnDelete(DeleteBehavior.Cascade);
-```
-
-这表示：
-
-- 一个 property 属于一个 landlord。
-- `LandlordId` 是 foreign key。
-- 如果 landlord 被删除，他的 properties 也会被删除。
-
-再比如：
-
-```csharp
-modelBuilder.Entity<Tenant>()
-    .HasOne(t => t.Property)
-    .WithMany(p => p.Tenants)
-    .HasForeignKey(t => t.PropertyId)
-    .OnDelete(DeleteBehavior.Restrict);
-```
-
-这表示：
-
-- 一个 tenant 会关联到一个 property。
-- 一个 property 可以有多个 tenant records。
-- 删除 property 时不能随便 cascade 删除 tenant，因为租约历史需要被谨慎保留。
-
-#### AppDbContextFactory.cs
-
-`AppDbContextFactory` 是给 EF Core design-time tools 用的。
-
-简单说，它主要服务于这些 command：
-
-```bash
-dotnet ef migrations add ...
-dotnet ef database update
-```
-
-当你运行 migration command 时，EF Core 需要知道如何创建 `AppDbContext`，但那时候 application 可能没有真正启动。
-
-所以 `AppDbContextFactory` 会手动做三件事：
-
-1. 读取 configuration。
-2. 读取 `DefaultConnection` database connection string。
-3. 创建并返回 `AppDbContext`。
-
-核心代码：
-
-```csharp
-var configuration = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false)
-    .AddJsonFile("appsettings.Development.json", optional: true)
-    .AddEnvironmentVariables()
-    .Build();
-```
-
-这表示它会读取：
-
-- `appsettings.json`
-- `appsettings.Development.json`
-- environment variables
-
-然后：
-
-```csharp
-optionsBuilder.UseNpgsql(
-    configuration.GetConnectionString("DefaultConnection"));
-```
-
-这表示 EF Core migration 工具会用 PostgreSQL connection string 创建 database context。
-
-#### Data 文件夹逻辑总结
-
-`Data` 文件夹的核心逻辑是 database mapping。
-
-可以这样讲：
-
-> The Data folder defines how the application connects to PostgreSQL and how C# models map to database tables. `AppDbContext` is used during runtime, while `AppDbContextFactory` is used by EF Core tools when creating or applying migrations.
-
-一句更简单的中文解释：
-
-> `Data` 文件夹就是系统的数据库连接和数据库规则中心。
-
-### MyMvcApp/Services
-
-`Services` 放可复用的业务逻辑，避免 controller 变得太复杂。
-
-例如：
-
-- `EmailService`：发送 approval email、maintenance email、property access pass。
-- `S3ImageService`：上传图片到 S3。
-- `DocumentUploadService`：创建 direct S3 upload、确认 document upload status。
-- `StripeEventBridgeProcessingService`：处理 Stripe/EventBridge payment event。
-- `InternalApiKeyProvider`：读取 internal API key。
-- `RoleClaimsTransformation`：把 user role 转换成 ASP.NET claims。
-
-可以这样理解：
-
-> Controller 负责接 request，Service 负责做可复用的业务操作。
-
-### MyMvcApp/Extensions
-
-`Extensions` 用来放扩展方法或 middleware，让 `Program.cs` 更干净。
-
-这里主要有：
-
-- `GoogleAuthenticationExtensions.cs`：封装 Google OAuth login 的注册逻辑。
-- `XRayUserTrackingMiddleware.cs`：把登录用户的 UserId 和 UserRole 写入 AWS X-Ray trace。
-
-### MyMvcApp/Migrations
-
-`Migrations` 是 Entity Framework Core 自动生成的 database schema 变化记录。
-
-例如项目新增了 `Documents` table、`Payments` table 或给某个 table 加字段，EF Core 会生成 migration file。
-
-部署或更新数据库时，migration 可以把数据库结构升级到最新版本。
-
-### MyMvcApp/wwwroot
-
-`wwwroot` 是 ASP.NET Core 的 public static files folder。
-
-放在这里的文件可以被 browser 直接访问，例如：
-
-- CSS
-- JavaScript
-- images
-- frontend libraries
-- uploaded/static assets
-
-比如 `wwwroot/css/site.css` 会影响页面样式，`wwwroot/js/site.js` 会放前端互动逻辑。
-
-### MyMvcApp.Serverless
-
-`MyMvcApp.Serverless` 是独立的 .NET Lambda project，专门处理 Stripe payment event。
-
-它不负责显示页面，也不处理普通 browser request。它是 event-driven worker。
-
-主要文件：
-
-- `Function.cs`：Lambda entry point。
-- `StripeEventProcessor.cs`：核心 payment event 处理逻辑。
-- `StripeWorkerModels.cs`：Lambda 需要的轻量 model 和 DbContext。
-- `MyMvcApp.Serverless.csproj`：Lambda project 配置和 dependencies。
-
-### S3-document-upload-confirmation-serverless
-
-这个 folder 是另一个 serverless function，不过它是 Node.js 写的。
-
-它的作用是：
-
-1. 接收 S3 object-created event。
-2. 读取 bucket name、object key、eTag、size。
-3. 调用 MVC app 的 internal endpoint。
-4. 通知 MVC app：这个 document 已经成功上传到 S3。
-
-主要文件：
-
-- `index.mjs`：Lambda handler。
-- `package.json`：Node.js project/package 配置。
+- `dotNET.sln`：Visual Studio solution file，把 `MyMvcApp` 和 `MyMvcApp.Serverless` 组织在一起。
+- `docker-compose.ec2.yml`：EC2/container 部署配置，启动 MVC app 和 AWS X-Ray daemon。
+- `nginx.conf.example`：Nginx reverse proxy 示例，真实部署时可把外部 request 转发到 ASP.NET Core app。
+- `docs/`：项目文档和 presentation notes。
 
 ## 3. 高层架构
 
@@ -631,9 +68,15 @@ flowchart LR
 
 主 MVC 应用负责用户看到和操作的功能。Stripe 和 S3 这类外部系统会触发 serverless function，再由 Lambda 更新数据库或回调 MVC 的 internal API。
 
-## 4. 主应用层：Program.cs
+## 4. MyMvcApp 主应用
 
-`MyMvcApp/Program.cs` 是整个 MVC 应用的启动文件，负责配置应用需要的服务和 middleware。
+`MyMvcApp` 是用户通过 browser 访问的主要 Web application。
+
+它是一个 ASP.NET Core MVC project，包含 UI、controller、database access、authentication、business services 和 static assets。
+
+## 5. Program.cs
+
+`Program.cs` 是整个 MVC 应用的启动入口。
 
 它主要配置：
 
@@ -656,120 +99,413 @@ flowchart LR
 - `RoleClaimsTransformation`
 - `S3ImageService`
 
-## 5. MVC 文件夹职责
+可以这样讲：
 
-### Controllers
+> `Program.cs` is the startup file. It wires up MVC, database access, authentication, AWS services, Stripe, middleware, and custom services.
 
-Controllers 负责接收 request，并协调数据库、service 和 view。
+## 6. Controllers 文件夹
 
-- `AccountController`：登录、注册、登出、密码重置请求、身份检查。
-- `GoogleLoginController`：Google OAuth 登录流程。
-- `AdminController`：Admin dashboard、用户审批、房源审批、公告、审计。
-- `AdminPaymentController`：付款监控、付款验证、付款拒绝、CSV 导出。
-- `LandlordController`：房源 CRUD、租客分配、租约管理、维修、文件、公告。
-- `TenantController`：租客 dashboard、房源信息、维修申请、文件、付款、访客通行证。
-- `CommunityAdminController`：社区公告/更新管理。
-- `PropertyBookingController`：公开短租预订和 Stripe checkout。
-- `PropertyGuardController`：房源访问通行证验证。
-- `StripeEventBridgeController`：处理 Stripe/EventBridge 内部付款事件。
-- `DocumentUploadEventsController`：处理 S3 上传确认事件。
-- `HomeController`：首页和公共页面。
+`Controllers` 是 MVC 里的 C，负责接收 request、检查权限、调用 service/database，然后返回 Razor view 或 JSON response。
 
-### Models
+Controller 的核心职责：
 
-Models 包含 database entity 和 view model。
+- Page routing：决定用户进入哪个页面。
+- Authorization：限制某些功能只能给 Admin、Landlord、Tenant 或 Security。
+- Data coordination：从 database 读取数据，组合成 ViewModel。
+- Business action：处理用户提交的表单，例如付款、维修、文件上传、审批。
+- Integration callback：接收 Stripe、S3、Lambda 等外部系统传回来的事件。
 
-核心 database entities：
+### AccountController
 
-- `AppUser`
-- `Property`
-- `PropertyAmenity`
-- `Tenant`
-- `LeaseHistory`
-- `MaintenanceRequest`
-- `MaintenanceTimeline`
-- `Payment`
-- `Document`
-- `CommunityUpdate`
-- `VisitorPass`
-- `PasswordResetRequest`
-- `AuditLog`
-- `SystemAnnouncement`
-- `PropertyBooking`
-- `PromoCode`
+负责普通账号流程：
 
-ViewModel 用来给页面准备数据，例如 Admin dashboard、Tenant dashboard、Landlord documents、Payment list 和 Maintenance form。
+- `Login`：显示登录页面，以及处理 login form。
+- `Register`：处理注册。
+- `Logout`：登出当前用户。
+- `RequestPasswordReset`：提交密码重置请求。
+- `PendingApproval`：注册后等待 admin 审批的页面。
+- `AccessDenied`：没有权限时显示的页面。
+- `CheckAuth`：检查当前 request 是否已经登录。
 
-### Views
+核心逻辑：authentication。它检查用户 email/password，处理登录状态，并根据账号状态决定用户能不能进入系统。
 
-Views 使用 Razor `.cshtml` 文件实现 UI，并按功能分组：
+### GoogleLoginController
 
-- `Views/Account`：登录、注册、Access Denied、Pending Approval。
-- `Views/Admin`：Admin dashboard 和不同管理区域的 partial views。
-- `Views/AdminPayment`：付款列表和付款详情。
-- `Views/Landlord`：房东 dashboard、房源、租客、维修、付款、文件。
-- `Views/Tenant`：租客 dashboard、房源、维修、文件、付款、访客。
-- `Views/CommunityAdmin`：社区更新的 CRUD 页面。
-- `Views/PropertyBooking`：预订、成功、取消页面。
-- `Views/PropertyGuard`：访客/房源 pass 验证。
-- `Views/Shared`：共用 layout、error page、validation scripts。
+负责 Google OAuth login：
 
-## 6. Database Design
+- `ExternalLogin`：开始 Google login，把用户 redirect 到 Google。
+- `ExternalLoginCallback`：Google 登录完成后回调到这里。
 
-数据库由 Entity Framework Core 管理，核心文件是 `AppDbContext`。
+核心逻辑：external authentication。用户通过 Google 证明身份，然后系统再决定是否创建或登录对应用户。
 
-```mermaid
-erDiagram
-    APP_USER ||--o{ PROPERTY : owns
-    APP_USER ||--o{ TENANT : has
-    PROPERTY ||--o{ PROPERTY_AMENITY : contains
-    PROPERTY ||--o{ TENANT : leases
-    PROPERTY ||--o{ MAINTENANCE_REQUEST : receives
-    TENANT ||--o{ MAINTENANCE_REQUEST : submits
-    TENANT ||--o{ PAYMENT : makes
-    PROPERTY ||--o{ PAYMENT : receives
-    TENANT ||--o{ DOCUMENT : uploads
-    PROPERTY ||--o{ DOCUMENT : relates_to
-    TENANT ||--o{ VISITOR_PASS : creates
-    TENANT ||--o{ LEASE_HISTORY : tracks
-    PROPERTY ||--o{ PROPERTY_BOOKING : booked_for
-    PROMO_CODE ||--o{ PROPERTY_BOOKING : applies_to
+### AdminController
+
+负责 Admin dashboard 和平台管理，只允许 `Admin` 角色访问：
+
+- `Admin` / `Dashboard`：显示 admin dashboard 和统计资料。
+- `ApproveProperty` / `RejectProperty`：审批或拒绝房源。
+- `ApproveUser`：审批新用户。
+- `ApprovePasswordResetRequest` / `RejectPasswordResetRequest`：处理密码重置申请。
+- `DisableUser` / `EnableUser`：停用或启用账号。
+- `ChangeRole`：修改用户角色。
+- `CreateAnnouncement` / `EditAnnouncement` / `DeleteAnnouncement`：管理系统公告。
+
+核心逻辑：platform governance，也就是平台管理。
+
+### AdminPaymentController
+
+负责 Admin 的付款监控：
+
+- `Index`：显示付款列表，可根据 filter 搜索。
+- `Detail`：查看单笔付款详情。
+- `Verify`：人工确认付款。
+- `Reject`：拒绝付款并填写备注。
+- `ExportCsv`：导出付款记录。
+
+核心逻辑：payment review。Admin 可以查看、验证、拒绝或导出 payment data。
+
+### LandlordController
+
+负责房东的主要业务：
+
+- `Dashboard`：房东 dashboard。
+- `MyProperties` / `PropertyDetails`：查看自己的房源和详情。
+- `AddProperty` / `EditProperty` / `DeleteProperty`：新增、编辑、删除房源。
+- `Tenants` / `TenantDetails`：查看租客列表和租客详情。
+- `AssignTenant`：把租客分配到房源。
+- `RenewLease` / `TerminateLease` / `AdjustRent`：续租、终止租约、调整租金。
+- `ChangeTenantProperty` / `ChangeDepositStatus`：变更租客房源或押金状态。
+- `MaintenanceRequests` / `EditMaintenanceRequest`：查看和处理维修请求。
+- `Payments`：查看付款。
+- `Documents`：查看文件。
+- `CreateDocumentUpload` / `GetDocumentUploadStatus`：创建和查询 direct S3 upload。
+- `UploadDocument` / `DownloadDocument` / `DeleteDocument`：文件上传、下载、删除。
+- `Announcements` / `CreateAnnouncement`：房东公告。
+
+核心逻辑：landlord operations。房东可以管理房源、租客、租约、维修、付款和文件。
+
+### TenantController
+
+负责租客自助功能：
+
+- `Dashboard` / `TenantDashboard`：租客 dashboard。
+- `PendingAssignment`：租客还没有被分配房源时的页面。
+- `MyProperty`：查看自己租住的房源。
+- `MaintenanceRequest` / `CreateMaintenance`：查看和提交维修请求。
+- `Documents`：查看自己的文件。
+- `CreateDocumentUpload` / `GetDocumentUploadStatus`：创建和查询 direct S3 upload。
+- `UploadDocument` / `DownloadDocument` / `DeleteDocument`：文件上传、下载、删除。
+- `Payments` / `CreateCheckoutSession`：查看租金付款并创建 Stripe Checkout session。
+- `PaymentSuccess` / `PaymentCancel`：付款成功或取消后的页面。
+- `Visitors` / `RegisterVisitor`：查看和注册访客通行证。
+- `CancelVisitorPass` / `MarkVisitorPassUsed`：取消或标记通行证已使用。
+- `ValidateVisitorPass` / `ValidateVisitorPassAndCheckIn`：Security 角色验证访客通行证。
+- `ConfirmMaintenanceCompletion`：租客确认维修完成并评分。
+- `Announcements`：查看公告。
+
+核心逻辑：tenant self-service。租客可以自己处理付款、维修、文件、访客和公告。
+
+### Other Controllers
+
+- `PropertyBookingController`：公开短租 booking，负责显示可预订房源、创建 Stripe Checkout session、付款成功/取消页面。
+- `CommunityAdminController`：Admin 管理 community updates，包括查看、新增、编辑、删除。
+- `HomeController`：公开首页、community update 详情页、privacy page、error page。
+- `PropertyGuardController`：根据 pass code 验证 property booking access pass。
+- `StripeEventBridgeController`：internal API，接收 Stripe/EventBridge payment callback。
+- `DocumentUploadEventsController`：internal API，接收 S3 object-created upload confirmation。
+- `RoleController`：简单角色页面或 role-based authorization 测试。
+
+可以这样讲：
+
+> Controller is the traffic controller of the MVC application. It receives requests, checks permission, calls services or database, and returns either a Razor view or a JSON response.
+
+## 7. Models 文件夹
+
+`Models` 是 MVC 里的 M，代表 application 的数据结构。
+
+它可以表达三种东西：
+
+- Database entity：真的会存进 database 的数据。
+- ViewModel：给 Razor view 显示用的数据。
+- Request/response contract：给 AJAX、API、Lambda callback 使用的数据格式。
+
+所以不是每一个 model 都是一张 table。有些是 table，有些只是页面或 API 用的数据包装。
+
+### Database Entity Models
+
+这些 model 通常会出现在 `AppDbContext` 的 `DbSet` 里面，所以它们会映射到 PostgreSQL table。
+
+主要 entity：
+
+- `AppUser`：系统用户资料，例如 email、role、approval status。
+- `Property`：房源资料，例如 property name、address、rent、status、landlord。
+- `PropertyAmenity`：房源设施，例如 Wi-Fi、parking、gym。
+- `Tenant`：租客资料，连接 user 和 property。
+- `LeaseHistory`：租约历史，例如续租、终止、换房、租金调整。
+- `MaintenanceRequest`：维修请求，例如类别、优先级、状态、图片、反馈。
+- `MaintenanceTimeline`：维修处理过程记录。
+- `Payment`：租金或 booking 付款记录，包含 Stripe session/payment intent/refund 信息。
+- `Document`：租约、身份证、收据等文件 metadata。
+- `CommunityUpdate`：社区公告、新闻、活动。
+- `VisitorPass`：访客通行证。
+- `PasswordResetRequest`：密码重置申请。
+- `AuditLog`：系统审计记录，例如 admin 做了什么操作。
+- `SystemAnnouncement`：系统公告。
+- `PropertyBooking`：短租 booking 记录。
+- `PromoCode`：短租优惠码。
+
+这些 entity 的作用是描述系统最核心的业务对象。
+
+### Enum Models
+
+Enum 用来限制状态或类型只能是几个固定值。
+
+例子：
+
+- `PropertyType`：`Apartment`、`House`、`Condo`、`Studio`、`Commercial`
+- `PropertyAvailabilityStatus`：`Available`、`Occupied`、`Maintenance`、`Unavailable`
+- `PropertyApprovalStatus`：`Pending`、`Approved`、`Rejected`
+- `PaymentStatus`：`Pending`、`Submitted`、`Verified`、`Overdue`、`Rejected`、`Failed`、`Cancelled`、`Refunded`
+- `MaintenanceStatus`：`Pending`、`Approved`、`InProgress`、`Completed`、`Rejected`
+- `DocumentUploadStatus`：`PendingUpload`、`Confirmed`、`FailedValidation`、`Expired`
+- `BookingStatus`：`Pending`、`Confirmed`、`Cancelled`
+
+Enum 的好处是让状态更安全、更清楚。比如 payment status 不能随便写 `"done"` 或 `"ok"`，只能使用系统定义好的状态。
+
+### ViewModels
+
+ViewModel 是专门给页面用的 model。它不一定会存进 database，而是把页面需要显示的数据整理成一个对象。
+
+例子：
+
+- `LoginViewModel`：登录页面需要的 email、password。
+- `RegisterViewModel`：注册页面需要的用户资料。
+- `TenantDashboardViewModel`：租客 dashboard 需要显示的资料。
+- `LandlordDashboardViewModel`：房东 dashboard 需要显示的资料。
+- `TenantPaymentsViewModel`：租客付款页面需要的 payment list 和 summary。
+- `TenantDocumentsViewModel`：租客文件页面需要的 document list 和 upload form data。
+- `LandlordDocumentsViewModel`：房东文件页面需要的 document list 和 upload form data。
+- `MaintenanceRequestViewModel`：维修申请页面需要的数据。
+- `AssignTenantViewModel`：房东分配租客到房源时使用的数据。
+- `VisitorPassValidationViewModel`：security 验证 pass 时显示的数据。
+
+一句话：
+
+> Entity 是 database shape，ViewModel 是 screen shape。
+
+### Admin ViewModels
+
+`Models/Admin` 里面主要放 Admin dashboard 和 payment monitoring 需要的数据结构。
+
+例子：
+
+- `AdminDashboardViewModel`：Admin dashboard 主页面数据。
+- `AdminOverviewViewModel`：总用户数、总房源数、付款概况等 overview。
+- `AdminUserReportViewModel`：用户统计。
+- `AdminPropertyReportViewModel`：房源统计。
+- `AdminMaintenanceReportViewModel`：维修统计。
+- `AdminPaymentReportViewModel`：付款统计。
+- `AdminAuditLogViewModel`：审计记录显示。
+- `PaymentFilterViewModel`：付款列表筛选条件。
+- `PaymentListItemViewModel`：付款列表每一行显示什么。
+- `PaymentDetailViewModel`：付款详情页显示什么。
+- `MonthlyRevenueReportItem`：月收入报表 item。
+- `OverdueTenantReportItem`：逾期租客报表 item。
+- `TenantPaymentReliabilityItem`：租客付款可靠性报表 item。
+
+这些 ViewModel 可以避免 controller 直接把一堆 database entity 丢给 view。
+
+### Request 和 Response Contracts
+
+有些 model 是给 API 或 AJAX 用的，不是给页面直接显示，也不一定是 database table。
+
+`DocumentUploadContracts.cs` 里面有：
+
+- `CreateDirectDocumentUploadRequest`
+- `DirectDocumentUploadResponse`
+- `DocumentUploadStatusResponse`
+- `S3ObjectCreatedUploadNotification`
+
+这些用在 direct S3 upload flow：
+
+```text
+Browser 请求创建 upload URL
+        ↓
+CreateDirectDocumentUploadRequest
+        ↓
+MVC 返回 pre-signed URL
+        ↓
+DirectDocumentUploadResponse
+        ↓
+S3 上传完成后 Lambda 回调
+        ↓
+S3ObjectCreatedUploadNotification
 ```
 
-数据库设计重点：
+可以这样讲：
 
-- Enum 会以 string 形式存在数据库里，比较容易 debug 和阅读。
-- 针对常用查询字段建立 index，例如 Stripe ID、document upload status、property status、audit log、lease history。
-- 根据业务规则配置 cascade delete、restrict delete 和 set null。
-- `Migrations/` 记录数据库 schema 的演进过程。
+> The Models folder defines the data structures used by the application. Some models map to database tables, some prepare data for views, and some define request/response formats for API or serverless communication.
 
-## 7. Authentication 和 Authorization
+## 8. Views 文件夹
 
-系统使用 AWS Cognito Identity，并结合 ASP.NET Core authentication。
+`Views` 是 MVC 里的 V，负责页面显示。
 
-主要 authentication 功能：
+它使用 Razor `.cshtml` 文件。结构通常跟 controller 对应：
 
-- Email/password login。
-- Google OAuth login。
-- Application cookie。
-- DataProtection keys 持久化，避免 container restart 后 cookie 无法解密。
-- 使用 `[Authorize]` 做角色权限控制。
-- 使用 `RoleClaimsTransformation` 把用户角色加入 claims。
+- `Views/Account` 对应 `AccountController`
+- `Views/Admin` 对应 `AdminController`
+- `Views/Landlord` 对应 `LandlordController`
+- `Views/Tenant` 对应 `TenantController`
+- `Views/PropertyBooking` 对应 `PropertyBookingController`
+- `Views/CommunityAdmin` 对应 `CommunityAdminController`
 
-主要角色：
+`Views/Shared` 放共用页面组件，例如 layout、error page 和 validation scripts。
 
-- `Admin`
-- `Landlord`
-- `Tenant`
-- `Security`
+可以这样讲：
 
-## 8. Extensions 的作用
+> Controllers decide what data to show, and Views decide how that data appears on the page.
 
-`Extensions` 文件夹主要用来放一些可以复用的配置或 middleware，让 `Program.cs` 不会太乱。
+## 9. Data 文件夹
+
+`Data` 负责 database connection 和 Entity Framework Core 设置。
+
+里面主要有：
+
+- `AppDbContext.cs`
+- `AppDbContextFactory.cs`
+
+### AppDbContext.cs
+
+`AppDbContext` 是 C# code 和 PostgreSQL database 之间的桥梁。
+
+Controller 或 Service 如果要查询 database，通常会通过 `AppDbContext` 操作：
+
+```csharp
+_context.Properties.ToListAsync()
+_context.Payments.Add(payment)
+_context.SaveChangesAsync()
+```
+
+`AppDbContext` 里面的 `DbSet` 会对应 database table。
+
+例如：
+
+```csharp
+public DbSet<Property> Properties { get; set; }
+```
+
+意思是：
+
+> C# 里的 `Property` model 会映射到 database 里的 `Properties` table。
+
+这个项目定义的主要 tables 包括：
+
+- `Users`
+- `Properties`
+- `PropertyAmenities`
+- `Tenants`
+- `MaintenanceRequests`
+- `MaintenanceTimelines`
+- `Payments`
+- `Documents`
+- `CommunityUpdates`
+- `VisitorPasses`
+- `PasswordResetRequests`
+- `AuditLogs`
+- `SystemAnnouncements`
+- `LeaseHistories`
+- `PropertyBookings`
+- `PromoCodes`
+
+### OnModelCreating
+
+`OnModelCreating` 是 `AppDbContext` 里面很重要的方法，用来配置 database rules。
+
+它主要配置三类东西：
+
+- Enum conversion：把 enum 存成 string，而不是数字。
+- Index：给常用查询字段加索引，让查询更快。
+- Relationship：定义 table 之间的 foreign key 和 delete behavior。
+
+Enum conversion 例子：
+
+```csharp
+modelBuilder.Entity<Property>()
+    .Property(p => p.PropertyType)
+    .HasConversion<string>();
+```
+
+这样 database 里会看到 `Apartment`、`House`、`Condo`，而不是 `1`、`2`、`3`。
+
+Index 例子：
+
+```csharp
+modelBuilder.Entity<Payment>().HasIndex(p => p.StripeSessionId);
+modelBuilder.Entity<Document>().HasIndex(d => d.UploadStatus);
+modelBuilder.Entity<AuditLog>().HasIndex(a => a.CreatedAt);
+```
+
+Relationship 例子：
+
+```csharp
+modelBuilder.Entity<Property>()
+    .HasOne(p => p.Landlord)
+    .WithMany()
+    .HasForeignKey(p => p.LandlordId)
+    .OnDelete(DeleteBehavior.Cascade);
+```
+
+这表示一个 property 属于一个 landlord，`LandlordId` 是 foreign key。如果 landlord 被删除，他的 properties 也会被删除。
+
+### AppDbContextFactory.cs
+
+`AppDbContextFactory` 是给 EF Core design-time tools 用的。
+
+它主要服务于这些 command：
+
+```bash
+dotnet ef migrations add ...
+dotnet ef database update
+```
+
+当运行 migration command 时，EF Core 需要知道如何创建 `AppDbContext`，但那时候 application 可能没有真正启动。
+
+所以 `AppDbContextFactory` 会：
+
+- 读取 `appsettings.json`
+- 读取 `appsettings.Development.json`
+- 读取 environment variables
+- 从 `DefaultConnection` 取得 PostgreSQL connection string
+- 创建并返回 `AppDbContext`
+
+可以这样讲：
+
+> The Data folder defines how the application connects to PostgreSQL and how C# models map to database tables. `AppDbContext` is used during runtime, while `AppDbContextFactory` is used by EF Core tools when creating or applying migrations.
+
+## 10. Services 文件夹
+
+`Services` 放可复用的业务逻辑，避免 controller 变得太复杂。
+
+主要 services：
+
+- `EmailService`：发送 approval email、maintenance email、property access pass。
+- `S3ImageService`：上传图片到 S3。
+- `DocumentUploadService`：创建 direct S3 upload、确认 document upload status。
+- `StripeEventBridgeProcessingService`：处理 Stripe/EventBridge payment event。
+- `InternalApiKeyProvider`：读取 internal API key。
+- `RoleClaimsTransformation`：把 user role 转换成 ASP.NET claims。
+
+可以这样讲：
+
+> Controller receives the request, while Service performs reusable business operations.
+
+## 11. Extensions 文件夹
+
+`Extensions` 用来放扩展方法或 middleware，让 `Program.cs` 更干净。
 
 ### GoogleAuthenticationExtensions
 
-`GoogleAuthenticationExtensions.cs` 定义了：
+`GoogleAuthenticationExtensions.cs` 定义：
 
 ```csharp
 builder.Services.AddGoogleLogin(builder.Configuration);
@@ -784,13 +520,9 @@ Authentication:Google:ClientSecret
 
 如果 Google credentials 存在，就启用 Google OAuth login。如果没有配置，就直接跳过，不会让应用启动失败。
 
-可以这样理解：
-
-> GoogleAuthenticationExtensions 把 Google OAuth 的注册逻辑封装起来，让主启动文件只需要调用 `AddGoogleLogin`。
-
 ### XRayUserTrackingMiddleware
 
-`XRayUserTrackingMiddleware.cs` 是一个 middleware。它会在用户已经登录时，从当前 request 里读取：
+`XRayUserTrackingMiddleware.cs` 会在用户已经登录时，从当前 request 读取：
 
 - UserId
 - UserRole
@@ -804,11 +536,33 @@ AWSXRayRecorder.Instance.AddAnnotation("UserRole", role);
 
 这样在 AWS X-Ray console 里可以按用户或角色过滤 request，方便 production debugging。
 
-可以这样理解：
+## 12. Migrations 文件夹
 
-> XRayUserTrackingMiddleware 会把登录用户的信息写入 X-Ray trace，让开发者知道哪一个用户、哪一种角色触发了某次请求。
+`Migrations` 是 Entity Framework Core 自动生成的 database schema 变化记录。
 
-## 9. appsettings.json 的用途
+例如项目新增 `Documents` table、`Payments` table 或给某个 table 加字段，EF Core 会生成 migration file。
+
+部署或更新数据库时，migration 可以把 database structure 升级到最新版本。
+
+可以这样讲：
+
+> Migrations are database version history. They record how the database schema changes over time.
+
+## 13. wwwroot 文件夹
+
+`wwwroot` 是 ASP.NET Core 的 public static files folder。
+
+放在这里的文件可以被 browser 直接访问，例如：
+
+- `wwwroot/css/`：全局和页面 CSS。
+- `wwwroot/js/`：前端 JavaScript。
+- `wwwroot/images/`：静态图片资源。
+- `wwwroot/lib/`：前端第三方 library，例如 jQuery。
+- `wwwroot/uploads/`：本地上传或静态上传资源。
+
+比如 `wwwroot/css/site.css` 会影响页面样式，`wwwroot/js/site.js` 会放前端互动逻辑。
+
+## 14. appsettings.json
 
 `appsettings.json` 是 ASP.NET Core 应用的主要配置文件。它用来存放应用启动时需要读取的配置，而不是把这些值写死在 C# code 里面。
 
@@ -824,49 +578,25 @@ AWSXRayRecorder.Instance.AddAnnotation("UserRole", role);
 - EventBridge shared secret。
 - Internal API key，用于 trusted server-to-server callback。
 
-例如 Stripe key：
+Stripe key 例子：
 
 ```csharp
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 ```
 
-这句会读取：
-
-```json
-{
-  "Stripe": {
-    "SecretKey": ""
-  }
-}
-```
-
-例如 database connection string：
+Database connection string 例子：
 
 ```csharp
 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 ```
 
-这句会读取：
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": ""
-  }
-}
-```
-
-这样做的好处是：
+这样做的好处：
 
 - Development 可以用 test database 和 test Stripe key。
 - Production 可以用 real database 和 live Stripe key。
 - Sensitive values 可以通过 environment variables 或 secret manager 提供，不需要 commit 到 source code。
 
-Presentation 可以这样讲：
-
-> `appsettings.json` stores application configuration such as database connection strings, AWS settings, Stripe keys, and logging levels. The application reads these values at runtime, so the same code can run in different environments with different configuration.
-
-## 10. .csproj 的用途
+## 15. .csproj 文件
 
 `.csproj` 是 .NET 项目的配置文件，可以理解成 project 的说明书。
 
@@ -895,15 +625,18 @@ Serverless 项目：
 
 说明它是一个 .NET project，并且目标是 AWS Lambda。
 
-Presentation 可以这样讲：
+## 16. MyMvcApp.Serverless
 
-> `.csproj` defines how a .NET project is built. It includes the target framework, project SDK, build settings, and NuGet dependencies.
+`MyMvcApp.Serverless` 是独立的 .NET AWS Lambda project，主要用来处理 Stripe payment event。
 
-## 11. MyMvcApp.Serverless 的作用
+它不是普通 MVC 页面，而是 event-driven worker。
 
-`MyMvcApp.Serverless` 是一个独立的 .NET AWS Lambda project，主要用来处理 Stripe payment event。
+主要文件：
 
-它不是普通 MVC 页面，而是一个 event-driven worker。
+- `Function.cs`：Lambda 入口，接收 event payload。
+- `StripeEventProcessor.cs`：Stripe event 的核心业务逻辑。
+- `StripeWorkerModels.cs`：Lambda 使用的轻量 database models 和 DbContext。
+- `MyMvcApp.Serverless.csproj`：Serverless project 的 .NET 配置和 dependencies。
 
 ### Function.cs
 
@@ -972,70 +705,23 @@ public async Task<StripeEventLambdaResponse> FunctionHandler(
 
 因为 Lambda project 是独立的，它只需要知道和 Stripe payment 相关的 table，不需要加载整个 MVC app 的所有 models。
 
-可以这样理解：
+## 17. S3 Upload Confirmation Serverless
 
-> `StripeWorkerModels.cs` provides a minimal database model for the Lambda worker, keeping the serverless project smaller and focused.
+`S3-document-upload-confirmation-serverless` 是 Node.js Lambda。
 
-### MyMvcApp.Serverless.csproj
+它的作用是：
 
-这是 Lambda project 的 `.csproj` 文件，负责定义：
+1. 接收 S3 object-created event。
+2. 读取 bucket name、object key、eTag、size。
+3. 调用 MVC app 的 internal endpoint。
+4. 通知 MVC app：这个 document 已经成功上传到 S3。
 
-- Target framework。
-- AWS Lambda project type。
-- Lambda 需要的 NuGet packages。
-- PostgreSQL provider。
-- Stripe SDK。
-- AWS SDK。
-- Email、S3、QR code 相关依赖。
+主要文件：
 
-## 12. 主要功能模块
+- `index.mjs`：Lambda handler。
+- `package.json`：Node.js package 配置。
 
-### Admin Module
-
-Admin 可以：
-
-- Approve 或 reject users。
-- Approve 或 reject property listings。
-- Monitor payment status。
-- Verify 或 reject payment records。
-- Manage system announcements。
-- View audit logs 和 dashboard analytics。
-
-### Landlord Module
-
-Landlord 可以：
-
-- Add、edit、delete property listings。
-- 上传 property images 到 S3。
-- Assign tenants to properties。
-- Renew、terminate 或 adjust lease details。
-- Review tenant maintenance requests。
-- 管理 property 或 tenant documents。
-- 发布 landlord announcements。
-
-### Tenant Module
-
-Tenant 可以：
-
-- 查看 assigned property。
-- 提交 maintenance requests。
-- 上传和下载 documents。
-- 通过 Stripe Checkout 支付 rent。
-- 注册 visitor passes。
-- Cancel 或 mark visitor passes as used。
-- 查看 system 和 landlord announcements。
-
-### Public Booking Module
-
-Guest 可以：
-
-- 浏览 available short-term properties。
-- 选择 check-in 和 check-out date。
-- 使用 promo code。
-- 通过 Stripe Checkout 付款。
-- 付款确认后收到 access pass。
-
-## 13. Payment Flow
+## 18. Payment Flow
 
 ```mermaid
 sequenceDiagram
@@ -1066,7 +752,7 @@ sequenceDiagram
 - PostgreSQL 保存 payment 和 booking 结果。
 - Audit log 保留系统操作记录。
 
-## 14. Document Upload Flow
+## 19. Document Upload Flow
 
 ```mermaid
 sequenceDiagram
@@ -1087,13 +773,13 @@ sequenceDiagram
 
 这个设计的重点是：文件不会先上传到 MVC server，而是 browser 直接上传到 S3。MVC app 只负责生成 upload URL 和保存 document metadata。
 
-这样可以：
+好处：
 
 - 减少 MVC server 的压力。
 - 更适合处理大文件。
 - 通过 S3 event 和 Lambda 确认文件真的上传成功。
 
-## 15. AWS Integration
+## 20. AWS Integration
 
 项目使用的 AWS services：
 
@@ -1107,7 +793,7 @@ sequenceDiagram
 
 `docker-compose.ec2.yml` 里面还配置了 X-Ray daemon container，让应用可以把 trace 发送到 AWS X-Ray。
 
-## 16. Deployment Structure
+## 21. Deployment Structure
 
 这个应用可以用 container 方式部署：
 
@@ -1118,24 +804,25 @@ sequenceDiagram
 - AWS、Google OAuth、Stripe、Internal API secrets 通过 environment variables 提供。
 - `nginx.conf.example` 提供 reverse proxy 部署参考。
 
-## 17. Suggested Presentation Slide Flow
+## 22. Suggested Presentation Slide Flow
 
 1. 项目标题和问题背景。
 2. 用户角色和系统目标。
 3. Repository 结构。
 4. High-level architecture diagram。
 5. MVC application structure。
-6. Database model 和 entity relationship。
-7. Authentication 和 role-based authorization。
-8. Admin、Landlord、Tenant、Guest 功能模块。
-9. Stripe payment flow。
-10. S3 direct upload flow。
-11. AWS service integration。
-12. Deployment design。
-13. Technical highlights 和 challenges。
-14. Conclusion 和 future improvements。
+6. Controllers：主要业务入口。
+7. Models：Entity、ViewModel、Contract。
+8. Data：DbContext、relationship、migration。
+9. Services 和 Extensions。
+10. Stripe payment flow。
+11. S3 direct upload flow。
+12. AWS service integration。
+13. Deployment design。
+14. Technical highlights 和 challenges。
+15. Conclusion 和 future improvements。
 
-## 18. Technical Highlights
+## 23. Technical Highlights
 
 - 清楚的 MVC 分层：Controllers、Models、Views、Services、Data。
 - 针对不同角色设计不同 UI 和 workflow。
@@ -1146,7 +833,7 @@ sequenceDiagram
 - Secure cookie 和 DataProtection 配置，适合 container deployment。
 - Audit logging 和 admin analytics 提高系统可管理性。
 
-## 19. Possible Future Improvements
+## 24. Possible Future Improvements
 
 - 为 controller 和 service workflow 添加 unit test 与 integration test。
 - 将非常大的 controller 拆分成更小的 service 或 command handler。
@@ -1155,7 +842,7 @@ sequenceDiagram
 - 增加 background jobs，自动检查 overdue payment 和 document expiry。
 - 增强 Lambda failure 和 payment reconciliation 的 monitoring dashboard。
 
-## 20. Short Speaking Script
+## 25. Short Speaking Script
 
 这个项目是一个使用 ASP.NET Core MVC 开发的物业管理平台，支持 Admin、Landlord、Tenant、Security 和 Guest 等不同角色。主应用采用 MVC 架构：Controllers 负责处理 request，Models 表示业务数据，Views 负责 UI，Services 封装可复用逻辑，而 Entity Framework Core 负责和 PostgreSQL 数据库交互。
 
