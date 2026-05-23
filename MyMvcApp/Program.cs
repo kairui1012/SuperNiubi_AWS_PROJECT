@@ -20,11 +20,13 @@ QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Enable AWS SDK calls to appear in X-Ray traces.
 AWSSDKHandler.RegisterXRayForAllServices();
 
+// Configure Stripe once so payment services can use the shared API key.
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
-// Add services to the container.
+// MVC controllers and JSON serialization.
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
@@ -33,6 +35,7 @@ builder.Services.AddControllersWithViews()
 
 if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
 {
+    // Trust proxy headers from Nginx or an AWS load balancer.
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders =
@@ -48,21 +51,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
         .AddXRayInterceptor(true));
 
-// Add Email Service
+// Application services used by controllers and background-style workflows.
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<StripeEventBridgeProcessingService>();
 builder.Services.AddScoped<DocumentUploadService>();
 builder.Services.AddScoped<InternalApiKeyProvider>();
 
+// Add role claims after sign-in so authorization policies see the current role.
 builder.Services.AddScoped<IClaimsTransformation, MyMvcApp.Services.RoleClaimsTransformation>();
 
-// Register AWS options before AWS-backed services so Cognito, S3, and SES use the same configured region/credentials chain.
+// Register AWS options before AWS-backed services so they share region and credentials.
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 
 builder.Services.AddCognitoIdentity();
 builder.Services.AddGoogleLogin(builder.Configuration);
 builder.Services.ConfigureApplicationCookie(options =>
 {
+    // Return status codes for API/Ajax requests instead of redirecting to HTML pages.
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Events.OnRedirectToLogin = context =>
@@ -90,6 +95,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 builder.Services.ConfigureExternalCookie(options =>
 {
+    // External sign-in callbacks require cross-site cookies.
     options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
@@ -99,13 +105,10 @@ builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIden
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 
-// 2. Register your custom S3 Image Service
+// S3 image storage for property and maintenance uploads.
 builder.Services.AddScoped<MyMvcApp.Services.IS3ImageService, MyMvcApp.Services.S3ImageService>();
 
-// ========== CRITICAL: DataProtection Key Persistence ==========
-// Persist DataProtection keys to a shared, persistent location.
-// In production, this MUST be on shared storage (EFS, shared volume) if you have multiple instances.
-// Otherwise, each instance will have different keys and cookies won't be recognized across instances.
+// Persist DataProtection keys so auth cookies survive restarts and multiple instances.
 var dataProtectionKeysPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYS_PATH") 
     ?? (builder.Environment.IsDevelopment() 
         ? Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")
@@ -116,9 +119,7 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
     .SetApplicationName("PropEase");
 
-// ========== Forwarded Headers Configuration ==========
-// REQUIRED when behind a reverse proxy (Nginx, ALB, etc).
-// This ensures X-Forwarded-Proto, X-Forwarded-For headers are processed correctly.
+// Process reverse-proxy headers for client IP and original scheme.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -126,9 +127,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-// ========== Identity Application Cookie Configuration ==========
-// Explicitly configure the Identity Application Cookie to ensure it's recognized across requests.
-// This is crucial when the app sits behind a reverse proxy or load balancer.
+// Configure the main Identity cookie used by MVC authentication.
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
@@ -137,7 +136,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(14);
 
-    // Cookie security settings - important for HTTPS deployments
+    // Keep the auth cookie locked to HTTPS and unavailable to client-side scripts.
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
@@ -171,22 +170,19 @@ var app = builder.Build();
 
 if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
 {
+    // Apply proxy headers before the request reaches the main pipeline.
     app.UseForwardedHeaders();
 }
 
-app.UseXRay("MyMvcApp"); // The string here is the name that will appear in the X-Ray console
+app.UseXRay("MyMvcApp");
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
-// ========== CRITICAL: ForwardedHeaders Middleware MUST come FIRST ==========
-// This must be before UseHttpsRedirection, UseAuthentication, etc.
-// It processes X-Forwarded-Proto header to determine if request is HTTPS
+// Forwarded headers must run before HTTPS redirection and authentication.
 app.UseForwardedHeaders();
 
 // In containerized HTTP deployments (e.g. direct EC2), keep HTTPS redirection optional.
@@ -200,9 +196,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 
-// ========== DEBUG MIDDLEWARE: Log authentication state for troubleshooting ==========
-// This helps identify whether cookie decryption is working correctly across requests.
-// Only logs specific paths to reduce noise.
+// Log authentication state on selected paths to troubleshoot cookie and role issues.
 app.Use(async (context, next) =>
 {
     var machine = Environment.MachineName;
@@ -215,7 +209,6 @@ app.Use(async (context, next) =>
     var hasIdentityCookie = context.Request.Cookies.ContainsKey(".AspNetCore.Identity.Application");
     var roles = string.Join(",", context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
 
-    // Only log specific paths to reduce noise
     if (path.StartsWithSegments("/Account/CheckAuth") || 
         path.StartsWithSegments("/Admin") ||
         path.StartsWithSegments("/Account/Login"))
@@ -241,6 +234,7 @@ app.Run();
 
 static bool IsJsonOrAjaxRequest(HttpRequest request)
 {
+    // Reuse one check for endpoints that should receive JSON-friendly auth errors.
     return request.Headers.Accept.Any(value => value?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true) ||
            string.Equals(request.Headers.XRequestedWith, "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 }

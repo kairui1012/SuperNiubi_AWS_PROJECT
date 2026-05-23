@@ -78,7 +78,18 @@ flowchart LR
 
 `Program.cs` 是整个 MVC 应用的启动入口。
 
-它主要配置：
+在 ASP.NET Core 里面，`Program.cs` 负责两件事：
+
+- 注册 services：告诉 application 哪些功能可以通过 dependency injection 使用。
+- 配置 middleware pipeline：决定每一个 HTTP request 进入系统后会经过哪些处理步骤。
+
+可以把它理解成 application 的 main switchboard。它不会直接处理某一个页面的业务逻辑，但它会把 database、authentication、AWS、Stripe、MVC routing 和 custom services 全部连接起来。
+
+### 5.1 Service Registration
+
+第一部分是 service registration，也就是 `builder.Services...`。
+
+它主要注册：
 
 - MVC controllers 和 Razor views。
 - PostgreSQL database，通过 Entity Framework Core 和 Npgsql 连接。
@@ -90,7 +101,41 @@ flowchart LR
 - Forwarded headers，支持 Nginx 或 load balancer 后面的部署环境。
 - 项目自定义 services 的 dependency injection。
 
-注册的主要 custom services：
+MVC 和 JSON serialization：
+
+```csharp
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+```
+
+这表示系统启用 MVC controller 和 Razor view，同时让 JSON response 里面的 enum 显示成文字，而不是数字。例如 `Approved` 会比 `1` 更清楚。
+
+Database configuration：
+
+```csharp
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+        .AddXRayInterceptor(true));
+```
+
+这里把 `AppDbContext` 注册进 dependency injection。Controller 或 Service 要访问 PostgreSQL 时，就可以注入 `AppDbContext`。`.AddXRayInterceptor(true)` 会把 database call 加进 AWS X-Ray trace，方便 debugging。
+
+AWS 和第三方 service：
+
+```csharp
+AWSSDKHandler.RegisterXRayForAllServices();
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
+builder.Services.AddAWSService<IAmazonSecretsManager>();
+```
+
+这些配置让 MVC app 可以调用 AWS SDK、Stripe API、S3 和 Secrets Manager。
+
+注册的主要 custom services 包括：
 
 - `EmailService`
 - `StripeEventBridgeProcessingService`
@@ -99,9 +144,99 @@ flowchart LR
 - `RoleClaimsTransformation`
 - `S3ImageService`
 
+这些 service 被 controller 使用，用来处理 email、payment event、document upload、internal API secret、role claims 和 S3 image upload。
+
+### 5.2 Authentication and Cookies
+
+`Program.cs` 也配置了 login cookie：
+
+```csharp
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromDays(14);
+});
+```
+
+这决定了：
+
+- 没登录的用户会去 `/Account/Login`。
+- 没权限的用户会去 `/Account/AccessDenied`。
+- Cookie 有效期是 14 天，并且支持 sliding expiration。
+- API 或 AJAX request 如果没有权限，会返回 `401` 或 `403`，而不是跳去 HTML login page。
+
+这里还有一个重要配置是 DataProtection：
+
+```csharp
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("PropEase");
+```
+
+ASP.NET Core 用 DataProtection key 来加密和解密 authentication cookie。如果这个 key 每次 container restart 都改变，用户就会突然被 logout。把 key 存到 persistent folder 后，cookie 就可以在 restart 后继续被识别。
+
+### 5.3 Reverse Proxy Support
+
+项目部署在 EC2、Nginx 或 AWS Load Balancer 后面时，真实 request scheme 和 client IP 通常会放在 forwarded headers 里面。
+
+`Program.cs` 使用：
+
+```csharp
+app.UseForwardedHeaders();
+```
+
+这样 application 才知道原始 request 是 HTTPS，client IP 是谁。这个配置对 secure cookie、redirect URL 和 production deployment 很重要。
+
+### 5.4 Middleware Pipeline
+
+`builder.Build()` 之后，代码进入 middleware pipeline 配置。
+
+主要顺序是：
+
+```text
+Forwarded Headers
+X-Ray tracing
+Exception handling / HSTS
+HTTPS redirection
+Static files
+Routing
+Authentication
+Authorization
+X-Ray user tracking
+Controller route mapping
+```
+
+Middleware 的顺序很重要。例如：
+
+- `UseForwardedHeaders()` 要在 authentication 和 HTTPS redirection 前面。
+- `UseAuthentication()` 要在 `UseAuthorization()` 前面。
+- `MapControllerRoute()` 放在最后，把 request 交给对应 controller action。
+
+默认 route 是：
+
+```csharp
+pattern: "{controller=Home}/{action=Index}/{id?}"
+```
+
+意思是用户访问网站根目录时，会默认进入 `HomeController` 的 `Index` action。
+
+### 5.5 Debugging and Observability
+
+`Program.cs` 里面也有 authentication debug middleware。它只在几个关键 path 输出登录状态：
+
+- `/Account/CheckAuth`
+- `/Admin`
+- `/Account/Login`
+
+它会记录 machine name、process id、host、scheme、path、user name、cookie 是否存在和 user roles。这个设计是为了排查 production 或 container deployment 中常见的 cookie / role 问题。
+
+另外，`app.UseXRay("MyMvcApp")` 和 `XRayUserTrackingMiddleware` 会把 request 和 user information 送到 AWS X-Ray，方便在 AWS console 里面追踪 slow request 或 error。
+
 可以这样讲：
 
-> `Program.cs` is the startup file. It wires up MVC, database access, authentication, AWS services, Stripe, middleware, and custom services.
+> `Program.cs` is the startup and configuration file of the MVC application. It registers all required services such as MVC, PostgreSQL, AWS, Stripe, authentication cookies, DataProtection, and custom business services. After that, it builds the HTTP middleware pipeline, so every request passes through forwarded headers, tracing, static files, routing, authentication, authorization, and finally the controller route.
 
 ## 6. Controllers 文件夹
 
