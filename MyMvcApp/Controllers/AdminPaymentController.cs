@@ -12,6 +12,9 @@ namespace MyMvcApp.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminPaymentController : Controller
     {
+        /// <summary>
+        /// Payment statuses that should no longer be treated as active or overdue.
+        /// </summary>
         private static readonly PaymentStatus[] ClosedPaymentStatuses =
         {
             PaymentStatus.Verified,
@@ -23,12 +26,17 @@ namespace MyMvcApp.Controllers
 
         private readonly AppDbContext _db;
 
+        /// <summary>
+        /// Creates a controller instance with the application database context.
+        /// </summary>
         public AdminPaymentController(AppDbContext db)
         {
             _db = db;
         }
 
-        // GET /AdminPayment/Index
+        /// <summary>
+        /// Shows the admin payment dashboard with filtering, sorting, paging, and summary reports.
+        /// </summary>
         public async Task<IActionResult> Index(PaymentFilterViewModel filter)
         {
             filter.Page = Math.Max(1, filter.Page);
@@ -169,7 +177,9 @@ namespace MyMvcApp.Controllers
             return View(vm);
         }
 
-        // GET /AdminPayment/Detail/{id}
+        /// <summary>
+        /// Shows the full details for one payment record.
+        /// </summary>
         public async Task<IActionResult> Detail(int id, string? returnUrl)
         {
             var payment = await _db.Payments.AsNoTracking()
@@ -218,7 +228,9 @@ namespace MyMvcApp.Controllers
             return View(vm);
         }
 
-        // POST /AdminPayment/Verify/{id}
+        /// <summary>
+        /// Manually verifies a non-Stripe payment and records the admin action in the audit log.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Verify(int id, string? returnUrl)
@@ -256,7 +268,9 @@ namespace MyMvcApp.Controllers
             return RedirectToDetail(id, returnUrl);
         }
 
-        // POST /AdminPayment/Reject/{id}
+        /// <summary>
+        /// Rejects a payment that has not already been verified and saves optional admin remarks.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int id, string? remarks, string? returnUrl)
@@ -287,7 +301,9 @@ namespace MyMvcApp.Controllers
             return RedirectToDetail(id, returnUrl);
         }
 
-        // GET /AdminPayment/ExportCsv
+        /// <summary>
+        /// Exports the filtered payment records to a CSV file and logs the export action.
+        /// </summary>
         public async Task<IActionResult> ExportCsv(PaymentFilterViewModel filter)
         {
             var today = DateTime.UtcNow.Date;
@@ -401,11 +417,17 @@ namespace MyMvcApp.Controllers
             return File(bytes, "text/csv", fileName);
         }
 
+        /// <summary>
+        /// Redirects back to the payment detail page while preserving the optional return URL.
+        /// </summary>
         private IActionResult RedirectToDetail(int id, string? returnUrl)
         {
             return RedirectToAction(nameof(Detail), new { id, returnUrl });
         }
 
+        /// <summary>
+        /// Builds a six-month revenue report for verified and refunded payments.
+        /// </summary>
         private async Task<List<MonthlyRevenueReportItem>> BuildMonthlyRevenueReportAsync(DateTime utcNow)
         {
             var startMonth = new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-5);
@@ -441,6 +463,9 @@ namespace MyMvcApp.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Builds the top overdue tenant report based on active unpaid payments.
+        /// </summary>
         private async Task<List<OverdueTenantReportItem>> BuildOverdueTenantReportAsync(DateTime utcNow)
         {
             var overduePayments = await _db.Payments.AsNoTracking()
@@ -481,6 +506,9 @@ namespace MyMvcApp.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Builds a tenant reliability report using payment history, late payments, and problem statuses.
+        /// </summary>
         private async Task<List<TenantPaymentReliabilityItem>> BuildTenantReliabilityReportAsync(DateTime utcNow)
         {
             var payments = await _db.Payments.AsNoTracking()
@@ -531,6 +559,9 @@ namespace MyMvcApp.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Queues an admin audit log entry to be saved with the current database transaction.
+        /// </summary>
         private void AddAuditLog(string action, string targetType, int? targetId, string? targetEmail, string? details)
         {
             _db.AuditLogs.Add(new AuditLog
@@ -545,6 +576,9 @@ namespace MyMvcApp.Controllers
             });
         }
 
+        /// <summary>
+        /// Gets the email or identity name for the currently signed-in admin.
+        /// </summary>
         private string GetCurrentUserEmail()
         {
             return User.FindFirstValue(ClaimTypes.Email)
@@ -552,6 +586,9 @@ namespace MyMvcApp.Controllers
                 ?? "Unknown admin";
         }
 
+        /// <summary>
+        /// Escapes a value so it can be safely written as a CSV field.
+        /// </summary>
         private static string CsvEscape(string? value)
         {
             if (string.IsNullOrEmpty(value))
