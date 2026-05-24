@@ -53,6 +53,61 @@ namespace MyMvcApp.Controllers
             _config = config;
         }
 
+        private string GetConfiguredUserPoolId()
+        {
+            return _config["AWS:UserPoolId"]
+                ?? throw new InvalidOperationException("AWS:UserPoolId is not configured.");
+        }
+
+        private async Task EnsureCognitoEmailCanReceiveAccountRecoveryAsync(string userPoolId, string email)
+        {
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+            var cognitoUser = await _cognitoClient.AdminGetUserAsync(new AdminGetUserRequest
+            {
+                UserPoolId = userPoolId,
+                Username = normalizedEmail
+            });
+
+            var existingEmail = cognitoUser.UserAttributes
+                .FirstOrDefault(attribute => attribute.Name == "email")?.Value;
+            var emailVerified = string.Equals(
+                cognitoUser.UserAttributes.FirstOrDefault(attribute => attribute.Name == "email_verified")?.Value,
+                "true",
+                StringComparison.OrdinalIgnoreCase);
+
+            var attributesToUpdate = new List<AttributeType>();
+
+            if (!string.Equals(existingEmail, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                attributesToUpdate.Add(new AttributeType
+                {
+                    Name = "email",
+                    Value = normalizedEmail
+                });
+            }
+
+            if (!emailVerified)
+            {
+                attributesToUpdate.Add(new AttributeType
+                {
+                    Name = "email_verified",
+                    Value = "true"
+                });
+            }
+
+            if (attributesToUpdate.Count == 0)
+            {
+                return;
+            }
+
+            await _cognitoClient.AdminUpdateUserAttributesAsync(new AdminUpdateUserAttributesRequest
+            {
+                UserPoolId = userPoolId,
+                Username = normalizedEmail,
+                UserAttributes = attributesToUpdate
+            });
+        }
+
         public Task<IActionResult> Admin(
             string? searchEmail,
             string? roleFilter,
@@ -725,7 +780,9 @@ namespace MyMvcApp.Controllers
             {
                 try
                 {
-                    var userPoolId = _config["AWS:UserPoolId"];
+                    var userPoolId = GetConfiguredUserPoolId();
+                    await EnsureCognitoEmailCanReceiveAccountRecoveryAsync(userPoolId, user.Email);
+
                     var confirmRequest = new AdminConfirmSignUpRequest
                     {
                         UserPoolId = userPoolId,
@@ -777,7 +834,9 @@ namespace MyMvcApp.Controllers
 
             try
             {
-                var userPoolId = _config["AWS:UserPoolId"];
+                var userPoolId = GetConfiguredUserPoolId();
+                await EnsureCognitoEmailCanReceiveAccountRecoveryAsync(userPoolId, request.Email);
+
                 await _cognitoClient.AdminResetUserPasswordAsync(new AdminResetUserPasswordRequest
                 {
                     UserPoolId = userPoolId,
