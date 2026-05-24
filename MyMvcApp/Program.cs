@@ -48,7 +48,12 @@ if (builder.Configuration.GetValue<bool>("EnableForwardedHeaders"))
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseNpgsql(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(3),
+                errorCodesToAdd: null))
         .AddXRayInterceptor(true));
 
 // Application services used by controllers and background-style workflows.
