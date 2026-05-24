@@ -5,17 +5,38 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using MyMvcApp.Models;
-using MyMvcApp.Data; // ADD THIS
+using MyMvcApp.Data;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Handles local login, registration, logout, and password reset requests.
+    /// </summary>
     public class AccountController : Controller
     {
+        /// <summary>
+        /// Handles application cookie sign-in and sign-out for Cognito users.
+        /// </summary>
         private readonly SignInManager<CognitoUser> _signInManager;
-        private readonly UserManager<CognitoUser> _userManager;
-        private readonly CognitoUserPool _pool; 
-        private readonly AppDbContext _dbContext; // ADD THIS
 
+        /// <summary>
+        /// Creates and manages Cognito user accounts.
+        /// </summary>
+        private readonly UserManager<CognitoUser> _userManager;
+
+        /// <summary>
+        /// Provides access to the configured Cognito user pool.
+        /// </summary>
+        private readonly CognitoUserPool _pool;
+
+        /// <summary>
+        /// Provides access to local application user records.
+        /// </summary>
+        private readonly AppDbContext _dbContext;
+
+        /// <summary>
+        /// Creates a controller instance with Cognito identity and local user data services.
+        /// </summary>
         public AccountController(SignInManager<CognitoUser> signInManager, UserManager<CognitoUser> userManager, CognitoUserPool pool, AppDbContext dbContext) 
         {
             _signInManager = signInManager;
@@ -24,7 +45,9 @@ namespace MyMvcApp.Controllers
             _dbContext = dbContext;
         }
 
-        // --- LOGIN ---
+        /// <summary>
+        /// Shows the login or registration form based on the requested mode.
+        /// </summary>
         [HttpGet]
         public IActionResult Login(string? mode = null)
         {
@@ -34,12 +57,15 @@ namespace MyMvcApp.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Signs in an approved and enabled user through Cognito.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (ModelState.IsValid)
             {
-                // 1. LOOKUP BY EMAIL NOW
+                // Look up the local application user before attempting Cognito sign-in.
                 var appUser = _dbContext.Users.FirstOrDefault(u => u.Email.ToLower() == model.Email.ToLower());
                 
                 if (appUser == null) {
@@ -60,7 +86,7 @@ namespace MyMvcApp.Controllers
 
                 try 
                 {
-                    // 2. SIGN IN TO COGNITO USING EMAIL
+                    // Sign in to Cognito using the email address as the username.
                     var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
 
                     if (result.Succeeded)
@@ -81,18 +107,27 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Shows the pending approval page for users waiting for admin approval.
+        /// </summary>
         [HttpGet]
         public IActionResult PendingApproval()
         {
             return View();
         }
 
+        /// <summary>
+        /// Shows the access denied page when a user cannot access a resource.
+        /// </summary>
         [HttpGet]
         public IActionResult AccessDenied()
         {
             return View();
         }
 
+        /// <summary>
+        /// Creates a pending password reset request for admin review.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RequestPasswordReset(string? email)
@@ -129,16 +164,21 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Login));
         }
 
-        // --- REGISTER ---
+        /// <summary>
+        /// Redirects the old register route to the combined login/register page.
+        /// </summary>
         [HttpGet]
         public IActionResult Register() => RedirectToAction(nameof(Login), new { mode = "register" });
 
+        /// <summary>
+        /// Registers a new Cognito user and creates a pending local application user.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (ModelState.IsValid)
             {
-                // CREATE COGNITO USER USING EMAIL AS THE IDENTIFIER
+                // Create the Cognito user using email as the login identifier.
                 var user = _pool.GetUser(model.Email); 
                 user.Attributes.Add("email", model.Email);
                 
@@ -170,6 +210,9 @@ namespace MyMvcApp.Controllers
             return View(nameof(Login), loginModel);
         }
 
+        /// <summary>
+        /// Signs out the current user and returns them to the login page.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -178,6 +221,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Login), "Account");
         }
 
+        /// <summary>
+        /// Returns basic authentication and claims information for diagnostics.
+        /// </summary>
         [HttpGet]
         public IActionResult CheckAuth()
         {

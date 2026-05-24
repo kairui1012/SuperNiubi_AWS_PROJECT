@@ -1,4 +1,4 @@
-using Amazon.AspNetCore.Identity.Cognito; // ADDED
+using Amazon.AspNetCore.Identity.Cognito;
 using Amazon.Extensions.CognitoAuthentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -11,14 +11,34 @@ using System.Security.Claims;
 
 namespace MyMvcApp.Controllers;
 
+/// <summary>
+/// Handles Google external authentication and maps approved users into the local application session.
+/// </summary>
 public class GoogleLoginController : Controller
 {
+    /// <summary>
+    /// Starts and completes external authentication sign-in operations.
+    /// </summary>
     private readonly SignInManager<CognitoUser> _signInManager;
-    private readonly UserManager<CognitoUser> _userManager; // ADDED
-    private readonly CognitoUserPool _pool; // ADDED
+
+    /// <summary>
+    /// Creates Cognito users for first-time Google sign-ins.
+    /// </summary>
+    private readonly UserManager<CognitoUser> _userManager;
+
+    /// <summary>
+    /// Provides access to the configured Cognito user pool.
+    /// </summary>
+    private readonly CognitoUserPool _pool;
+
+    /// <summary>
+    /// Provides access to local application user records.
+    /// </summary>
     private readonly AppDbContext _dbContext;
 
-    // ADDED UserManager and CognitoUserPool to the constructor
+    /// <summary>
+    /// Creates a controller instance with Cognito identity and local user data services.
+    /// </summary>
     public GoogleLoginController(
         SignInManager<CognitoUser> signInManager, 
         UserManager<CognitoUser> userManager, 
@@ -31,6 +51,9 @@ public class GoogleLoginController : Controller
         _dbContext = dbContext;
     }
 
+    /// <summary>
+    /// Starts the Google external login challenge.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ExternalLogin(string? returnUrl = null, string? mode = null)
@@ -56,6 +79,9 @@ public class GoogleLoginController : Controller
         return Challenge(properties, provider);
     }
 
+    /// <summary>
+    /// Completes Google sign-in, creates a pending local user when needed, and signs in approved users.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null, string? mode = null)
     {
@@ -85,10 +111,9 @@ public class GoogleLoginController : Controller
         var appUser = await _dbContext.Users
             .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
-        // --- FIX START ---
         if (appUser == null)
         {
-            // 1. Create the user in AWS Cognito First
+            // Create the identity provider user before adding the local pending account.
             var cognitoUser = _pool.GetUser(normalizedEmail);
             cognitoUser.Attributes.Add("email", normalizedEmail);
             
@@ -97,14 +122,14 @@ public class GoogleLoginController : Controller
             var randomPassword = Guid.NewGuid().ToString("N") + "Aa1!";
             var result = await _userManager.CreateAsync(cognitoUser, randomPassword);
 
-            // Handle potential Cognito errors (gracefully ignore if they already exist in Cognito but not DB)
+            // Ignore duplicate Cognito users but surface all other identity provider errors.
             if (!result.Succeeded && !result.Errors.Any(e => e.Code == "UsernameExistsException" || e.Description.Contains("already exists")))
             {
                 TempData["ErrorMessage"] = "Failed to create user in identity provider.";
                 return RedirectToAction(nameof(AccountController.Login), "Account", new { mode = authMode });
             }
 
-            // 2. Create the user in the Local Database
+            // Create the local application user in a pending approval state.
             _dbContext.Users.Add(new AppUser
             {
                 Email = normalizedEmail,
@@ -116,7 +141,6 @@ public class GoogleLoginController : Controller
 
             return RedirectToAction(nameof(AccountController.PendingApproval), "Account");
         }
-        // --- FIX END ---
 
         if (appUser.IsDisabled)
         {
@@ -154,6 +178,9 @@ public class GoogleLoginController : Controller
         return RedirectByRole(appUser.Role);
     }
 
+    /// <summary>
+    /// Normalizes the requested authentication mode to either login or register.
+    /// </summary>
     private static string NormalizeAuthMode(string? mode)
     {
         return string.Equals(mode, "register", StringComparison.OrdinalIgnoreCase)
@@ -161,6 +188,9 @@ public class GoogleLoginController : Controller
             : "login";
     }
 
+    /// <summary>
+    /// Redirects an approved user to the dashboard that matches their application role.
+    /// </summary>
     private IActionResult RedirectByRole(string role)
     {
         if (role == "Admin") return RedirectToAction("Dashboard", "Admin");

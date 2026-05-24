@@ -7,12 +7,29 @@ using MyMvcApp.Services;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Handles short-term property booking, Stripe checkout, and guest access email testing.
+    /// </summary>
     public class PropertyBookingController : Controller
     {
+        /// <summary>
+        /// Provides access to property and booking records.
+        /// </summary>
         private readonly AppDbContext _context;
+
+        /// <summary>
+        /// Reads Stripe redirect domain and booking configuration values.
+        /// </summary>
         private readonly IConfiguration _configuration;
+
+        /// <summary>
+        /// Sends property access pass emails for booking tests.
+        /// </summary>
         private readonly MyMvcApp.Services.EmailService _emailService;
 
+        /// <summary>
+        /// Creates a controller instance with booking data, configuration, and email services.
+        /// </summary>
         public PropertyBookingController(AppDbContext context, IConfiguration configuration, MyMvcApp.Services.EmailService emailService)
         {
             _context = context;
@@ -20,6 +37,9 @@ namespace MyMvcApp.Controllers
             _emailService = emailService;
         }
 
+        /// <summary>
+        /// Lists available properties that can be booked for short-term stays.
+        /// </summary>
         public async Task<IActionResult> Index()
         {
             var properties = await _context.Properties
@@ -33,6 +53,9 @@ namespace MyMvcApp.Controllers
             return View(properties);
         }
 
+        /// <summary>
+        /// Shows the booking page for an available short-term property.
+        /// </summary>
         public async Task<IActionResult> Book(int id)
         {
             var property = await _context.Properties.FindAsync(id);
@@ -47,6 +70,9 @@ namespace MyMvcApp.Controllers
             return View(property); 
         }
 
+        /// <summary>
+        /// Creates a pending booking and redirects the guest to Stripe Checkout for payment.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateCheckoutSession(int propertyId, DateTime checkInDate, DateTime checkOutDate, string? promoCode, string guestName, string guestEmail, string guestPhone)
         {
@@ -70,8 +96,7 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction(nameof(Book), new { id = propertyId });
             }
 
-            // --- FIX FOR ISSUE 2: The 15-Minute Abandoned Cart Rule ---
-            // Only block dates if the booking is CONFIRMED, OR if it is a PENDING booking created less than 15 minutes ago.
+            // Block confirmed bookings and recent pending checkout locks.
             var fifteenMinsAgo = DateTime.UtcNow.AddMinutes(-15);
             
             bool hasOverlap = await _context.PropertyBookings.AnyAsync(b =>
@@ -86,7 +111,7 @@ namespace MyMvcApp.Controllers
                 return RedirectToAction(nameof(Book), new { id = propertyId });
             }
 
-            // Calculate Nights and Price
+            // Calculate stay duration, discount, and final checkout amount.
             int nights = (utcCheckOut - utcCheckIn).Days;
             decimal totalAmount = property.DailyRate.Value * nights;
             decimal discountAmount = 0;
@@ -125,7 +150,7 @@ namespace MyMvcApp.Controllers
             _context.PropertyBookings.Add(booking);
             await _context.SaveChangesAsync();
 
-            // --- FIX FOR ISSUE 3: Dynamic HTTP/HTTPS resolution ---
+            // Build Stripe redirect URLs from the configured domain or current request host.
             var domain = _configuration["Domain"] ?? $"{Request.Scheme}://{Request.Host}"; 
             
             var options = new SessionCreateOptions
@@ -162,31 +187,40 @@ namespace MyMvcApp.Controllers
             return Redirect(session.Url);
         }
 
+        /// <summary>
+        /// Shows the booking success page after Stripe redirects back.
+        /// </summary>
         public IActionResult Success()
         {
             return View();
         }
 
+        /// <summary>
+        /// Shows the booking cancellation page after Stripe checkout is cancelled.
+        /// </summary>
         public IActionResult Cancel()
         {
             return View();
         }
-        // Paste this right above the final closing brackets of the controller
+
+        /// <summary>
+        /// Sends a test property access pass email for a booking.
+        /// </summary>
         public async Task<IActionResult> ForceTestEmail(int id)
         {
-            // Find the booking
+            // Load the booking and property for the access pass email.
             var booking = await _context.PropertyBookings
                 .Include(b => b.Property)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (booking == null) return Content("Booking not found. Check the ID.");
 
-            // Generate a fake pass code if it doesn't have one
+            // Use a fallback test pass code when the booking does not have one yet.
             booking.PassCode ??= "TEST1234";
 
             try
             {
-                // FORCE the email to send
+                // Send the property access pass using the same email service as production bookings.
                 await _emailService.SendPropertyAccessPassAsync(booking.GuestEmail, booking, booking.PassCode);
                 return Content("SUCCESS! Email triggered. Check your terminal for [QR DEBUG] and check your inbox.");
             }

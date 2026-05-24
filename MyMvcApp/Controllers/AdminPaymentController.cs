@@ -9,6 +9,9 @@ using System.Text;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Provides admin payment review, verification, rejection, reporting, and CSV export features.
+    /// </summary>
     [Authorize(Roles = "Admin")]
     public class AdminPaymentController : Controller
     {
@@ -24,6 +27,9 @@ namespace MyMvcApp.Controllers
             PaymentStatus.Refunded
         };
 
+        /// <summary>
+        /// Provides access to payment, tenant, property, and audit log records.
+        /// </summary>
         private readonly AppDbContext _db;
 
         /// <summary>

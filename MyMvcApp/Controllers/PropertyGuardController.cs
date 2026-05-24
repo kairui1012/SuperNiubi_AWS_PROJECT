@@ -5,15 +5,27 @@ using MyMvcApp.Models;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Allows guards to verify short-term booking access passes.
+    /// </summary>
     public class PropertyGuardController : Controller
     {
+        /// <summary>
+        /// Provides access to property booking pass records.
+        /// </summary>
         private readonly AppDbContext _context;
 
+        /// <summary>
+        /// Creates a controller instance with the application database context.
+        /// </summary>
         public PropertyGuardController(AppDbContext context)
         {
             _context = context;
         }
 
+        /// <summary>
+        /// Validates a guest access pass code and reports whether access is currently allowed.
+        /// </summary>
         public async Task<IActionResult> Verify(string? code)
         {
             if (string.IsNullOrWhiteSpace(code)) return View(); 
@@ -38,9 +50,9 @@ namespace MyMvcApp.Controllers
             }
 
             var now = DateTime.Now; 
-            // Strict check-in at 3:00 PM on arrival date
+            // Guests can enter only after 3:00 PM on the arrival date.
             var checkInTime = booking.CheckInDate.Date.AddHours(15); 
-            // Strict check-out at 11:00 AM on departure date
+            // Guest access expires at 11:00 AM on the departure date.
             var checkOutTime = booking.CheckOutDate.Date.AddHours(11); 
 
             if (now < checkInTime)
@@ -57,7 +69,7 @@ namespace MyMvcApp.Controllers
                 return View(booking);
             }
 
-            // Valid for the entire duration!
+            // The pass is valid for the current stay window.
             ViewBag.Status = "Valid";
             ViewBag.Message = "Active Guest. Full Access Granted.";
             return View(booking);

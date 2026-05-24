@@ -13,24 +13,85 @@ using System.Security.Claims;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Provides landlord property, tenant, maintenance, payment, document, and announcement management features.
+    /// </summary>
     [Authorize]
     public class LandlordController : Controller
     {
+        /// <summary>
+        /// Announcement audience values that landlords can select.
+        /// </summary>
         private static readonly string[] AllowedAnnouncementAudiences = { "All", "Tenant", "Landlord" };
+
+        /// <summary>
+        /// File extensions accepted for landlord property images.
+        /// </summary>
         private static readonly string[] AllowedPropertyImageExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+
+        /// <summary>
+        /// File extensions accepted for maintenance repair images.
+        /// </summary>
         private static readonly string[] AllowedMaintenanceRepairImageExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+
+        /// <summary>
+        /// File extensions accepted for landlord document uploads.
+        /// </summary>
         private static readonly string[] AllowedDocumentExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".txt", ".xlsx", ".xls" };
+
+        /// <summary>
+        /// Maximum allowed property image upload size in bytes.
+        /// </summary>
         private const long MaxPropertyImageSizeBytes = 8 * 1024 * 1024;
+
+        /// <summary>
+        /// Maximum allowed maintenance repair image upload size in bytes.
+        /// </summary>
         private const long MaxMaintenanceRepairImageSizeBytes = 8 * 1024 * 1024;
+
+        /// <summary>
+        /// Maximum allowed landlord document upload size in bytes.
+        /// </summary>
         private const long MaxDocumentSizeBytes = 10 * 1024 * 1024;
+
+        /// <summary>
+        /// Provides access to landlord, property, tenant, maintenance, payment, and document records.
+        /// </summary>
         private readonly AppDbContext _dbContext;
+
+        /// <summary>
+        /// Uploads landlord property images to S3.
+        /// </summary>
         private readonly IS3ImageService _s3ImageService;
+
+        /// <summary>
+        /// Sends landlord workflow notification emails.
+        /// </summary>
         private readonly EmailService _emailService;
+
+        /// <summary>
+        /// Resolves local web root paths for generated files.
+        /// </summary>
         private readonly IWebHostEnvironment _environment;
+
+        /// <summary>
+        /// Provides direct access to S3 objects for document downloads.
+        /// </summary>
         private readonly IAmazonS3 _s3Client;
+
+        /// <summary>
+        /// Reads S3 and application configuration values.
+        /// </summary>
         private readonly IConfiguration _configuration;
+
+        /// <summary>
+        /// Creates and tracks direct document upload requests.
+        /// </summary>
         private readonly DocumentUploadService _documentUploadService;
 
+        /// <summary>
+        /// Creates a controller instance with landlord data, S3, email, hosting, configuration, and document upload services.
+        /// </summary>
         public LandlordController(
             AppDbContext dbContext,
             IS3ImageService s3ImageService,
@@ -49,6 +110,9 @@ namespace MyMvcApp.Controllers
             _documentUploadService = documentUploadService;
         }
 
+        /// <summary>
+        /// Shows the landlord dashboard with portfolio, tenant, payment, and maintenance summaries.
+        /// </summary>
         public async Task<IActionResult> Dashboard()
         {
             var userEmail = GetCurrentUserEmail();
@@ -144,6 +208,9 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Lists all properties owned by the current landlord.
+        /// </summary>
         public IActionResult MyProperties()
         {
             var userEmail = GetCurrentUserEmail();
@@ -173,6 +240,9 @@ namespace MyMvcApp.Controllers
             return View(properties);
         }
 
+        /// <summary>
+        /// Shows details for one property owned by the current landlord.
+        /// </summary>
         [HttpGet]
         public IActionResult PropertyDetails(int id)
         {
@@ -207,12 +277,18 @@ namespace MyMvcApp.Controllers
             return View(property);
         }
 
+        /// <summary>
+        /// Shows the form for adding a new property.
+        /// </summary>
         [HttpGet]
         public IActionResult AddProperty()
         {
             return View();
         }
 
+        /// <summary>
+        /// Creates a new landlord property with optional image and amenities.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddProperty(Property model, IFormFile? PropertyImage, string? AmenitiesText)
@@ -275,6 +351,9 @@ namespace MyMvcApp.Controllers
             }
         }
 
+        /// <summary>
+        /// Shows the edit form for a landlord property.
+        /// </summary>
         [HttpGet]
         public IActionResult EditProperty(int id)
         {
@@ -310,6 +389,9 @@ namespace MyMvcApp.Controllers
             return View(property);
         }
 
+        /// <summary>
+        /// Updates a landlord property, image, short-term settings, and amenities.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditProperty(Property model, IFormFile? PropertyImage, string? AmenitiesText)
@@ -399,6 +481,9 @@ namespace MyMvcApp.Controllers
             }
         }
 
+        /// <summary>
+        /// Soft deletes a landlord property when it has no active tenant assignment.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult DeleteProperty(int id)
@@ -458,6 +543,9 @@ namespace MyMvcApp.Controllers
             }
         }
 
+        /// <summary>
+        /// Lists tenants assigned to properties owned by the current landlord.
+        /// </summary>
         public IActionResult Tenants()
         {
             var userEmail = GetCurrentUserEmail();
@@ -488,6 +576,9 @@ namespace MyMvcApp.Controllers
             return View(tenants);
         }
 
+        /// <summary>
+        /// Shows full details for a tenant managed by the current landlord.
+        /// </summary>
         [HttpGet]
         public IActionResult TenantDetails(int id)
         {
@@ -516,6 +607,9 @@ namespace MyMvcApp.Controllers
             return View(tenant);
         }
 
+        /// <summary>
+        /// Renews a managed tenant lease and records lease history.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult RenewLease(RenewLeaseViewModel model)
@@ -555,6 +649,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction("TenantDetails", new { id = model.TenantId });
         }
 
+        /// <summary>
+        /// Terminates a managed tenant lease and releases the assigned property.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult TerminateLease(TerminateLeaseViewModel model)
@@ -588,6 +685,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction("TenantDetails", new { id = model.TenantId });
         }
 
+        /// <summary>
+        /// Adjusts rent for a managed tenant and records the change.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AdjustRent(AdjustRentViewModel model)
@@ -623,6 +723,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction("TenantDetails", new { id = model.TenantId });
         }
 
+        /// <summary>
+        /// Moves a managed tenant to another available landlord property.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ChangeTenantProperty(ChangeTenantPropertyViewModel model)
@@ -676,6 +779,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction("TenantDetails", new { id = model.TenantId });
         }
 
+        /// <summary>
+        /// Updates the deposit status for a managed tenant.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ChangeDepositStatus(ChangeDepositStatusViewModel model)
@@ -704,6 +810,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction("TenantDetails", new { id = model.TenantId });
         }
 
+        /// <summary>
+        /// Lists maintenance requests for properties owned by the current landlord.
+        /// </summary>
         public IActionResult MaintenanceRequests()
         {
             var userEmail = GetCurrentUserEmail();
@@ -735,6 +844,9 @@ namespace MyMvcApp.Controllers
             return View(requests);
         }
 
+        /// <summary>
+        /// Shows the edit form for a landlord-managed maintenance request.
+        /// </summary>
         [HttpGet]
         public IActionResult EditMaintenanceRequest(int id)
         {
@@ -774,6 +886,9 @@ namespace MyMvcApp.Controllers
             return View(request);
         }
 
+        /// <summary>
+        /// Updates a maintenance request status, notes, timeline, and optional repair image.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditMaintenanceRequest(MaintenanceRequest model, IFormFile? RepairImage)
@@ -883,6 +998,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction("MaintenanceRequests");
         }
 
+        /// <summary>
+        /// Lists payment records for properties owned by the current landlord.
+        /// </summary>
         public IActionResult Payments()
         {
             var userEmail = GetCurrentUserEmail();
@@ -915,6 +1033,9 @@ namespace MyMvcApp.Controllers
             return View(payments);
         }
 
+        /// <summary>
+        /// Shows documents related to the current landlord's properties and tenants.
+        /// </summary>
         public async Task<IActionResult> Documents()
         {
             var landlord = GetCurrentLandlord();
@@ -928,6 +1049,9 @@ namespace MyMvcApp.Controllers
             return View(await BuildLandlordDocumentsViewModelAsync(landlord.Id));
         }
 
+        /// <summary>
+        /// Creates a direct-to-S3 document upload request for the landlord.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateDocumentUpload([FromBody] CreateDirectDocumentUploadRequest? request)
@@ -953,6 +1077,9 @@ namespace MyMvcApp.Controllers
             return Json(uploadResult.Response);
         }
 
+        /// <summary>
+        /// Returns the processing status for a landlord document upload.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetDocumentUploadStatus(int id)
         {
@@ -973,6 +1100,9 @@ namespace MyMvcApp.Controllers
             return Json(_documentUploadService.ToStatusResponse(document));
         }
 
+        /// <summary>
+        /// Uploads a landlord document through the server-side upload flow.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadDocument(LandlordDocumentsViewModel model)
@@ -1112,6 +1242,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Documents));
         }
 
+        /// <summary>
+        /// Downloads a document managed by the current landlord.
+        /// </summary>
         public async Task<IActionResult> DownloadDocument(int id)
         {
             var landlord = GetCurrentLandlord();
@@ -1177,6 +1310,9 @@ namespace MyMvcApp.Controllers
             return PhysicalFile(physicalPath, contentType, enableRangeProcessing: true);
         }
 
+        /// <summary>
+        /// Deletes a document managed by the current landlord.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteDocument(int id)
@@ -1205,6 +1341,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Documents));
         }
 
+        /// <summary>
+        /// Shows system announcements visible to landlords.
+        /// </summary>
         [Authorize(Roles = "Landlord")]
         public async Task<IActionResult> Announcements()
         {
@@ -1222,6 +1361,9 @@ namespace MyMvcApp.Controllers
         }
 
         [HttpPost]
+        /// <summary>
+        /// Creates a landlord announcement for the selected audience.
+        /// </summary>
         [Authorize(Roles = "Landlord")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAnnouncement(CreateLandlordAnnouncementViewModel model)
@@ -1269,6 +1411,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Announcements));
         }
 
+        /// <summary>
+        /// Shows the form for assigning an approved tenant user to an available property.
+        /// </summary>
         [HttpGet]
         public IActionResult AssignTenant()
         {
@@ -1296,6 +1441,9 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Assigns an approved tenant user to one of the landlord's available properties.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AssignTenant(AssignTenantViewModel model)
@@ -1425,6 +1573,9 @@ namespace MyMvcApp.Controllers
             }
         }
 
+        /// <summary>
+        /// Loads tenant and property dropdown options for the assign tenant form.
+        /// </summary>
         private void LoadAssignTenantDropdowns(AssignTenantViewModel model, int landlordId)
         {
             model.TenantUsers = _dbContext.Users
@@ -1459,6 +1610,9 @@ namespace MyMvcApp.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Normalizes an announcement audience value to an allowed visibility option.
+        /// </summary>
         private static string NormalizeAnnouncementAudience(string? visibleTo)
         {
             if (string.IsNullOrWhiteSpace(visibleTo))
@@ -1470,6 +1624,9 @@ namespace MyMvcApp.Controllers
                 string.Equals(audience, visibleTo.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "All";
         }
 
+        /// <summary>
+        /// Gets the landlord account for the currently signed-in user.
+        /// </summary>
         private AppUser? GetCurrentLandlord()
         {
             var userEmail = GetCurrentUserEmail();
@@ -1484,6 +1641,9 @@ namespace MyMvcApp.Controllers
                 u.Role == "Landlord");
         }
 
+        /// <summary>
+        /// Gets a tenant only when the current landlord manages that tenant's property.
+        /// </summary>
         private (Tenant? Tenant, AppUser? Landlord, string ErrorMessage) GetManagedTenant(int tenantId)
         {
             var landlord = GetCurrentLandlord();
@@ -1505,6 +1665,9 @@ namespace MyMvcApp.Controllers
                 : (tenant, landlord, string.Empty);
         }
 
+        /// <summary>
+        /// Loads available property options for moving a tenant between landlord properties.
+        /// </summary>
         private void LoadAvailablePropertyOptions(int landlordId, int currentPropertyId)
         {
             ViewBag.AvailableProperties = _dbContext.Properties
@@ -1527,6 +1690,9 @@ namespace MyMvcApp.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Loads lease history entries for display on tenant detail pages.
+        /// </summary>
         private void LoadLeaseHistory(int tenantId)
         {
             ViewBag.LeaseHistory = _dbContext.LeaseHistories
@@ -1536,6 +1702,9 @@ namespace MyMvcApp.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Queues a lease history entry for a tenant change.
+        /// </summary>
         private void AddLeaseHistory(Tenant tenant, string action, string? oldValue, string? newValue, string? notes)
         {
             _dbContext.LeaseHistories.Add(new LeaseHistory
@@ -1551,6 +1720,9 @@ namespace MyMvcApp.Controllers
             });
         }
 
+        /// <summary>
+        /// Builds the landlord document management view model.
+        /// </summary>
         private async Task<LandlordDocumentsViewModel> BuildLandlordDocumentsViewModelAsync(
             int landlordId,
             CreateLandlordDocumentViewModel? newDocument = null)
@@ -1601,6 +1773,9 @@ namespace MyMvcApp.Controllers
             };
         }
 
+        /// <summary>
+        /// Gets a document only when it is managed by the supplied landlord.
+        /// </summary>
         private async Task<Document?> GetManagedDocumentAsync(int documentId, int landlordId)
         {
             return await _dbContext.Documents
@@ -1615,6 +1790,9 @@ namespace MyMvcApp.Controllers
                      d.UploadedBy == landlordId));
         }
 
+        /// <summary>
+        /// Validates landlord document file size and extension.
+        /// </summary>
         private static string? ValidateDocumentFile(IFormFile file)
         {
             if (file.Length > MaxDocumentSizeBytes)
@@ -1628,6 +1806,9 @@ namespace MyMvcApp.Controllers
                 : "Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX, TXT, XLS, XLSX.";
         }
 
+        /// <summary>
+        /// Validates property image file size and extension.
+        /// </summary>
         private static string? ValidatePropertyImage(IFormFile file)
         {
             if (file.Length > MaxPropertyImageSizeBytes)
@@ -1641,6 +1822,9 @@ namespace MyMvcApp.Controllers
                 : "Only JPG, JPEG, PNG, and WEBP property images are allowed.";
         }
 
+        /// <summary>
+        /// Normalizes short-term rental fields and validates the daily rate when enabled.
+        /// </summary>
         private void NormalizeShortTermSettings(Property property)
         {
             if (!property.AllowShortTerm)
@@ -1655,6 +1839,9 @@ namespace MyMvcApp.Controllers
             }
         }
 
+        /// <summary>
+        /// Validates maintenance repair image file size and extension.
+        /// </summary>
         private static string? ValidateRepairImage(IFormFile file)
         {
             if (file.Length > MaxMaintenanceRepairImageSizeBytes)
@@ -1668,6 +1855,9 @@ namespace MyMvcApp.Controllers
                 : "Only JPG, JPEG, PNG, and WEBP repair images are allowed.";
         }
 
+        /// <summary>
+        /// Saves a maintenance repair image and returns its relative web path.
+        /// </summary>
         private async Task<string> SaveRepairImageAsync(IFormFile file, MaintenanceRequest request)
         {
             var uploadsFolder = Path.Combine("wwwroot", "uploads", "landlord", "maintenance", request.RequestId.ToString());
@@ -1684,6 +1874,9 @@ namespace MyMvcApp.Controllers
                 .Replace("\\", "/");
         }
 
+        /// <summary>
+        /// Queues a maintenance timeline entry for a request update.
+        /// </summary>
         private void AddMaintenanceTimeline(MaintenanceRequest request, string action, string? details)
         {
             _dbContext.MaintenanceTimelines.Add(new MaintenanceTimeline
@@ -1697,6 +1890,9 @@ namespace MyMvcApp.Controllers
             });
         }
 
+        /// <summary>
+        /// Replaces a property's amenities from a comma-separated text field.
+        /// </summary>
         private void SyncPropertyAmenities(Property property, string? amenitiesText)
         {
             property.Amenities.Clear();
@@ -1723,6 +1919,9 @@ namespace MyMvcApp.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the email or identity name for the currently signed-in landlord.
+        /// </summary>
         private string GetCurrentUserEmail()
         {
             return User.Claims.FirstOrDefault(c => c.Type == "email")?.Value

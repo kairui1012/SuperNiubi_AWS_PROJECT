@@ -9,14 +9,27 @@ using System.Text;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Receives internal document upload events and confirms completed S3 uploads.
+    /// </summary>
     [ApiController]
     [AllowAnonymous]
     [Route("api/document-uploads")]
     public class DocumentUploadEventsController : ControllerBase
     {
+        /// <summary>
+        /// Confirms and finalizes direct document uploads.
+        /// </summary>
         private readonly DocumentUploadService _documentUploadService;
+
+        /// <summary>
+        /// Provides the internal API key used to authenticate upload event callbacks.
+        /// </summary>
         private readonly InternalApiKeyProvider _internalApiKeyProvider;
 
+        /// <summary>
+        /// Creates a controller instance with document upload and internal API key services.
+        /// </summary>
         public DocumentUploadEventsController(
             DocumentUploadService documentUploadService,
             InternalApiKeyProvider internalApiKeyProvider)
@@ -25,6 +38,9 @@ namespace MyMvcApp.Controllers
             _internalApiKeyProvider = internalApiKeyProvider;
         }
 
+        /// <summary>
+        /// Confirms a pending direct document upload after S3 reports that the object was created.
+        /// </summary>
         [HttpPost("s3-object-created")]
         public async Task<IActionResult> S3ObjectCreated([FromBody] S3ObjectCreatedUploadNotification notification)
         {
@@ -58,6 +74,9 @@ namespace MyMvcApp.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Compares API keys using fixed-time comparison to reduce timing leaks.
+        /// </summary>
         private static bool FixedTimeEquals(string expected, string provided)
         {
             var expectedBytes = Encoding.UTF8.GetBytes(expected);

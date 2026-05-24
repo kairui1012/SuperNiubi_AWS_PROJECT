@@ -18,19 +18,60 @@ using MyMvcApp.Services;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Provides tenant dashboard, property, maintenance, document, payment, visitor, and announcement features.
+    /// </summary>
     [Authorize] // Ensures only logged-in users can reach this page
     public class TenantController : Controller
     {
+        /// <summary>
+        /// Provides access to tenant, payment, document, visitor, and maintenance records.
+        /// </summary>
         private readonly AppDbContext _context;
+
+        /// <summary>
+        /// Resolves local web root paths for generated tenant files.
+        /// </summary>
         private readonly IWebHostEnvironment _environment;
+
+        /// <summary>
+        /// Reads Stripe, S3, and application configuration values.
+        /// </summary>
         private readonly IConfiguration _configuration;
+
+        /// <summary>
+        /// Provides direct access to S3 objects for document downloads.
+        /// </summary>
         private readonly IAmazonS3 _s3Client;
+
+        /// <summary>
+        /// Creates and tracks direct document upload requests.
+        /// </summary>
         private readonly DocumentUploadService _documentUploadService;
+
+        /// <summary>
+        /// Maximum allowed tenant document upload size in bytes.
+        /// </summary>
         private const long MaxDocumentSizeBytes = 10 * 1024 * 1024;
+
+        /// <summary>
+        /// Maximum allowed maintenance image upload size in bytes.
+        /// </summary>
         private const long MaxMaintenanceImageSizeBytes = 8 * 1024 * 1024;
+
+        /// <summary>
+        /// File extensions accepted for tenant document uploads.
+        /// </summary>
         private static readonly string[] AllowedDocumentExtensions = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"];
+
+        /// <summary>
+        /// File extensions accepted for tenant maintenance images.
+        /// </summary>
         private static readonly string[] AllowedMaintenanceImageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
+        /// <summary>
+        /// Creates a controller instance with tenant data, hosting, S3, and document upload services.
+        /// </summary>
         public TenantController(
             AppDbContext context,
             IWebHostEnvironment environment,
@@ -45,11 +86,17 @@ namespace MyMvcApp.Controllers
             _documentUploadService = documentUploadService;
         }
 
+        /// <summary>
+        /// Gets the email address for the currently signed-in tenant.
+        /// </summary>
         private string? GetCurrentEmail()
         {
             return User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
         }
 
+        /// <summary>
+        /// Builds a base64 PNG QR code data URL for a visitor pass payload.
+        /// </summary>
         private static string BuildQrCodeDataUrl(string payload)
         {
             using var generator = new QRCodeGenerator();
@@ -60,6 +107,9 @@ namespace MyMvcApp.Controllers
             return $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
         }
 
+        /// <summary>
+        /// Extracts the normalized visitor pass code from a raw QR payload or typed code.
+        /// </summary>
         private static string ExtractPassCode(string? rawPassCode)
         {
             var input = (rawPassCode ?? string.Empty).Trim();
@@ -83,12 +133,18 @@ namespace MyMvcApp.Controllers
             return input.ToUpperInvariant();
         }
 
+        /// <summary>
+        /// Checks whether a file name uses one of the allowed extensions.
+        /// </summary>
         private static bool HasAllowedExtension(string fileName, string[] allowedExtensions)
         {
             var extension = Path.GetExtension(fileName);
             return !string.IsNullOrWhiteSpace(extension) && allowedExtensions.Contains(extension.ToLowerInvariant());
         }
 
+        /// <summary>
+        /// Marks active visitor passes as expired when their visit date has passed.
+        /// </summary>
         private async Task ExpireVisitorPassesAsync(int tenantId)
         {
             var today = DateTime.UtcNow.Date;
@@ -110,6 +166,9 @@ namespace MyMvcApp.Controllers
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Builds dashboard notification items for rent, lease, maintenance, and visitor pass events.
+        /// </summary>
         private async Task<List<TenantNotificationItem>> BuildTenantNotificationsAsync(
             Tenant tenant,
             DateTime nextPaymentDue,
@@ -202,6 +261,9 @@ namespace MyMvcApp.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Builds the visitor pass view model for the current tenant.
+        /// </summary>
         private async Task<TenantVisitorsViewModel> BuildVisitorViewModelAsync(Tenant tenant, CreateVisitorViewModel? newVisitor = null, int? selectedVisitorPassId = null)
         {
             await ExpireVisitorPassesAsync(tenant.TenantId);
@@ -225,6 +287,9 @@ namespace MyMvcApp.Controllers
             };
         }
 
+        /// <summary>
+        /// Parses a stored payment month value into a numeric month.
+        /// </summary>
         private static int ParseMonthNumber(string? monthValue)
         {
             if (string.IsNullOrWhiteSpace(monthValue))
@@ -250,6 +315,9 @@ namespace MyMvcApp.Controllers
             return 0;
         }
 
+        /// <summary>
+        /// Calculates the next unpaid rent due date for a tenant.
+        /// </summary>
         private static DateTime GetNextDueDateUtc(int rentDueDay, IEnumerable<Payment> payments, DateTime referenceUtc)
         {
             var dueDay = Math.Clamp(rentDueDay, 1, 28);
@@ -274,6 +342,9 @@ namespace MyMvcApp.Controllers
             return candidateDueDate;
         }
 
+        /// <summary>
+        /// Builds the tenant payment page view model from tenant and payment records.
+        /// </summary>
         private TenantPaymentsViewModel BuildPaymentsViewModel(Tenant tenant, List<Payment> payments)
         {
             var now = DateTime.UtcNow;
@@ -298,6 +369,9 @@ namespace MyMvcApp.Controllers
             };
         }
 
+        /// <summary>
+        /// Orders tenant payment history by newest records first.
+        /// </summary>
         private static IOrderedQueryable<Payment> OrderPaymentHistory(IQueryable<Payment> payments)
         {
             return payments
@@ -305,6 +379,9 @@ namespace MyMvcApp.Controllers
                 .ThenByDescending(p => p.PaymentId);
         }
 
+        /// <summary>
+        /// Generates a mock rent payment receipt PDF for local payment records.
+        /// </summary>
         private async Task<string> GenerateMockPaymentReceiptPdfAsync(Tenant tenant, Payment payment)
         {
             var receiptsFolder = Path.Combine(_environment.WebRootPath, "uploads", "tenant", tenant.TenantId.ToString(), "payments");
@@ -360,11 +437,17 @@ namespace MyMvcApp.Controllers
             return Path.Combine("uploads", "tenant", tenant.TenantId.ToString(), "payments", fileName).Replace("\\", "/");
         }
 
+        /// <summary>
+        /// Compatibility action that forwards the tenant dashboard route to TenantDashboard.
+        /// </summary>
         public Task<IActionResult> Dashboard()
         {
             return TenantDashboard();
         }
 
+        /// <summary>
+        /// Shows the tenant dashboard with property, payment, maintenance, visitor, and notification data.
+        /// </summary>
         public async Task<IActionResult> TenantDashboard()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -456,6 +539,9 @@ namespace MyMvcApp.Controllers
             return View("TenantDashboard", viewModel);
         }
 
+        /// <summary>
+        /// Shows a page for approved tenants who have not been assigned to a property yet.
+        /// </summary>
         public async Task<IActionResult> PendingAssignment()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -472,6 +558,9 @@ namespace MyMvcApp.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Shows the tenant's assigned property details.
+        /// </summary>
         public async Task<IActionResult> MyProperty()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -510,6 +599,9 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Shows the maintenance request list and creation form for the tenant.
+        /// </summary>
         public async Task<IActionResult> MaintenanceRequest()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -542,6 +634,9 @@ namespace MyMvcApp.Controllers
             return View(viewModel);
         }
 
+        /// <summary>
+        /// Creates a new tenant maintenance request with optional image upload.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateMaintenance(MaintenanceRequestViewModel viewModel)
@@ -631,6 +726,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(MaintenanceRequest));
         }
 
+        /// <summary>
+        /// Shows tenant documents and upload controls.
+        /// </summary>
         public async Task<IActionResult> Documents()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -658,6 +756,9 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Creates a direct-to-S3 document upload request for the tenant.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateDocumentUpload([FromBody] CreateDirectDocumentUploadRequest? request)
@@ -693,6 +794,9 @@ namespace MyMvcApp.Controllers
             return Json(uploadResult.Response);
         }
 
+        /// <summary>
+        /// Returns the processing status for a tenant document upload.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetDocumentUploadStatus(int id)
         {
@@ -721,6 +825,9 @@ namespace MyMvcApp.Controllers
             return Json(status);
         }
 
+        /// <summary>
+        /// Uploads a tenant document through the server-side upload flow.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadDocument(TenantDocumentsViewModel model)
@@ -842,6 +949,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Documents));
         }
 
+        /// <summary>
+        /// Downloads a tenant document that belongs to the current tenant.
+        /// </summary>
         public async Task<IActionResult> DownloadDocument(int id)
         {
             var email = GetCurrentEmail();
@@ -916,6 +1026,9 @@ namespace MyMvcApp.Controllers
             return PhysicalFile(physicalPath, contentType, enableRangeProcessing: true);
         }
 
+        /// <summary>
+        /// Deletes a tenant document that belongs to the current tenant.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteDocument(int id)
@@ -952,6 +1065,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Documents));
         }
 
+        /// <summary>
+        /// Shows rent payment records and current payment options for the tenant.
+        /// </summary>
         public async Task<IActionResult> Payments()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name;
@@ -977,6 +1093,9 @@ namespace MyMvcApp.Controllers
             return View(BuildPaymentsViewModel(tenant, payments));
         }
 
+        /// <summary>
+        /// Creates a Stripe Checkout session for the tenant's next rent payment.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateCheckoutSession()
@@ -1100,6 +1219,9 @@ namespace MyMvcApp.Controllers
             return Redirect(session.Url);
         }
 
+        /// <summary>
+        /// Shows the payment success page after returning from Stripe.
+        /// </summary>
         [HttpGet]
         public IActionResult PaymentSuccess(string? session_id)
         {
@@ -1107,6 +1229,9 @@ namespace MyMvcApp.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Handles payment cancellation after returning from Stripe.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> PaymentCancel(string? session_id)
         {
@@ -1128,6 +1253,9 @@ namespace MyMvcApp.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Shows visitor pass management for the tenant.
+        /// </summary>
         public async Task<IActionResult> Visitors(int? passId)
         {
             var email = GetCurrentEmail();
@@ -1159,6 +1287,9 @@ namespace MyMvcApp.Controllers
             return View(await BuildVisitorViewModelAsync(tenant));
         }
 
+        /// <summary>
+        /// Registers a new visitor pass for the tenant.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RegisterVisitor(TenantVisitorsViewModel model)
@@ -1215,6 +1346,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Visitors), new { passId = visitorPass.VisitorPassId });
         }
 
+        /// <summary>
+        /// Cancels an active visitor pass owned by the tenant.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelVisitorPass(int id)
@@ -1257,6 +1391,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Visitors), new { passId = pass.VisitorPassId });
         }
 
+        /// <summary>
+        /// Marks a visitor pass as used after a successful check-in.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkVisitorPassUsed(int id)
@@ -1299,6 +1436,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Visitors), new { passId = pass.VisitorPassId });
         }
 
+        /// <summary>
+        /// Validates a visitor pass code from the security check page.
+        /// </summary>
         [Authorize(Roles = "Security")]
         [Route("/ValidateQrPass")]
         //[Route("/Tenant/ValidateVisitorPass")]
@@ -1347,6 +1487,9 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Validates a visitor pass code and checks the visitor in.
+        /// </summary>
         [Authorize(Roles = "Security")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -1378,6 +1521,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(ValidateVisitorPass), new { passCode = code, checkedIn = true });
         }
 
+        /// <summary>
+        /// Confirms that a completed maintenance request is accepted by the tenant.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmMaintenanceCompletion(int requestId, int? rating, string? feedbackComment)
@@ -1437,6 +1583,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(MaintenanceRequest));
         }
 
+        /// <summary>
+        /// Shows system announcements visible to tenants.
+        /// </summary>
         [Authorize(Roles = "Tenant")]
         public async Task<IActionResult> Announcements()
         {
@@ -1449,6 +1598,9 @@ namespace MyMvcApp.Controllers
             return View(announcements);
         }
 
+        /// <summary>
+        /// Queues a maintenance timeline entry for a tenant-side maintenance action.
+        /// </summary>
         private void AddMaintenanceTimeline(MaintenanceRequest request, string action, string? details, string actorEmail)
         {
             _context.MaintenanceTimelines.Add(new MaintenanceTimeline
