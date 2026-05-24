@@ -4,29 +4,102 @@ using MyMvcApp.Models;
 
 namespace MyMvcApp.Data
 {
+    /// <summary>
+    /// Represents the Entity Framework database context for the property management application.
+    /// </summary>
     public class AppDbContext : DbContext
     {
+        /// <summary>
+        /// Creates a database context using the configured Entity Framework options.
+        /// </summary>
+        /// <param name="options">The database provider and connection options.</param>
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-        
+
+        /// <summary>
+        /// Application users, including tenants, landlords, security users, and admins.
+        /// </summary>
         public DbSet<AppUser> Users { get; set; }
+
+        /// <summary>
+        /// Rental properties managed by landlords and admins.
+        /// </summary>
         public DbSet<Property> Properties { get; set; }
+
+        /// <summary>
+        /// Amenities linked to rental properties.
+        /// </summary>
         public DbSet<PropertyAmenity> PropertyAmenities { get; set; }
+
+        /// <summary>
+        /// Tenant lease and occupancy records.
+        /// </summary>
         public DbSet<Tenant> Tenants { get; set; }
+
+        /// <summary>
+        /// Maintenance requests submitted for tenant properties.
+        /// </summary>
         public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
+
+        /// <summary>
+        /// Timeline events that track maintenance request progress.
+        /// </summary>
         public DbSet<MaintenanceTimeline> MaintenanceTimelines { get; set; }
+
+        /// <summary>
+        /// Tenant payment records and payment gateway identifiers.
+        /// </summary>
         public DbSet<Payment> Payments { get; set; }
+
+        /// <summary>
+        /// Uploaded files and document metadata.
+        /// </summary>
         public DbSet<Document> Documents { get; set; }
+
+        /// <summary>
+        /// Public community updates shown on the landing page.
+        /// </summary>
         public DbSet<CommunityUpdate> CommunityUpdates { get; set; }
+
+        /// <summary>
+        /// Visitor passes created by tenants for guest access.
+        /// </summary>
         public DbSet<VisitorPass> VisitorPasses { get; set; }
+
+        /// <summary>
+        /// Password reset requests that require admin review.
+        /// </summary>
         public DbSet<PasswordResetRequest> PasswordResetRequests { get; set; }
+
+        /// <summary>
+        /// Administrative audit log entries.
+        /// </summary>
         public DbSet<AuditLog> AuditLogs { get; set; }
+
+        /// <summary>
+        /// System announcements displayed to selected user roles.
+        /// </summary>
         public DbSet<SystemAnnouncement> SystemAnnouncements { get; set; }
+
+        /// <summary>
+        /// Historical lease changes for tenant records.
+        /// </summary>
         public DbSet<LeaseHistory> LeaseHistories { get; set; }
+
+        /// <summary>
+        /// Property booking records and booking payment states.
+        /// </summary>
         public DbSet<PropertyBooking> PropertyBookings { get; set; }
+
+        /// <summary>
+        /// Promotional codes that can be applied to property bookings.
+        /// </summary>
         public DbSet<PromoCode> PromoCodes { get; set; }
 
 
-        // Setting rules to store the data
+        /// <summary>
+        /// Configures entity conversions, indexes, relationships, and delete behaviors.
+        /// </summary>
+        /// <param name="modelBuilder">The builder used to configure the EF Core model.</param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Store ENUM as String for easier check, if not it will be 1, 2, 3 in db
