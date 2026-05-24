@@ -72,6 +72,7 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="email" data-forgot-email />
                     <button type="submit" class="auth-forgot-button">Forgot password?</button>
+                    <a asp-action="ResetPassword" class="auth-forgot-button text-decoration-none ms-3">I have a reset code</a>
                 </form>
 
                 <form asp-action="Register" method="post" autocomplete="off" class="auth-form @(!isLogin ? "" : "d-none")" data-auth-form="register">

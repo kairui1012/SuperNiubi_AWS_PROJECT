@@ -1,24 +1,26 @@
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using MyMvcApp.Data;
-using System; // Required for Console
+using Microsoft.EntityFrameworkCore;
 
 namespace MyMvcApp.Services
 {
     public class RoleClaimsTransformation : IClaimsTransformation
     {
         private readonly AppDbContext _dbContext;
+        private readonly ILogger<RoleClaimsTransformation> _logger;
 
-        public RoleClaimsTransformation(AppDbContext dbContext)
+        public RoleClaimsTransformation(AppDbContext dbContext, ILogger<RoleClaimsTransformation> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
-        public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+        public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
             if (principal.HasClaim(c => c.Type == "NeonDbRoleStamped"))
             {
-                return Task.FromResult(principal);
+                return principal;
             }
 
             var clone = principal.Clone();
@@ -30,36 +32,42 @@ namespace MyMvcApp.Services
                     ?? clone.FindFirst("email")?.Value;
                 var normalizedEmail = email?.Trim().ToLowerInvariant();
 
-                Console.WriteLine($"\n[DEBUG] --> Attempting to authorize user by Email: '{email}'");
+                _logger.LogDebug("Attempting to authorize user by email {Email}.", email);
 
                 if (!string.IsNullOrEmpty(normalizedEmail))
                 {
-                    var user = _dbContext.Users.FirstOrDefault(u => u.Email.ToLower() == normalizedEmail);
-                    
-                    if (user != null)
+                    try
                     {
-                        var cleanRole = user.Role.Trim(); // Removes accidental spaces from DB
-                        Console.WriteLine($"[DEBUG] --> User found in DB! Role assigned: '{cleanRole}'");
+                        var user = await _dbContext.Users
+                            .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
-                        // 2. THE FIX: Create a dedicated, explicitly authenticated Identity card 
-                        // Passing a string ("NeonDbAuth") forces IsAuthenticated = true!
-                        var roleIdentity = new ClaimsIdentity("NeonDbAuth", ClaimTypes.Name, ClaimTypes.Role);
-                        roleIdentity.AddClaim(new Claim(ClaimTypes.Role, cleanRole));
-                        roleIdentity.AddClaim(new Claim(ClaimTypes.Email, user.Email));
-                        roleIdentity.AddClaim(new Claim("email", user.Email));
-                        roleIdentity.AddClaim(new Claim("NeonDbRoleStamped", "true"));
+                        if (user != null)
+                        {
+                            var cleanRole = user.Role.Trim();
+                            _logger.LogDebug("User found in database. Role assigned: {Role}.", cleanRole);
 
-                        clone.AddIdentity(roleIdentity);
-                        Console.WriteLine($"[DEBUG] --> Success: Role stamped onto Identity.\n");
+                            var roleIdentity = new ClaimsIdentity("NeonDbAuth", ClaimTypes.Name, ClaimTypes.Role);
+                            roleIdentity.AddClaim(new Claim(ClaimTypes.Role, cleanRole));
+                            roleIdentity.AddClaim(new Claim(ClaimTypes.Email, user.Email));
+                            roleIdentity.AddClaim(new Claim("email", user.Email));
+                            roleIdentity.AddClaim(new Claim("NeonDbRoleStamped", "true"));
+
+                            clone.AddIdentity(roleIdentity);
+                            _logger.LogDebug("Role stamped onto identity.");
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Authenticated user {Email} was not found in the application database.", email);
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Console.WriteLine($"[DEBUG] --> FAILED: User '{email}' was NOT found in the Neon Database!\n");
+                        _logger.LogError(ex, "Could not load role claims for {Email} because the application database is unavailable.", email);
                     }
                 }
             }
 
-            return Task.FromResult(clone);
+            return clone;
         }
     }
 }

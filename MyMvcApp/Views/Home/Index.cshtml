@@ -52,6 +52,13 @@
         </div>
     </section>
 
+    @if (ViewBag.DatabaseUnavailable == true)
+    {
+        <div class="alert alert-warning">
+            Community updates are temporarily unavailable. Please try again shortly.
+        </div>
+    }
+
     @if (updates.Any())
     {
         <section class="community-grid" aria-label="Community events and updates">

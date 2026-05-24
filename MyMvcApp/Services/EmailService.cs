@@ -24,17 +24,12 @@ namespace MyMvcApp.Services
 
         public async Task SendApprovalEmailAsync(string toEmail)
         {
-            var senderEmail = _config["AWS:SesSenderEmail"];
-            var region = RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1"); 
-            using var client = new AmazonSimpleEmailServiceClient(region);
-
             var loginUrl = "https://propease.dev/Account/Login"; 
             var subject = "Your Account Has Been Approved!";
             var htmlBody = $"<h3>Hello,</h3><p>Your account has been approved by the system administrator.</p><br><a href='{loginUrl}' style='display:inline-block; padding:12px 24px; background-color:#D9C5B2; color:#14110F; text-decoration:none; border-radius:50px; font-weight:bold;'>Login to Your Account</a>";
             var textBody = $"Hello,\r\n\r\nYour account has been approved by the system administrator.\r\n\r\nLogin to Your Account here: {loginUrl}";
 
-            var sendRequest = CreateSendEmailRequest(senderEmail, toEmail, subject, htmlBody, textBody);
-            await client.SendEmailAsync(sendRequest);
+            await SendEmailAsync(toEmail, subject, htmlBody, textBody);
         }
 
         // --- UPDATED METHOD: S3 QR CODE HOSTING ---
@@ -42,6 +37,12 @@ namespace MyMvcApp.Services
         public async Task SendPropertyAccessPassAsync(string toEmail, PropertyBooking booking, string passCode)
         {
             var senderEmail = _config["AWS:SesSenderEmail"];
+
+            if (string.IsNullOrWhiteSpace(senderEmail))
+            {
+                throw new InvalidOperationException("AWS SES sender email is not configured.");
+            }
+
             var region = Amazon.RegionEndpoint.GetBySystemName(_config["AWS:Region"] ?? "ap-southeast-1"); 
             using var sesClient = new Amazon.SimpleEmail.AmazonSimpleEmailServiceClient(region);
 

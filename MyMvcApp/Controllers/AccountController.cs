@@ -1,8 +1,12 @@
 using Amazon.AspNetCore.Identity.Cognito;
 using Amazon.Extensions.CognitoAuthentication;
+using Amazon.CognitoIdentityProvider;
+using Amazon.CognitoIdentityProvider.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 using System.Linq;
 using MyMvcApp.Models;
 using MyMvcApp.Data; // ADD THIS
@@ -15,13 +19,23 @@ namespace MyMvcApp.Controllers
         private readonly UserManager<CognitoUser> _userManager;
         private readonly CognitoUserPool _pool; 
         private readonly AppDbContext _dbContext; // ADD THIS
+        private readonly IAmazonCognitoIdentityProvider _cognitoClient;
+        private readonly IConfiguration _config;
 
-        public AccountController(SignInManager<CognitoUser> signInManager, UserManager<CognitoUser> userManager, CognitoUserPool pool, AppDbContext dbContext) 
+        public AccountController(
+            SignInManager<CognitoUser> signInManager,
+            UserManager<CognitoUser> userManager,
+            CognitoUserPool pool,
+            AppDbContext dbContext,
+            IAmazonCognitoIdentityProvider cognitoClient,
+            IConfiguration config) 
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _pool = pool;
             _dbContext = dbContext;
+            _cognitoClient = cognitoClient;
+            _config = config;
         }
 
         // --- LOGIN ---
@@ -127,6 +141,90 @@ namespace MyMvcApp.Controllers
 
             TempData["SuccessMessage"] = "If the email is registered, your password reset request has been sent to the administrator.";
             return RedirectToAction(nameof(Login));
+        }
+
+        [HttpGet]
+        public IActionResult ResetPassword(string? email = null)
+        {
+            return View(new ResetPasswordViewModel
+            {
+                Email = email ?? string.Empty
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var normalizedEmail = model.Email.Trim().ToLowerInvariant();
+            var clientId = _config["AWS:UserPoolClientId"];
+
+            if (string.IsNullOrWhiteSpace(clientId))
+            {
+                ModelState.AddModelError(string.Empty, "Cognito app client is not configured.");
+                return View(model);
+            }
+
+            try
+            {
+                var request = new ConfirmForgotPasswordRequest
+                {
+                    ClientId = clientId,
+                    Username = normalizedEmail,
+                    ConfirmationCode = model.Code.Trim(),
+                    Password = model.NewPassword
+                };
+
+                var secretHash = ComputeCognitoSecretHash(normalizedEmail, clientId);
+                if (!string.IsNullOrWhiteSpace(secretHash))
+                {
+                    request.SecretHash = secretHash;
+                }
+
+                await _cognitoClient.ConfirmForgotPasswordAsync(request);
+
+                TempData["SuccessMessage"] = "Password reset successful. Please sign in with your new password.";
+                return RedirectToAction(nameof(Login));
+            }
+            catch (CodeMismatchException)
+            {
+                ModelState.AddModelError(nameof(model.Code), "The reset code is incorrect.");
+            }
+            catch (ExpiredCodeException)
+            {
+                ModelState.AddModelError(nameof(model.Code), "The reset code has expired. Please request a new password reset.");
+            }
+            catch (InvalidPasswordException ex)
+            {
+                ModelState.AddModelError(nameof(model.NewPassword), ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError(string.Empty, $"Password reset failed: {ex.Message}");
+            }
+
+            return View(model);
+        }
+
+        private string? ComputeCognitoSecretHash(string username, string clientId)
+        {
+            var clientSecret = _config["AWS:UserPoolClientSecret"];
+
+            if (string.IsNullOrWhiteSpace(clientSecret))
+            {
+                return null;
+            }
+
+            var message = Encoding.UTF8.GetBytes(username + clientId);
+            var key = Encoding.UTF8.GetBytes(clientSecret);
+
+            using var hmac = new HMACSHA256(key);
+            return Convert.ToBase64String(hmac.ComputeHash(message));
         }
 
         // --- REGISTER ---

@@ -43,14 +43,21 @@ namespace MyMvcApp.Controllers
         private readonly EmailService _emailService;
         private readonly IAmazonCognitoIdentityProvider _cognitoClient;
         private readonly IConfiguration _config;
+        private readonly ILogger<AdminController> _logger;
 
         // Inject the Cognito Client and Configuration
-        public AdminController(AppDbContext dbContext, EmailService emailService, IAmazonCognitoIdentityProvider cognitoClient, IConfiguration config)
+        public AdminController(
+            AppDbContext dbContext,
+            EmailService emailService,
+            IAmazonCognitoIdentityProvider cognitoClient,
+            IConfiguration config,
+            ILogger<AdminController> logger)
         {
             _dbContext = dbContext;
             _emailService = emailService;
             _cognitoClient = cognitoClient;
             _config = config;
+            _logger = logger;
         }
 
         private string GetConfiguredUserPoolId()
@@ -59,7 +66,7 @@ namespace MyMvcApp.Controllers
                 ?? throw new InvalidOperationException("AWS:UserPoolId is not configured.");
         }
 
-        private async Task EnsureCognitoEmailCanReceiveAccountRecoveryAsync(string userPoolId, string email)
+        private async Task<UserStatusType> EnsureCognitoEmailCanReceiveAccountRecoveryAsync(string userPoolId, string email)
         {
             var normalizedEmail = email.Trim().ToLowerInvariant();
             var cognitoUser = await _cognitoClient.AdminGetUserAsync(new AdminGetUserRequest
@@ -97,7 +104,7 @@ namespace MyMvcApp.Controllers
 
             if (attributesToUpdate.Count == 0)
             {
-                return;
+                return cognitoUser.UserStatus;
             }
 
             await _cognitoClient.AdminUpdateUserAttributesAsync(new AdminUpdateUserAttributesRequest
@@ -106,6 +113,8 @@ namespace MyMvcApp.Controllers
                 Username = normalizedEmail,
                 UserAttributes = attributesToUpdate
             });
+
+            return cognitoUser.UserStatus;
         }
 
         public Task<IActionResult> Admin(
@@ -781,14 +790,17 @@ namespace MyMvcApp.Controllers
                 try
                 {
                     var userPoolId = GetConfiguredUserPoolId();
-                    await EnsureCognitoEmailCanReceiveAccountRecoveryAsync(userPoolId, user.Email);
+                    var cognitoStatus = await EnsureCognitoEmailCanReceiveAccountRecoveryAsync(userPoolId, user.Email);
 
-                    var confirmRequest = new AdminConfirmSignUpRequest
+                    if (cognitoStatus == UserStatusType.UNCONFIRMED)
                     {
-                        UserPoolId = userPoolId,
-                        Username = user.Email
-                    };
-                    await _cognitoClient.AdminConfirmSignUpAsync(confirmRequest);
+                        var confirmRequest = new AdminConfirmSignUpRequest
+                        {
+                            UserPoolId = userPoolId,
+                            Username = user.Email
+                        };
+                        await _cognitoClient.AdminConfirmSignUpAsync(confirmRequest);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -813,8 +825,8 @@ namespace MyMvcApp.Controllers
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Email Failed: {ex.Message}");
-                    TempData["SuccessMessage"] = "User approved, but the notification email failed to send.";
+                    _logger.LogWarning(ex, "Failed to send approval email to {Email}.", user.Email);
+                    TempData["SuccessMessage"] = $"User approved, but the notification email failed to send: {ex.Message}";
                 }
             }
             return RedirectToAction(nameof(Dashboard), new { activePane = "users" });

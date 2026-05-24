@@ -22,21 +22,40 @@ public class HomeController : Controller
     [AllowAnonymous]
     public async Task<IActionResult> Index()
     {
-        // Fetch updates where the EndDate is in the future, sorted newest first
-        var activeUpdates = await _context.CommunityUpdates
-            .Where(u => u.EndDate >= DateTime.UtcNow)
-            .OrderByDescending(u => u.CreatedAt)
-            .ToListAsync();
+        List<CommunityUpdate> activeUpdates;
 
-        // Pass the live data to the landing page
+        try
+        {
+            activeUpdates = await _context.CommunityUpdates
+                .Where(u => u.EndDate >= DateTime.UtcNow)
+                .OrderByDescending(u => u.CreatedAt)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not load community updates because the database is unavailable.");
+            ViewBag.DatabaseUnavailable = true;
+            activeUpdates = new List<CommunityUpdate>();
+        }
+
         return View(activeUpdates);
     }
 
     [AllowAnonymous]
     public async Task<IActionResult> UpdateDetails(int id)
     {
-        // Find the specific event the user clicked on
-        var update = await _context.CommunityUpdates.FindAsync(id);
+        CommunityUpdate? update;
+
+        try
+        {
+            update = await _context.CommunityUpdates.FindAsync(id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not load community update {UpdateId} because the database is unavailable.", id);
+            TempData["ErrorMessage"] = "Community updates are temporarily unavailable. Please try again shortly.";
+            return RedirectToAction(nameof(Index));
+        }
         
         if (update == null) 
         {
