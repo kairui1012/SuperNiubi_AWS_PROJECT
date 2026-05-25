@@ -6,6 +6,12 @@ using Stripe;
 
 namespace MyMvcApp.Services
 {
+    /// <summary>
+    /// Processes Stripe payment events delivered through Amazon EventBridge or an internal Lambda callback.
+    /// EventBridge routes the external Stripe event, Lambda or MVC receives the payload,
+    /// and this service updates local payment, booking, refund, and audit records.
+    /// CloudWatch captures processing logs, and SNS can be attached to alarms for repeated failures.
+    /// </summary>
     public class StripeEventBridgeProcessingService
     {
         private readonly AppDbContext _context;
@@ -13,6 +19,9 @@ namespace MyMvcApp.Services
         private readonly ILogger<StripeEventBridgeProcessingService> _logger;
         private readonly EmailService _emailService;
 
+        /// <summary>
+        /// Creates the Stripe event processor with database access, configuration, logging, and email notification support.
+        /// </summary>
         public StripeEventBridgeProcessingService(
             AppDbContext context,
             IConfiguration configuration,
@@ -25,6 +34,9 @@ namespace MyMvcApp.Services
             _emailService = emailService;
         }
 
+        /// <summary>
+        /// Reads a Stripe EventBridge payload and dispatches it to the handler for the specific Stripe event type.
+        /// </summary>
         public async Task<StripeEventProcessResult> ProcessEventBridgeEventAsync(JsonElement payload)
         {
             var summary = ReadEventSummary(payload);
@@ -50,6 +62,9 @@ namespace MyMvcApp.Services
             };
         }
 
+        /// <summary>
+        /// Confirms a payment from a trusted internal Lambda callback when Lambda sends normalized payment details.
+        /// </summary>
         public async Task<StripeEventProcessResult> ConfirmPaymentAsync(StripePaymentConfirmedRequest request)
         {
             var payment = await FindPaymentFromConfirmationAsync(request);
@@ -85,6 +100,9 @@ namespace MyMvcApp.Services
             }, StripeEventSummary.Empty);
         }
 
+        /// <summary>
+        /// Extracts a compact event id and event type summary from either the EventBridge envelope or Stripe payload.
+        /// </summary>
         public static StripeEventSummary ReadEventSummary(JsonElement payload)
         {
             var stripeEvent = GetStripeEvent(payload);
@@ -93,6 +111,9 @@ namespace MyMvcApp.Services
                 ReadString(stripeEvent, "type") ?? ReadString(payload, "detail-type"));
         }
 
+        /// <summary>
+        /// Handles completed checkout sessions for rent payments and short-term property bookings.
+        /// </summary>
         private async Task<StripeEventProcessResult> HandleCheckoutSessionCompletedAsync(
             JsonElement stripeEvent,
             string? eventId,
@@ -519,36 +540,83 @@ namespace MyMvcApp.Services
         }
     }
 
+    /// <summary>
+    /// Contains the Stripe event id and event type used for logging, audit entries, and CloudWatch troubleshooting.
+    /// </summary>
     public sealed record StripeEventSummary(string? EventId, string? EventType)
     {
+        /// <summary>
+        /// Represents an empty summary for internal callbacks that do not carry a full Stripe event envelope.
+        /// </summary>
         public static StripeEventSummary Empty { get; } = new(null, null);
     }
 
+    /// <summary>
+    /// Standard processing result returned by EventBridge, Lambda, and MVC callback handlers.
+    /// </summary>
     public sealed record StripeEventProcessResult(
         int StatusCode,
         object? Body,
         string? Message,
         StripeEventSummary Summary)
     {
+        /// <summary>
+        /// Indicates whether the status code should be treated as a successful event processing result.
+        /// </summary>
         public bool IsSuccessStatusCode => StatusCode >= 200 && StatusCode < 300;
 
+        /// <summary>
+        /// Creates a successful processing result.
+        /// </summary>
         public static StripeEventProcessResult Ok(object body, StripeEventSummary summary)
             => new(200, body, null, summary);
 
+        /// <summary>
+        /// Creates a validation failure result for malformed EventBridge or Stripe payloads.
+        /// </summary>
         public static StripeEventProcessResult BadRequest(string message, StripeEventSummary summary)
             => new(400, null, message, summary);
 
+        /// <summary>
+        /// Creates a not-found result when a Stripe event does not match a local payment or booking.
+        /// </summary>
         public static StripeEventProcessResult NotFound(string message, StripeEventSummary summary)
             => new(404, null, message, summary);
     }
 
+    /// <summary>
+    /// Normalized payment confirmation payload sent by trusted Lambda/internal workflows.
+    /// </summary>
     public class StripePaymentConfirmedRequest
     {
+        /// <summary>
+        /// Local payment id, when Lambda can identify the exact payment row.
+        /// </summary>
         public int? PaymentId { get; set; }
+
+        /// <summary>
+        /// Stripe Checkout session id used to match a local payment.
+        /// </summary>
         public string? StripeSessionId { get; set; }
+
+        /// <summary>
+        /// Stripe payment intent id used as the final payment reference.
+        /// </summary>
         public string? StripePaymentIntentId { get; set; }
+
+        /// <summary>
+        /// Stripe event id used for idempotency, audit logs, and EventBridge troubleshooting.
+        /// </summary>
         public string? StripeEventId { get; set; }
+
+        /// <summary>
+        /// Stripe-hosted receipt URL, when available.
+        /// </summary>
         public string? StripeReceiptUrl { get; set; }
+
+        /// <summary>
+        /// Payment completion time reported by Stripe or Lambda.
+        /// </summary>
         public DateTime? PaidAt { get; set; }
     }
 }

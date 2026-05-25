@@ -5,17 +5,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MyMvcApp.Services
 {
+    /// <summary>
+    /// Adds local application role claims after authentication.
+    /// Google or Cognito proves the user's identity, then this transformer reads the local database role
+    /// so MVC authorization can enforce Admin, Landlord, Tenant, and Security access rules.
+    /// Role lookup errors are logged for CloudWatch-based production debugging.
+    /// </summary>
     public class RoleClaimsTransformation : IClaimsTransformation
     {
         private readonly AppDbContext _dbContext;
         private readonly ILogger<RoleClaimsTransformation> _logger;
 
+        /// <summary>
+        /// Creates the claims transformer with database access and structured logging.
+        /// </summary>
         public RoleClaimsTransformation(AppDbContext dbContext, ILogger<RoleClaimsTransformation> logger)
         {
             _dbContext = dbContext;
             _logger = logger;
         }
 
+        /// <summary>
+        /// Clones the authenticated principal and stamps the role from the local Users table exactly once.
+        /// </summary>
         public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
             if (principal.HasClaim(c => c.Type == "NeonDbRoleStamped"))

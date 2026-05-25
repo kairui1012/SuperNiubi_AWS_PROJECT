@@ -6,12 +6,21 @@ using MyMvcApp.Models;
 
 namespace MyMvcApp.Services
 {
+    /// <summary>
+    /// Coordinates direct-to-S3 document uploads for tenants and landlords.
+    /// The MVC app creates a pending database record and a pre-signed S3 PUT URL,
+    /// then the S3 object-created Lambda callback confirms the upload through this service.
+    /// CloudWatch records the Lambda/callback logs, and SNS can be attached to alarms for failed confirmations.
+    /// </summary>
     public class DocumentUploadService
     {
         private readonly AppDbContext _dbContext;
         private readonly IAmazonS3 _s3Client;
         private readonly IConfiguration _configuration;
 
+        /// <summary>
+        /// Creates a document upload service with database access, S3 access, and AWS configuration.
+        /// </summary>
         public DocumentUploadService(AppDbContext dbContext, IAmazonS3 s3Client, IConfiguration configuration)
         {
             _dbContext = dbContext;
@@ -19,21 +28,34 @@ namespace MyMvcApp.Services
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Wraps the result of creating a direct upload request so controllers can return either a URL or a validation error.
+        /// </summary>
         public sealed record DocumentUploadCreateResult(DirectDocumentUploadResponse? Response, string? ErrorMessage)
         {
             public bool Succeeded => Response is not null;
 
+            /// <summary>
+            /// Creates a successful result containing the S3 pre-signed upload URL response.
+            /// </summary>
             public static DocumentUploadCreateResult Success(DirectDocumentUploadResponse response)
             {
                 return new DocumentUploadCreateResult(response, null);
             }
 
+            /// <summary>
+            /// Creates a failed result containing the reason the upload request cannot proceed.
+            /// </summary>
             public static DocumentUploadCreateResult Failure(string message)
             {
                 return new DocumentUploadCreateResult(null, message);
             }
         }
 
+        /// <summary>
+        /// Validates metadata before a pre-signed upload URL is created.
+        /// This protects S3 from unsupported file types and oversized uploads.
+        /// </summary>
         public string? ValidateDocumentUploadRequest(
             CreateDirectDocumentUploadRequest? request,
             string[] allowedExtensions,
@@ -79,6 +101,9 @@ namespace MyMvcApp.Services
             return null;
         }
 
+        /// <summary>
+        /// Creates a pending tenant document record and returns a pre-signed S3 PUT URL for browser direct upload.
+        /// </summary>
         public async Task<DocumentUploadCreateResult> CreateTenantDirectUploadAsync(
             CreateDirectDocumentUploadRequest? request,
             int uploadedByUserId,
@@ -112,6 +137,9 @@ namespace MyMvcApp.Services
                 await SavePendingDocumentAndCreateUploadAsync(document, request.ContentType));
         }
 
+        /// <summary>
+        /// Creates a pending landlord document record after verifying the selected property or tenant belongs to the landlord.
+        /// </summary>
         public async Task<DocumentUploadCreateResult> CreateLandlordDirectUploadAsync(
             CreateDirectDocumentUploadRequest? request,
             int landlordId,
@@ -193,6 +221,9 @@ namespace MyMvcApp.Services
                 await SavePendingDocumentAndCreateUploadAsync(document, request.ContentType));
         }
 
+        /// <summary>
+        /// Builds the temporary S3 PUT URL used by the browser to upload the file directly to S3.
+        /// </summary>
         public DirectDocumentUploadResponse CreatePresignedPutUrl(Document document, string contentType)
         {
             var bucketName = _configuration["AWS:BucketName"];
@@ -224,6 +255,9 @@ namespace MyMvcApp.Services
             };
         }
 
+        /// <summary>
+        /// Builds the permanent S3 object URL stored in document metadata.
+        /// </summary>
         public string BuildS3Url(string fileKey)
         {
             var bucketName = _configuration["AWS:BucketName"] ?? string.Empty;
@@ -231,6 +265,9 @@ namespace MyMvcApp.Services
             return $"https://{bucketName}.s3.{region}.amazonaws.com/{fileKey}";
         }
 
+        /// <summary>
+        /// Returns the upload status visible to a tenant while Lambda confirmation is still pending.
+        /// </summary>
         public async Task<DocumentUploadStatusResponse?> GetTenantUploadStatusAsync(int documentId, int tenantId)
         {
             var document = await _dbContext.Documents
@@ -240,6 +277,9 @@ namespace MyMvcApp.Services
             return document is null ? null : ToStatusResponse(document);
         }
 
+        /// <summary>
+        /// Converts a document entity into the lightweight status response used by AJAX polling.
+        /// </summary>
         public DocumentUploadStatusResponse ToStatusResponse(Document document)
         {
             return new DocumentUploadStatusResponse
@@ -250,6 +290,9 @@ namespace MyMvcApp.Services
             };
         }
 
+        /// <summary>
+        /// Creates the database record before the file exists in S3 so the later Lambda callback has a key to match.
+        /// </summary>
         private Document CreatePendingDocument(
             CreateDirectDocumentUploadRequest request,
             int uploadedByUserId,
@@ -283,6 +326,9 @@ namespace MyMvcApp.Services
             };
         }
 
+        /// <summary>
+        /// Saves the pending document first, then creates the S3 upload URL tied to that document key.
+        /// </summary>
         private async Task<DirectDocumentUploadResponse> SavePendingDocumentAndCreateUploadAsync(Document document, string contentType)
         {
             _dbContext.Documents.Add(document);
@@ -295,6 +341,11 @@ namespace MyMvcApp.Services
             return response;
         }
 
+        /// <summary>
+        /// Confirms an S3 object-created event reported by Lambda.
+        /// The service checks the bucket, finds the pending document by object key,
+        /// verifies S3 metadata, then marks the upload as confirmed or failed.
+        /// </summary>
         public async Task<DocumentUploadStatusResponse?> ConfirmS3ObjectCreatedAsync(string fileKey, string? bucketName, string? eTag)
         {
             var configuredBucket = _configuration["AWS:BucketName"];

@@ -10,7 +10,7 @@ PropEase 是一个使用 ASP.NET Core MVC 开发的物业管理系统，主要�
 - Security：访客通行证验证与 check-in。
 - Guest：短租房源浏览、预订和 Stripe 付款。
 
-这个项目结合了传统 MVC Web Application 和 AWS Serverless 架构。主 MVC 应用负责用户界面和核心业务流程，Stripe 付款确认和 S3 文件上传确认则交给 Lambda 处理。
+这个项目结合了传统 MVC Web Application 和 AWS Serverless 架构。主 MVC 应用负责用户界面和核心业务流程，Stripe 付款确认和 S3 文件上传确认则交给 Lambda 处理。系统也使用 CloudWatch 收集 application、Lambda 和事件处理日志，并可通过 SNS 把重要告警通知给维护人员。
 
 ## 2. Repository 总览
 
@@ -61,12 +61,16 @@ flowchart LR
     Stripe --> EventBridge[Amazon EventBridge]
     EventBridge --> StripeLambda[.NET Lambda Worker]
     StripeLambda --> DB
+    EventBridge --> SNS[Amazon SNS Alerts]
     S3 --> S3Lambda[Node.js Upload Confirmation Lambda]
     S3Lambda --> MVC
     MVC --> XRay[AWS X-Ray]
+    MVC --> CloudWatch[Amazon CloudWatch Logs]
+    StripeLambda --> CloudWatch
+    S3Lambda --> CloudWatch
 ```
 
-主 MVC 应用负责用户看到和操作的功能。Stripe 和 S3 这类外部系统会触发 serverless function，再由 Lambda 更新数据库或回调 MVC 的 internal API。
+主 MVC 应用负责用户看到和操作的功能。Stripe 和 S3 这类外部系统会触发 serverless function，再由 Lambda 更新数据库或回调 MVC 的 internal API。CloudWatch 负责集中保存日志和 metrics，SNS 可以连接 CloudWatch alarm 或 EventBridge rule，用来发送失败通知。
 
 ## 4. MyMvcApp 主应用
 
@@ -95,6 +99,7 @@ flowchart LR
 - PostgreSQL database，通过 Entity Framework Core 和 Npgsql 连接。
 - AWS services，包括 Cognito、S3、Secrets Manager。
 - AWS X-Ray tracing，用来追踪 request 和 AWS SDK 调用。
+- CloudWatch Logs，用来查看 MVC container、Lambda execution 和事件处理错误。
 - Stripe API key。
 - Cookie authentication。
 - DataProtection key persistence，确保 container restart 后 login cookie 仍然有效。
@@ -232,7 +237,7 @@ pattern: "{controller=Home}/{action=Index}/{id?}"
 
 它会记录 machine name、process id、host、scheme、path、user name、cookie 是否存在和 user roles。这个设计是为了排查 production 或 container deployment 中常见的 cookie / role 问题。
 
-另外，`app.UseXRay("MyMvcApp")` 和 `XRayUserTrackingMiddleware` 会把 request 和 user information 送到 AWS X-Ray，方便在 AWS console 里面追踪 slow request 或 error。
+另外，`app.UseXRay("MyMvcApp")` 和 `XRayUserTrackingMiddleware` 会把 request 和 user information 送到 AWS X-Ray，方便在 AWS console 里面追踪 slow request 或 error。应用和 Lambda 的 console logs 会进入 Amazon CloudWatch Logs，因此 production debugging 可以同时看 X-Ray trace 和 CloudWatch log stream。
 
 可以这样讲：
 
@@ -630,6 +635,114 @@ dotnet ef database update
 - `InternalApiKeyProvider`：读取 internal API key。
 - `RoleClaimsTransformation`：把 user role 转换成 ASP.NET claims。
 
+### EmailService
+
+`EmailService` 负责发送系统 email，例如 approval、maintenance notification 和 property access pass。
+
+在 AWS integration 里面，它对应的是 SES。尤其是短租 booking payment 成功后，Lambda 或 MVC 业务逻辑可以发送 access pass email 给 guest。CloudWatch 可以用来检查 email 发送失败的 log。
+
+可以这样讲：
+
+> EmailService is the notification service for user-facing email. It connects the business workflow to AWS SES.
+
+### S3ImageService
+
+`S3ImageService` 负责把 property image、community image 或 maintenance image 上传到 S3。
+
+它属于同步上传流程：MVC controller 收到图片后，通过 service 上传到 S3，然后保存 image URL。这个 service 不需要 Lambda，因为图片上传由 MVC backend 直接完成。
+
+可以这样讲：
+
+> S3ImageService handles normal image upload from the MVC backend to S3.
+
+### DocumentUploadService
+
+`DocumentUploadService` 是 direct-to-S3 document upload 的核心 service。
+
+它负责：
+
+- 验证 file name、file type、file size。
+- 创建 `PendingUpload` document record。
+- 生成 S3 pre-signed PUT URL。
+- 在 Lambda callback 后确认 S3 object metadata。
+- 把 document status 从 `PendingUpload` 更新成 `Confirmed` 或 `FailedValidation`。
+
+它和 serverless 的关系是：
+
+```text
+MVC Controller
+  -> DocumentUploadService creates pre-signed URL
+  -> User uploads file directly to S3
+  -> S3 triggers Lambda
+  -> Lambda calls MVC internal API
+  -> DocumentUploadService confirms object and updates DB
+```
+
+CloudWatch 会保存 S3 confirmation Lambda 的 execution log。如果 callback 失败，可以通过 CloudWatch alarm 连接 SNS，通知 developer 检查 upload confirmation。
+
+可以这样讲：
+
+> DocumentUploadService does not upload the file body itself. It creates the upload permission and later confirms the S3 upload after Lambda reports that the object was created.
+
+### StripeEventBridgeProcessingService
+
+`StripeEventBridgeProcessingService` 负责处理 Stripe payment event。
+
+它会读取 EventBridge 传来的 Stripe event，并根据 event type 更新 payment 或 booking：
+
+- `checkout.session.completed`
+- `payment_intent.succeeded`
+- `payment_intent.payment_failed`
+- `checkout.session.expired`
+- `charge.refunded`
+- `refund.created`
+- `refund.updated`
+
+它和 AWS event workflow 的关系是：
+
+```text
+Stripe
+  -> Amazon EventBridge
+  -> Lambda or MVC internal event endpoint
+  -> StripeEventBridgeProcessingService
+  -> PostgreSQL payment / booking update
+```
+
+CloudWatch 会记录 Lambda 或 MVC event endpoint 的 processing log。SNS 可以作为告警目标，当 EventBridge delivery、Lambda execution 或 payment processing 多次失败时通知维护人员。
+
+可以这样讲：
+
+> StripeEventBridgeProcessingService is the business processor for payment events. EventBridge delivers the event, Lambda or MVC receives it, and this service updates the database.
+
+### InternalApiKeyProvider
+
+`InternalApiKeyProvider` 负责读取 internal API key。这个 key 用来保护内部 callback endpoint，例如：
+
+- Stripe/EventBridge internal callback。
+- S3 upload confirmation Lambda callback。
+
+它会优先从 configuration 读取，也可以从 AWS Secrets Manager 读取。Lambda call MVC internal API 时，需要带上同一个 key，例如 header：
+
+```text
+X-Internal-Api-Key
+```
+
+这个设计可以避免 public user 直接伪造 Lambda callback。CloudWatch log 可以帮助检查 callback 被拒绝是因为 key 缺失、key 错误，还是 Secrets Manager 读取失败。
+
+可以这样讲：
+
+> InternalApiKeyProvider protects server-to-server callbacks. It makes sure only trusted Lambda/EventBridge workflows can confirm uploads or payment events.
+
+### RoleClaimsTransformation
+
+`RoleClaimsTransformation` 负责把本地 database 里的 user role 加进 ASP.NET claims。
+
+Google 或 Cognito 只负责 authentication，也就是证明用户是谁；系统真正的 role 来自本地 `Users` table。这个 service 会根据 email 查用户，再添加 role claim，让 `[Authorize(Roles = "...")]` 可以正常工作。
+
+可以这样讲：
+
+> RoleClaimsTransformation bridges authentication and authorization. It turns the database role into ASP.NET role claims.
+
 可以这样讲：
 
 > Controller receives the request, while Service performs reusable business operations.
@@ -796,6 +909,7 @@ public async Task<StripeEventLambdaResponse> FunctionHandler(
 - 注册 `StripeEventProcessor`。
 - 接收 event payload。
 - 把真正的 payment event 处理交给 `StripeEventProcessor`。
+- 把 success、warning、error log 写到 CloudWatch Logs。
 
 ### StripeEventProcessor.cs
 
@@ -850,6 +964,7 @@ public async Task<StripeEventLambdaResponse> FunctionHandler(
 2. 读取 bucket name、object key、eTag、size。
 3. 调用 MVC app 的 internal endpoint。
 4. 通知 MVC app：这个 document 已经成功上传到 S3。
+5. 如果 callback 失败，错误会进入 Lambda log，由 CloudWatch 记录并可触发 SNS 告警。
 
 主要文件：
 
@@ -867,6 +982,8 @@ sequenceDiagram
     participant Lambda as Stripe Lambda Worker
     participant DB as PostgreSQL
     participant SES as AWS SES
+    participant CloudWatch as CloudWatch Logs
+    participant SNS as Amazon SNS
 
     TenantOrGuest->>MVC: Start payment or booking
     MVC->>Stripe: Create checkout session
@@ -876,6 +993,8 @@ sequenceDiagram
     EventBridge->>Lambda: Invoke worker
     Lambda->>DB: Update payment or booking status
     Lambda->>SES: Send access pass email when needed
+    Lambda->>CloudWatch: Write processing logs
+    CloudWatch->>SNS: Send alarm notification on failures
 ```
 
 付款流程使用的技术：
@@ -886,6 +1005,8 @@ sequenceDiagram
 - .NET Lambda worker 异步处理 payment status。
 - PostgreSQL 保存 payment 和 booking 结果。
 - Audit log 保留系统操作记录。
+- CloudWatch Logs 保存 Lambda 执行日志、warning 和 error。
+- SNS 可以作为 alarm target，把 payment event failure 通知管理员或 developer。
 
 ## 19. Document Upload Flow
 
@@ -896,6 +1017,8 @@ sequenceDiagram
     participant S3 as AWS S3
     participant Lambda as S3 Confirmation Lambda
     participant DB as PostgreSQL
+    participant CloudWatch as CloudWatch Logs
+    participant SNS as Amazon SNS
 
     User->>MVC: Request direct document upload
     MVC->>DB: Create pending document record
@@ -904,6 +1027,8 @@ sequenceDiagram
     S3->>Lambda: Object-created event
     Lambda->>MVC: Internal confirmation callback
     MVC->>DB: Mark upload as confirmed
+    Lambda->>CloudWatch: Write upload callback logs
+    CloudWatch->>SNS: Notify on repeated callback failures
 ```
 
 这个设计的重点是：文件不会先上传到 MVC server，而是 browser 直接上传到 S3。MVC app 只负责生成 upload URL 和保存 document metadata。
@@ -913,6 +1038,8 @@ sequenceDiagram
 - 减少 MVC server 的压力。
 - 更适合处理大文件。
 - 通过 S3 event 和 Lambda 确认文件真的上传成功。
+- CloudWatch 可以检查每一次 Lambda callback 是否成功。
+- SNS 可以在 upload confirmation 失败时发送告警。
 
 ## 20. AWS Integration
 
@@ -923,10 +1050,16 @@ sequenceDiagram
 - SES：发送 email notification 和 property access pass。
 - Secrets Manager：读取 internal secret。
 - X-Ray：追踪 request、AWS SDK call 和 production issue。
-- Lambda：处理 payment 和 upload confirmation。
-- EventBridge：接收 Stripe event。
+- CloudWatch：集中保存 MVC app、Lambda 和事件处理日志，并支持 metrics/alarm。
+- Lambda：处理 payment event 和 S3 upload confirmation。
+- EventBridge：接收 Stripe event，并把事件 route 到 Lambda；也可以连接 SNS 做失败通知。
+- SNS：作为 notification layer，配合 CloudWatch alarm 或 EventBridge rule，把 payment/upload failure 通知管理员或 developer。
 
-`docker-compose.ec2.yml` 里面还配置了 X-Ray daemon container，让应用可以把 trace 发送到 AWS X-Ray。
+`docker-compose.ec2.yml` 里面还配置了 X-Ray daemon container，让应用可以把 trace 发送到 AWS X-Ray。运行在 AWS 上时，MVC container 和 Lambda 的 console output 会进入 CloudWatch Logs，方便检查 request log、Lambda retry、EventBridge delivery 和 internal callback error。
+
+可以这样讲：
+
+> EventBridge is used as the event router, Lambda is used as the event processor, CloudWatch is used for logging and monitoring, and SNS is used for alert notification when important serverless workflows fail.
 
 ## 21. Deployment Structure
 
@@ -964,7 +1097,8 @@ sequenceDiagram
 - 使用 EF Core migrations 管理 PostgreSQL schema。
 - Direct-to-S3 upload 架构，提高文件上传 scalability。
 - Stripe + EventBridge + Lambda 的异步 payment processing。
-- AWS X-Ray 提供 production observability。
+- CloudWatch + X-Ray 提供 production observability。
+- SNS alerting 可以帮助团队及时发现 payment 或 upload callback failure。
 - Secure cookie 和 DataProtection 配置，适合 container deployment。
 - Audit logging 和 admin analytics 提高系统可管理性。
 
@@ -981,6 +1115,6 @@ sequenceDiagram
 
 这个项目是一个使用 ASP.NET Core MVC 开发的物业管理平台，支持 Admin、Landlord、Tenant、Security 和 Guest 等不同角色。主应用采用 MVC 架构：Controllers 负责处理 request，Models 表示业务数据，Views 负责 UI，Services 封装可复用逻辑，而 Entity Framework Core 负责和 PostgreSQL 数据库交互。
 
-系统也集成了多个 AWS 和第三方服务。Cognito 用于用户身份认证，S3 用于储存图片和文件，SES 用于发送 email，X-Ray 用于监控和 tracing。付款方面，系统使用 Stripe Checkout，付款结果通过 Amazon EventBridge 传给 .NET Lambda worker，再由 Lambda 更新 payment 或 booking 状态。
+系统也集成了多个 AWS 和第三方服务。Cognito 用于用户身份认证，S3 用于储存图片和文件，SES 用于发送 email，X-Ray 用于 request tracing，CloudWatch 用于集中查看 application 和 Lambda logs，SNS 用于重要失败告警。付款方面，系统使用 Stripe Checkout，付款结果通过 Amazon EventBridge 传给 .NET Lambda worker，再由 Lambda 更新 payment 或 booking 状态。
 
-文件上传方面，用户会直接上传到 S3，而不是先经过 MVC server。S3 上传成功后会触发 Node.js Lambda，再回调 MVC app 确认文件上传完成。整体架构结合了传统 MVC Web Application 和 cloud-native serverless workflows，让系统既清楚分层，也能处理异步付款和文件上传场景。
+文件上传方面，用户会直接上传到 S3，而不是先经过 MVC server。S3 上传成功后会触发 Node.js Lambda，再回调 MVC app 确认文件上传完成。EventBridge 负责事件传递，Lambda 负责异步处理，CloudWatch 负责记录和监控，SNS 负责告警通知。整体架构结合了传统 MVC Web Application 和 cloud-native serverless workflows，让系统既清楚分层，也能处理异步付款和文件上传场景。

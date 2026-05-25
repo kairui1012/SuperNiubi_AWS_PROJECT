@@ -13,15 +13,44 @@ using MyMvcApp.Data; // ADD THIS
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Handles Cognito-backed login, registration, logout, and password reset flows.
+    /// </summary>
     public class AccountController : Controller
     {
+        /// <summary>
+        /// Signs users into and out of the application cookie through Cognito Identity.
+        /// </summary>
         private readonly SignInManager<CognitoUser> _signInManager;
+
+        /// <summary>
+        /// Creates and manages Cognito user accounts.
+        /// </summary>
         private readonly UserManager<CognitoUser> _userManager;
+
+        /// <summary>
+        /// Provides access to the configured Cognito user pool.
+        /// </summary>
         private readonly CognitoUserPool _pool; 
+
+        /// <summary>
+        /// Provides access to local application user and password reset records.
+        /// </summary>
         private readonly AppDbContext _dbContext; // ADD THIS
+
+        /// <summary>
+        /// Calls Cognito APIs that are not exposed through the ASP.NET Identity wrapper.
+        /// </summary>
         private readonly IAmazonCognitoIdentityProvider _cognitoClient;
+
+        /// <summary>
+        /// Reads Cognito app client settings.
+        /// </summary>
         private readonly IConfiguration _config;
 
+        /// <summary>
+        /// Creates a controller instance with Cognito identity, Cognito API, and local user data services.
+        /// </summary>
         public AccountController(
             SignInManager<CognitoUser> signInManager,
             UserManager<CognitoUser> userManager,
@@ -38,7 +67,9 @@ namespace MyMvcApp.Controllers
             _config = config;
         }
 
-        // --- LOGIN ---
+        /// <summary>
+        /// Shows the combined login and registration page in the requested mode.
+        /// </summary>
         [HttpGet]
         public IActionResult Login(string? mode = null)
         {
@@ -48,6 +79,9 @@ namespace MyMvcApp.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Authenticates an approved local user against Cognito and redirects by application role.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
@@ -95,18 +129,27 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Shows the waiting page for registered users who have not been approved by an admin.
+        /// </summary>
         [HttpGet]
         public IActionResult PendingApproval()
         {
             return View();
         }
 
+        /// <summary>
+        /// Shows the access denied page for authenticated users without permission.
+        /// </summary>
         [HttpGet]
         public IActionResult AccessDenied()
         {
             return View();
         }
 
+        /// <summary>
+        /// Creates a pending local password reset request for admin review.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RequestPasswordReset(string? email)
@@ -143,6 +186,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Login));
         }
 
+        /// <summary>
+        /// Shows the form for entering a Cognito password reset code and new password.
+        /// </summary>
         [HttpGet]
         public IActionResult ResetPassword(string? email = null)
         {
@@ -152,6 +198,9 @@ namespace MyMvcApp.Controllers
             });
         }
 
+        /// <summary>
+        /// Confirms a Cognito password reset code and updates the user's password.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
@@ -211,6 +260,9 @@ namespace MyMvcApp.Controllers
             return View(model);
         }
 
+        /// <summary>
+        /// Computes the Cognito client secret hash when the app client has a configured secret.
+        /// </summary>
         private string? ComputeCognitoSecretHash(string username, string clientId)
         {
             var clientSecret = _config["AWS:UserPoolClientSecret"];
@@ -227,10 +279,15 @@ namespace MyMvcApp.Controllers
             return Convert.ToBase64String(hmac.ComputeHash(message));
         }
 
-        // --- REGISTER ---
+        /// <summary>
+        /// Redirects legacy register links to the combined authentication page.
+        /// </summary>
         [HttpGet]
         public IActionResult Register() => RedirectToAction(nameof(Login), new { mode = "register" });
 
+        /// <summary>
+        /// Registers a Cognito user and creates a pending local application account.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -268,6 +325,9 @@ namespace MyMvcApp.Controllers
             return View(nameof(Login), loginModel);
         }
 
+        /// <summary>
+        /// Signs the current user out of the application.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -276,6 +336,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Login), "Account");
         }
 
+        /// <summary>
+        /// Returns current authentication and claims details for diagnostics.
+        /// </summary>
         [HttpGet]
         public IActionResult CheckAuth()
         {

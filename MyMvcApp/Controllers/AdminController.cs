@@ -12,15 +12,45 @@ using System.Security.Claims;
 
 namespace MyMvcApp.Controllers
 {
+    /// <summary>
+    /// Provides the main admin dashboard for users, properties, maintenance, audit logs, and announcements.
+    /// </summary>
     [Authorize(Roles = "Admin")] // Optional: secures this controller
     public class AdminController : Controller
     {
+        /// <summary>
+        /// Roles that admins can assign to application users.
+        /// </summary>
         private static readonly string[] AllowedRoles = { "Tenant", "Landlord", "Security", "Admin" };
+
+        /// <summary>
+        /// User status filters supported by the admin dashboard.
+        /// </summary>
         private static readonly string[] AllowedStatuses = { "Pending", "Approved", "Disabled" };
+
+        /// <summary>
+        /// Dashboard pane identifiers accepted from query string navigation.
+        /// </summary>
         private static readonly string[] AllowedAdminPanes = { "dashboard", "users", "properties", "maintenance", "payments", "audit", "announcements" };
+
+        /// <summary>
+        /// Maintenance status filters supported by the admin dashboard.
+        /// </summary>
         private static readonly string[] AllowedMaintenanceStatuses = { "Pending", "Approved", "InProgress", "Completed", "Rejected" };
+
+        /// <summary>
+        /// Maintenance priority filters supported by the admin dashboard.
+        /// </summary>
         private static readonly string[] AllowedMaintenancePriorities = { "High", "Medium", "Low" };
+
+        /// <summary>
+        /// Announcement audience options that admins can select.
+        /// </summary>
         private static readonly string[] AllowedVisibleTo = { "All", "Tenant", "Landlord" };
+
+        /// <summary>
+        /// Audit action filters displayed in the admin audit log search.
+        /// </summary>
         private static readonly string[] AllowedAuditActions =
         {
             "ApproveUser",
@@ -39,13 +69,34 @@ namespace MyMvcApp.Controllers
             "RejectProperty"
         };
 
+        /// <summary>
+        /// Provides access to application data used by the admin dashboard.
+        /// </summary>
         private readonly AppDbContext _dbContext;
+
+        /// <summary>
+        /// Sends account approval and administrative notification emails.
+        /// </summary>
         private readonly EmailService _emailService;
+
+        /// <summary>
+        /// Performs admin-level Cognito user operations.
+        /// </summary>
         private readonly IAmazonCognitoIdentityProvider _cognitoClient;
+
+        /// <summary>
+        /// Reads application and AWS configuration values.
+        /// </summary>
         private readonly IConfiguration _config;
+
+        /// <summary>
+        /// Writes admin workflow diagnostics.
+        /// </summary>
         private readonly ILogger<AdminController> _logger;
 
-        // Inject the Cognito Client and Configuration
+        /// <summary>
+        /// Creates a controller instance with database, email, Cognito, configuration, and logging services.
+        /// </summary>
         public AdminController(
             AppDbContext dbContext,
             EmailService emailService,
@@ -60,12 +111,18 @@ namespace MyMvcApp.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Reads the configured Cognito user pool id or throws when it is missing.
+        /// </summary>
         private string GetConfiguredUserPoolId()
         {
             return _config["AWS:UserPoolId"]
                 ?? throw new InvalidOperationException("AWS:UserPoolId is not configured.");
         }
 
+        /// <summary>
+        /// Ensures a Cognito user has a verified email address so account recovery can send reset codes.
+        /// </summary>
         private async Task<UserStatusType> EnsureCognitoEmailCanReceiveAccountRecoveryAsync(string userPoolId, string email)
         {
             var normalizedEmail = email.Trim().ToLowerInvariant();
@@ -117,6 +174,9 @@ namespace MyMvcApp.Controllers
             return cognitoUser.UserStatus;
         }
 
+        /// <summary>
+        /// Compatibility action that forwards the legacy Admin route to the dashboard.
+        /// </summary>
         public Task<IActionResult> Admin(
             string? searchEmail,
             string? roleFilter,
@@ -134,6 +194,9 @@ namespace MyMvcApp.Controllers
             return Dashboard(searchEmail, roleFilter, statusFilter, propertySearch, maintenanceSearch, maintenanceStatusFilter, maintenancePriorityFilter, activePane, auditSearch, auditActionFilter, auditFromDate, auditToDate);
         }
 
+        /// <summary>
+        /// Shows the admin dashboard with user, property, maintenance, payment, audit, and announcement data.
+        /// </summary>
         public async Task<IActionResult> Dashboard(
             string? searchEmail,
             string? roleFilter,
@@ -725,6 +788,9 @@ namespace MyMvcApp.Controllers
             return View("Admin", model);
         }
 
+        /// <summary>
+        /// Approves a submitted property and records the admin audit entry.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ApproveProperty(int id)
@@ -753,6 +819,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "properties" });
         }
 
+        /// <summary>
+        /// Rejects a submitted property and records the admin audit entry.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RejectProperty(int id)
@@ -781,6 +850,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "properties" });
         }
 
+        /// <summary>
+        /// Approves a pending user, confirms the Cognito account when needed, and sends an approval email.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> ApproveUser(int id)
         {
@@ -832,6 +904,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
+        /// <summary>
+        /// Approves a password reset request and asks Cognito to send the reset email.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ApprovePasswordResetRequest(int id)
@@ -876,6 +951,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
+        /// <summary>
+        /// Rejects a pending password reset request without contacting Cognito.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RejectPasswordResetRequest(int id)
@@ -903,6 +981,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
+        /// <summary>
+        /// Disables a user in Cognito and marks the local account as disabled.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> DisableUser(int id)
         {
@@ -946,6 +1027,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
+        /// <summary>
+        /// Enables a previously disabled user in Cognito and the local database.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> EnableUser(int id)
         {
@@ -983,6 +1067,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
+        /// <summary>
+        /// Changes a user's local application role after validating the requested role.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> ChangeRole(int id, string? newRole)
         {
@@ -1018,6 +1105,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "users" });
         }
 
+        /// <summary>
+        /// Creates a system announcement visible to the selected audience.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAnnouncement(CreateAnnouncementViewModel vm)
@@ -1054,6 +1144,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
         }
 
+        /// <summary>
+        /// Updates an existing system announcement.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAnnouncement(EditAnnouncementViewModel vm)
@@ -1090,6 +1183,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
         }
 
+        /// <summary>
+        /// Deletes a system announcement and records the admin audit entry.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteAnnouncement(int id)
@@ -1116,6 +1212,9 @@ namespace MyMvcApp.Controllers
             return RedirectToAction(nameof(Dashboard), new { activePane = "announcements" });
         }
 
+        /// <summary>
+        /// Returns a filter value only when it matches one of the allowed values.
+        /// </summary>
         private static string? NormalizeFilter(string? value, IEnumerable<string> allowedValues)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -1127,6 +1226,9 @@ namespace MyMvcApp.Controllers
                 string.Equals(allowedValue, value.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
+        /// <summary>
+        /// Determines whether the supplied email belongs to the currently signed-in admin.
+        /// </summary>
         private bool IsCurrentUser(string email)
         {
             var currentUserEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
@@ -1134,6 +1236,9 @@ namespace MyMvcApp.Controllers
                 && string.Equals(currentUserEmail, email, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// Adds an audit log entry for an admin action.
+        /// </summary>
         private void AddAuditLog(string action, string targetType, int? targetId, string? targetEmail, string? details)
         {
             _dbContext.AuditLogs.Add(new AuditLog
@@ -1148,6 +1253,9 @@ namespace MyMvcApp.Controllers
             });
         }
 
+        /// <summary>
+        /// Gets the current admin email for audit attribution.
+        /// </summary>
         private string GetCurrentUserEmail()
         {
             return User.FindFirstValue(ClaimTypes.Email)

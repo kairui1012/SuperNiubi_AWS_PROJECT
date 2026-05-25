@@ -11,17 +11,28 @@ using Microsoft.Extensions.Logging;
 
 namespace MyMvcApp.Services
 {
+    /// <summary>
+    /// Sends user-facing emails through AWS SES and prepares property access pass emails.
+    /// Email failures are written through ILogger and can be observed in CloudWatch Logs;
+    /// production alarms can notify maintainers through SNS when delivery failures repeat.
+    /// </summary>
     public class EmailService
     {
         private readonly IConfiguration _config;
         private readonly ILogger<EmailService> _logger;
 
+        /// <summary>
+        /// Creates the email service with AWS SES/S3 configuration and structured logging.
+        /// </summary>
         public EmailService(IConfiguration config, ILogger<EmailService> logger) 
         { 
             _config = config; 
             _logger = logger;
         }
 
+        /// <summary>
+        /// Sends an approval email after an administrator approves a user account.
+        /// </summary>
         public async Task SendApprovalEmailAsync(string toEmail)
         {
             var loginUrl = "https://propease.dev/Account/Login"; 
@@ -32,8 +43,10 @@ namespace MyMvcApp.Services
             await SendEmailAsync(toEmail, subject, htmlBody, textBody);
         }
 
-        // --- UPDATED METHOD: S3 QR CODE HOSTING ---
-        // --- UPDATED METHOD: S3 QR CODE WITH BUTTON FALLBACK ---
+        /// <summary>
+        /// Sends a short-term property booking access pass.
+        /// The QR code is generated locally, uploaded to S3, and linked from the SES email.
+        /// </summary>
         public async Task SendPropertyAccessPassAsync(string toEmail, PropertyBooking booking, string passCode)
         {
             var senderEmail = _config["AWS:SesSenderEmail"];
@@ -134,6 +147,9 @@ namespace MyMvcApp.Services
             await sesClient.SendEmailAsync(sendRequest);
         }
 
+        /// <summary>
+        /// Creates the AWS SES send request with both HTML and plain text bodies.
+        /// </summary>
         private SendEmailRequest CreateSendEmailRequest(string sender, string to, string subject, string html, string text)
         {
             return new SendEmailRequest
@@ -152,6 +168,9 @@ namespace MyMvcApp.Services
             };
         }
 
+        /// <summary>
+        /// Notifies a tenant when a landlord changes the status or details of a maintenance request.
+        /// </summary>
         public async Task SendMaintenanceStatusChangedEmailAsync(MaintenanceRequest request, string? landlordEmail)
         {
             var tenantEmail = request.Tenant?.User?.Email;
@@ -204,6 +223,9 @@ namespace MyMvcApp.Services
             await SendEmailAsync(tenantEmail, subject, htmlBody, textBody);
         }
 
+        /// <summary>
+        /// Sends a generic SES email using the configured sender and AWS region.
+        /// </summary>
         private async Task SendEmailAsync(string toEmail, string subject, string htmlBody, string textBody)
         {
             var senderEmail = _config["AWS:SesSenderEmail"];

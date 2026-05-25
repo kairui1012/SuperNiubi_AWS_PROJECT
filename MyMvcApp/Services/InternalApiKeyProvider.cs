@@ -5,17 +5,29 @@ using Amazon.SecretsManager.Model;
 
 namespace MyMvcApp.Services
 {
+    /// <summary>
+    /// Resolves the shared internal API key used to authenticate trusted server-to-server callbacks.
+    /// Lambda and EventBridge-facing workflows use this key when calling MVC internal endpoints,
+    /// such as Stripe payment confirmation and S3 upload confirmation callbacks.
+    /// CloudWatch logs key lookup failures, and SNS alarms can notify maintainers if callbacks fail repeatedly.
+    /// </summary>
     public class InternalApiKeyProvider
     {
         private readonly IConfiguration _configuration;
         private readonly IAmazonSecretsManager _secretsManager;
         private readonly ILogger<InternalApiKeyProvider> _logger;
 
+        /// <summary>
+        /// Describes where the internal API key was loaded from and why lookup succeeded or failed.
+        /// </summary>
         public sealed record InternalApiKeyLookupResult(string? Key, string Source, string Message)
         {
             public bool HasKey => !string.IsNullOrWhiteSpace(Key);
         }
 
+        /// <summary>
+        /// Creates the provider with configuration fallback, AWS Secrets Manager access, and logging.
+        /// </summary>
         public InternalApiKeyProvider(
             IConfiguration configuration,
             IAmazonSecretsManager secretsManager,
@@ -26,11 +38,17 @@ namespace MyMvcApp.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Returns the internal API key value, or null when no configured source contains one.
+        /// </summary>
         public async Task<string?> GetInternalApiKeyAsync()
         {
             return (await GetInternalApiKeyLookupAsync()).Key;
         }
 
+        /// <summary>
+        /// Loads the internal API key from app configuration, AWS Secrets Manager, or the legacy EventBridge shared secret.
+        /// </summary>
         public async Task<InternalApiKeyLookupResult> GetInternalApiKeyLookupAsync()
         {
             var configuredKey = _configuration["InternalApi:Key"];
@@ -88,6 +106,9 @@ namespace MyMvcApp.Services
             return new InternalApiKeyLookupResult(null, "not-configured", message);
         }
 
+        /// <summary>
+        /// Lists the accepted Secrets Manager secret ids used during deployment migration.
+        /// </summary>
         private static IEnumerable<string> GetSecretIds()
         {
             yield return "prod/mymvcapp/secrets";
@@ -95,6 +116,9 @@ namespace MyMvcApp.Services
             yield return "InternalApi:Key";
         }
 
+        /// <summary>
+        /// Extracts a usable key from either a plain string secret or a JSON secret payload.
+        /// </summary>
         private static string? ExtractSecretValue(GetSecretValueResponse response)
         {
             var secret = response.SecretString;
@@ -111,6 +135,9 @@ namespace MyMvcApp.Services
             return TryReadJsonSecretValue(secret) ?? secret;
         }
 
+        /// <summary>
+        /// Reads common JSON property names used to store the internal API key in Secrets Manager.
+        /// </summary>
         private static string? TryReadJsonSecretValue(string secret)
         {
             try
