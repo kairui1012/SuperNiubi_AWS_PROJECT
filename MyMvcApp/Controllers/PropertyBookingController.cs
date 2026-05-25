@@ -42,12 +42,7 @@ namespace MyMvcApp.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            var properties = await _context.Properties
-                .Where(p => !p.IsDeleted
-                    && p.AllowShortTerm
-                    && p.DailyRate.HasValue
-                    && p.DailyRate.Value > 0
-                    && p.AvailabilityStatus == PropertyAvailabilityStatus.Available)
+            var properties = await GetBookableStayProperties(_context.Properties.AsNoTracking())
                 .ToListAsync();
                 
             return View(properties);
@@ -58,13 +53,10 @@ namespace MyMvcApp.Controllers
         /// </summary>
         public async Task<IActionResult> Book(int id)
         {
-            var property = await _context.Properties.FindAsync(id);
-            if (property == null
-                || property.IsDeleted
-                || !property.AllowShortTerm
-                || !property.DailyRate.HasValue
-                || property.DailyRate.Value <= 0
-                || property.AvailabilityStatus != PropertyAvailabilityStatus.Available)
+            var property = await GetBookableStayProperties(_context.Properties.AsNoTracking())
+                .FirstOrDefaultAsync(p => p.PropertyId == id);
+
+            if (property == null)
                 return NotFound();
 
             return View(property); 
@@ -79,13 +71,10 @@ namespace MyMvcApp.Controllers
             var utcCheckIn = DateTime.SpecifyKind(checkInDate.Date, DateTimeKind.Utc);
             var utcCheckOut = DateTime.SpecifyKind(checkOutDate.Date, DateTimeKind.Utc);
 
-            var property = await _context.Properties.FindAsync(propertyId);
-            if (property == null
-                || property.IsDeleted
-                || !property.AllowShortTerm
-                || !property.DailyRate.HasValue
-                || property.DailyRate.Value <= 0
-                || property.AvailabilityStatus != PropertyAvailabilityStatus.Available)
+            var property = await GetBookableStayProperties(_context.Properties)
+                .FirstOrDefaultAsync(p => p.PropertyId == propertyId);
+
+            if (property == null)
             {
                 return BadRequest();
             }
@@ -113,7 +102,8 @@ namespace MyMvcApp.Controllers
 
             // Calculate stay duration, discount, and final checkout amount.
             int nights = (utcCheckOut - utcCheckIn).Days;
-            decimal totalAmount = property.DailyRate.Value * nights;
+            var dailyRate = property.DailyRate.GetValueOrDefault();
+            decimal totalAmount = dailyRate * nights;
             decimal discountAmount = 0;
             int? appliedPromoId = null;
 
@@ -185,6 +175,28 @@ namespace MyMvcApp.Controllers
             await _context.SaveChangesAsync();
 
             return Redirect(session.Url);
+        }
+
+        /// <summary>
+        /// Applies the public short-term booking eligibility rules.
+        /// </summary>
+        private static IQueryable<Property> GetBookableStayProperties(IQueryable<Property> properties)
+        {
+            var utcNow = DateTime.UtcNow;
+            var currentMonthStart = new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var nextMonthStart = currentMonthStart.AddMonths(1);
+
+            return properties.Where(p => !p.IsDeleted
+                && p.AllowShortTerm
+                && p.DailyRate.HasValue
+                && p.DailyRate.Value > 0
+                && p.AvailabilityStatus == PropertyAvailabilityStatus.Available
+                && !p.Tenants.Any(t => t.LeaseStatus == LeaseStatus.Active
+                    && t.Payments.Any(payment =>
+                        payment.Status == PaymentStatus.Verified
+                        && payment.PaymentDate.HasValue
+                        && payment.PaymentDate.Value >= currentMonthStart
+                        && payment.PaymentDate.Value < nextMonthStart)));
         }
 
         /// <summary>

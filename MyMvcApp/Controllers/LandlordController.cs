@@ -416,6 +416,8 @@ namespace MyMvcApp.Controllers
 
             var existingProperty = _dbContext.Properties
                 .Include(p => p.Amenities)
+                .Include(p => p.Tenants)
+                .ThenInclude(t => t.Payments)
                 .FirstOrDefault(p => p.PropertyId == model.PropertyId && p.LandlordId == landlord.Id && !p.IsDeleted);
 
             if (existingProperty == null)
@@ -425,6 +427,27 @@ namespace MyMvcApp.Controllers
             }
 
             NormalizeShortTermSettings(model);
+
+            var utcNow = DateTime.UtcNow;
+            var currentMonthStart = new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var nextMonthStart = currentMonthStart.AddMonths(1);
+            var hasPaidActiveTenant = existingProperty.Tenants.Any(t =>
+                t.LeaseStatus == LeaseStatus.Active &&
+                t.Payments.Any(payment =>
+                    payment.Status == PaymentStatus.Verified &&
+                    payment.PaymentDate.HasValue &&
+                    payment.PaymentDate.Value >= currentMonthStart &&
+                    payment.PaymentDate.Value < nextMonthStart));
+
+            if (hasPaidActiveTenant && model.AllowShortTerm)
+            {
+                ModelState.AddModelError(nameof(Property.AllowShortTerm), "Short-term stays cannot be enabled while this property has an active tenant with verified rent for the current month.");
+            }
+
+            if (hasPaidActiveTenant && model.AvailabilityStatus == PropertyAvailabilityStatus.Available)
+            {
+                ModelState.AddModelError(nameof(Property.AvailabilityStatus), "A property with an active paid tenant must remain occupied.");
+            }
 
             if (!ModelState.IsValid)
             {
@@ -451,7 +474,9 @@ namespace MyMvcApp.Controllers
                 existingProperty.DailyRate = model.DailyRate;
                 existingProperty.ParkingBay = model.ParkingBay;
                 existingProperty.Description = model.Description;
-                existingProperty.AvailabilityStatus = model.AvailabilityStatus;
+                existingProperty.AvailabilityStatus = hasPaidActiveTenant
+                    ? PropertyAvailabilityStatus.Occupied
+                    : model.AvailabilityStatus;
                 existingProperty.ApprovalStatus = PropertyApprovalStatus.Pending;
                 existingProperty.UpdatedAt = DateTime.UtcNow;
 
